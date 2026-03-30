@@ -1,0 +1,71 @@
+# ===================================================
+# API Gateway Configuration
+# ===================================================
+spring:
+  application:
+    name: api-gateway
+
+  # --- Spring Cloud Gateway Routes ---
+  cloud:
+    gateway:
+      routes:
+        # ── Employee-Service ──
+        - id: employee-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/employees/**
+          filters:
+            - TokenRelay=
+
+        - id: department-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/departments/**
+          filters:
+            - TokenRelay=
+
+        - id: contract-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/contracts/**
+          filters:
+            - TokenRelay=
+
+        # ── Recruitment-Service ──
+        - id: job-offer-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/job-offers/**
+          filters:
+            - TokenRelay=
+
+        - id: application-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/applications/**
+          filters:
+            - TokenRelay=
+
+        - id: interview-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/interviews/**
+          filters:
+            - TokenRelay=
+
+  # --- Keycloak / OAuth2 Resource Server ---
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/aziz
+
+# Port de la Gateway
+server:
+  port: 8888
+
+# Logging pour debug
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
