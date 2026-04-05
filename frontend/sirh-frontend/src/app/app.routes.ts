@@ -5,6 +5,7 @@ import { hrAdminGuard, employeeGuard } from './guards/auth.guard';
 import { EmployeeDashboardComponent } from './components/employee/employee-dashboard/employee-dashboard.component';
 import { EmployeeDirectoryComponent } from './components/employee/employee-directory/employee-directory.component';
 import { MyApplicationsComponent } from './components/employee/my-applications/my-applications.component';
+import { OrganigrammeComponent } from './components/employee/organigramme/organigramme.component';
 
 // ── Composants Espace RH Admin ──
 import { AdminDashboardComponent } from './components/admin/admin-dashboard/admin-dashboard.component';
@@ -35,6 +36,11 @@ export const routes: Routes = [
   {
     path: 'employee/applications',
     component: MyApplicationsComponent,
+    canActivate: [employeeGuard]
+  },
+  {
+    path: 'employee/organigramme',
+    component: OrganigrammeComponent,
     canActivate: [employeeGuard]
   },
 

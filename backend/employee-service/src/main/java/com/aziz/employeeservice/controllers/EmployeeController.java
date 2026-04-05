@@ -75,7 +75,7 @@ public class EmployeeController {
     }
 
     /** Récupère un employé par son ID */
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     @PreAuthorize("hasRole('HR_ADMIN')")
     public ResponseEntity<Employee> getEmployeeById(@PathVariable Long id) {
         return employeeService.getEmployeeById(id)
@@ -100,14 +100,14 @@ public class EmployeeController {
     }
 
     /** Met à jour un employé */
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}")
     @PreAuthorize("hasRole('HR_ADMIN')")
     public ResponseEntity<Employee> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
         return ResponseEntity.ok(employeeService.updateEmployee(id, employee));
     }
 
     /** Supprime un employé */
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     @PreAuthorize("hasRole('HR_ADMIN')")
     public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
@@ -133,5 +133,16 @@ public class EmployeeController {
     @PreAuthorize("hasRole('HR_ADMIN')")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
         return ResponseEntity.ok(employeeService.getDashboardStats());
+    }
+
+    // =============================================
+    // Organigramme
+    // =============================================
+
+    /** Retourne l'organigramme de l'entreprise (départements + employés) */
+    @GetMapping("/organigramme")
+    @PreAuthorize("hasAnyRole('HR_ADMIN', 'EMPLOYEE')")
+    public ResponseEntity<List<Map<String, Object>>> getOrganigramme() {
+        return ResponseEntity.ok(employeeService.getOrganigramme());
     }
 }

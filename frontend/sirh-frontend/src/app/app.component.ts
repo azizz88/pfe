@@ -33,6 +33,9 @@ import { KeycloakService } from './services/keycloak.service';
           <a routerLink="/employee/applications" routerLinkActive="active">
             <span>📝</span> Mes Candidatures
           </a>
+          <a routerLink="/employee/organigramme" routerLinkActive="active">
+            <span>🏢</span> Organigramme
+          </a>
         </div>
 
         <!-- Menu RH Admin (visible seulement pour HR_ADMIN) -->

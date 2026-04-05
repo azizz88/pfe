@@ -5,6 +5,12 @@ spring:
   application:
     name: employee-service
 
+  # --- Upload de fichiers ---
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
   # --- Base de données MySQL ---
   datasource:
     url: jdbc:mysql://localhost:3306/sirh_employees?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
@@ -32,6 +38,11 @@ spring:
 # Port du service
 server:
   port: 8081
+
+# Répertoire d'upload des documents
+app:
+  upload:
+    dir: ./uploads
 
 ---
 # ===================================================

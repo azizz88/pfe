@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import Keycloak from 'keycloak-js';
 
 /**
@@ -11,6 +11,8 @@ import Keycloak from 'keycloak-js';
 export class KeycloakService {
 
   private _keycloak: Keycloak | undefined;
+
+  constructor(private ngZone: NgZone) {}
 
   /** Getter pour l'instance Keycloak */
   get keycloak(): Keycloak {
@@ -26,13 +28,20 @@ export class KeycloakService {
 
   /**
    * Initialise Keycloak avec login-required.
-   * Appelée par APP_INITIALIZER au démarrage de l'application.
+   * La résolution de la Promise est ramenée dans NgZone pour que
+   * le change detection Angular fonctionne correctement après le bootstrap.
    */
-  async init(): Promise<boolean> {
-    const authenticated = await this.keycloak.init({
-      onLoad: 'login-required'
+  init(): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.keycloak.init({
+        onLoad: 'login-required',
+        checkLoginIframe: false
+      }).then(authenticated => {
+        this.ngZone.run(() => resolve(authenticated));
+      }).catch(err => {
+        this.ngZone.run(() => reject(err));
+      });
     });
-    return authenticated;
   }
 
   /** Nom d'utilisateur Keycloak */

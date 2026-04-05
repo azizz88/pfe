@@ -1,16 +1,19 @@
 package com.aziz.employeeservice.services;
 
+import com.aziz.employeeservice.entities.Contract;
+import com.aziz.employeeservice.entities.Department;
 import com.aziz.employeeservice.entities.Employee;
 import com.aziz.employeeservice.entities.ContractType;
+import com.aziz.employeeservice.repositories.ContractRepository;
+import com.aziz.employeeservice.repositories.DepartmentRepository;
 import com.aziz.employeeservice.repositories.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 
 /**
  * Service métier pour la gestion des employés.
@@ -21,9 +24,15 @@ import java.util.Optional;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final DepartmentRepository departmentRepository;
+    private final ContractRepository contractRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository,
+                           DepartmentRepository departmentRepository,
+                           ContractRepository contractRepository) {
         this.employeeRepository = employeeRepository;
+        this.departmentRepository = departmentRepository;
+        this.contractRepository = contractRepository;
     }
 
 
@@ -144,6 +153,79 @@ public class EmployeeService {
         }
         stats.put("byContractType", byContractType);
 
+        // Masse salariale
+        stats.put("totalSalaryMass", employeeRepository.getTotalSalaryMass());
+
+        Map<String, Double> salaryByDept = new HashMap<>();
+        for (Object[] row : employeeRepository.getSalaryByDepartment()) {
+            salaryByDept.put((String) row[0], (Double) row[1]);
+        }
+        stats.put("salaryByDepartment", salaryByDept);
+
+        // Contrats expirant dans les 30 prochains jours
+        List<Contract> expiring = contractRepository.findExpiringBefore(LocalDate.now().plusDays(30));
+        List<Map<String, Object>> expiringList = new ArrayList<>();
+        for (Contract c : expiring) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("employeeName", c.getEmployee() != null
+                    ? c.getEmployee().getFirstName() + " " + c.getEmployee().getLastName() : "—");
+            item.put("type", c.getType().name());
+            item.put("endDate", c.getEndDate().toString());
+            expiringList.add(item);
+        }
+        stats.put("expiringContracts", expiringList);
+        stats.put("expiringCount", expiringList.size());
+
+        // Ancienneté moyenne (en mois)
+        List<Employee> allEmployees = employeeRepository.findAll();
+        long totalMonths = 0;
+        int count = 0;
+        for (Employee emp : allEmployees) {
+            if (emp.getHireDate() != null) {
+                totalMonths += ChronoUnit.MONTHS.between(emp.getHireDate(), LocalDate.now());
+                count++;
+            }
+        }
+        stats.put("averageTenureMonths", count > 0 ? totalMonths / count : 0);
+
         return stats;
+    }
+
+    // =============================================
+    // Organigramme de l'entreprise
+    // =============================================
+
+    /** Retourne la structure organisationnelle : départements avec leurs employés */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getOrganigramme() {
+        List<Map<String, Object>> organigramme = new ArrayList<>();
+
+        for (Department dept : departmentRepository.findAll()) {
+            Map<String, Object> node = new HashMap<>();
+
+            Map<String, Object> deptInfo = new HashMap<>();
+            deptInfo.put("id", dept.getId());
+            deptInfo.put("name", dept.getName());
+            deptInfo.put("description", dept.getDescription());
+            node.put("department", deptInfo);
+
+            List<Map<String, Object>> employeeList = new ArrayList<>();
+            for (Employee emp : employeeRepository.findByDepartmentId(dept.getId())) {
+                Map<String, Object> empInfo = new HashMap<>();
+                empInfo.put("id", emp.getId());
+                empInfo.put("matricule", emp.getMatricule());
+                empInfo.put("firstName", emp.getFirstName());
+                empInfo.put("lastName", emp.getLastName());
+                empInfo.put("position", emp.getPosition());
+                empInfo.put("email", emp.getEmail());
+                employeeList.add(empInfo);
+            }
+            node.put("employees", employeeList);
+            node.put("employeeCount", employeeList.size());
+
+            organigramme.add(node);
+        }
+
+        return organigramme;
     }
 }

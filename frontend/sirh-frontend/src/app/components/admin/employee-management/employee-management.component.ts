@@ -45,6 +45,7 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
               </td>
               <td class="actions">
                 <button class="edit-btn" (click)="editEmployee(emp)">✏️</button>
+                <button class="doc-btn" (click)="openDocuments(emp)">📎</button>
                 <button class="delete-btn" (click)="deleteEmployee(emp.id)">🗑️</button>
               </td>
             </tr>
@@ -68,12 +69,67 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
               <option value="">-- Département --</option>
               <option *ngFor="let dept of departments" [value]="dept.id">{{ dept.name }}</option>
             </select>
+            <div class="form-full-row">
+              <label>Date d'embauche</label>
+              <input [(ngModel)]="form.hireDate" type="date" />
+            </div>
+            <div class="form-section-title">Contrat</div>
+            <select [(ngModel)]="form.contractType">
+              <option value="">-- Type de contrat --</option>
+              <option value="CDI">CDI</option>
+              <option value="CDD">CDD</option>
+              <option value="STAGE">Stage</option>
+            </select>
+            <div class="form-full-row">
+              <label>Date début contrat</label>
+              <input [(ngModel)]="form.contractStartDate" type="date" />
+            </div>
+            <div class="form-full-row">
+              <label>Date fin contrat</label>
+              <input [(ngModel)]="form.contractEndDate" type="date" />
+            </div>
+            <input [(ngModel)]="form.contractSalary" placeholder="Salaire mensuel (DT)" type="number" />
           </div>
           <div class="modal-actions">
             <button class="cancel-btn" (click)="showForm = false">Annuler</button>
             <button class="submit-btn" (click)="saveEmployee()">
               {{ isEditing ? 'Modifier' : 'Créer' }}
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Documents -->
+      <div class="modal-overlay" *ngIf="showDocModal" (click)="showDocModal = false">
+        <div class="modal doc-modal" (click)="$event.stopPropagation()">
+          <h3>Documents de {{ docEmployee?.firstName }} {{ docEmployee?.lastName }}</h3>
+
+          <!-- Upload -->
+          <div class="upload-zone">
+            <input type="file" #fileInput (change)="onFileSelected($event)" class="file-input" />
+            <button class="upload-btn" (click)="uploadFile()" [disabled]="!selectedFile">
+              Uploader
+            </button>
+          </div>
+
+          <!-- Liste des documents -->
+          <div class="doc-list">
+            <div class="doc-item" *ngFor="let doc of documents">
+              <div class="doc-icon">{{ getFileIcon(doc.fileType) }}</div>
+              <div class="doc-info">
+                <div class="doc-name">{{ doc.fileName }}</div>
+                <div class="doc-meta">{{ doc.uploadDate }} &bull; {{ doc.fileType }}</div>
+              </div>
+              <div class="doc-actions">
+                <button class="dl-btn" (click)="downloadDoc(doc)">Telecharger</button>
+                <button class="rm-btn" (click)="deleteDoc(doc.id)">Supprimer</button>
+              </div>
+            </div>
+            <p *ngIf="documents.length === 0" class="empty-docs">Aucun document.</p>
+          </div>
+
+          <div class="modal-actions">
+            <button class="cancel-btn" (click)="showDocModal = false">Fermer</button>
           </div>
         </div>
       </div>
@@ -101,7 +157,7 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
     .CDD { background: #fef9c3; color: #854d0e; }
     .STAGE { background: #dbeafe; color: #1e40af; }
     .actions { display: flex; gap: 8px; }
-    .edit-btn, .delete-btn { border: none; background: none; cursor: pointer; font-size: 1.1rem; padding: 4px; }
+    .edit-btn, .delete-btn, .doc-btn { border: none; background: none; cursor: pointer; font-size: 1.1rem; padding: 4px; }
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5);
       display: flex; align-items: center; justify-content: center; z-index: 1000;
@@ -114,9 +170,32 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
       font-size: 0.9rem; outline: none;
     }
     .form-grid input:focus, .form-grid select:focus { border-color: #3b82f6; }
+    .form-full-row { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; }
+    .form-full-row label { font-size: 0.8rem; color: #64748b; }
+    .form-full-row input { padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; outline: none; }
+    .form-full-row input:focus { border-color: #3b82f6; }
+    .form-section-title {
+      grid-column: 1 / -1; font-weight: 700; color: #1e3a5f; font-size: 0.95rem;
+      margin-top: 8px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+    }
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
     .cancel-btn { padding: 8px 16px; border: 1px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; }
     .submit-btn { padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    .doc-modal { max-width: 650px; }
+    .upload-zone { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; }
+    .file-input { flex: 1; font-size: 0.85rem; }
+    .upload-btn { padding: 8px 16px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+    .upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .doc-list { max-height: 300px; overflow-y: auto; }
+    .doc-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    .doc-icon { font-size: 1.5rem; }
+    .doc-info { flex: 1; }
+    .doc-name { font-weight: 600; color: #1e293b; font-size: 0.9rem; }
+    .doc-meta { color: #94a3b8; font-size: 0.75rem; }
+    .doc-actions { display: flex; gap: 6px; }
+    .dl-btn { padding: 4px 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.75rem; }
+    .rm-btn { padding: 4px 10px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.75rem; }
+    .empty-docs { color: #94a3b8; font-style: italic; text-align: center; padding: 20px 0; }
   `]
 })
 export class EmployeeManagementComponent implements OnInit {
@@ -126,6 +205,12 @@ export class EmployeeManagementComponent implements OnInit {
   isEditing = false;
   editId: number | null = null;
   form: any = {};
+
+  // Documents
+  showDocModal = false;
+  docEmployee: any = null;
+  documents: any[] = [];
+  selectedFile: File | null = null;
 
   constructor(private employeeApi: EmployeeApiService) {}
 
@@ -143,11 +228,20 @@ export class EmployeeManagementComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.form = {}; this.isEditing = false; this.editId = null;
+    this.form = { contractType: '', departmentId: '' };
+    this.isEditing = false;
+    this.editId = null;
   }
 
   editEmployee(emp: any): void {
-    this.form = { ...emp, departmentId: emp.department?.id || '' };
+    this.form = {
+      ...emp,
+      departmentId: emp.department?.id || '',
+      contractType: emp.contract?.type || '',
+      contractStartDate: emp.contract?.startDate || '',
+      contractEndDate: emp.contract?.endDate || '',
+      contractSalary: emp.contract?.salary || ''
+    };
     this.isEditing = true;
     this.editId = emp.id;
     this.showForm = true;
@@ -156,7 +250,14 @@ export class EmployeeManagementComponent implements OnInit {
   saveEmployee(): void {
     const payload = {
       ...this.form,
-      department: this.form.departmentId ? { id: this.form.departmentId } : null
+      department: this.form.departmentId ? { id: this.form.departmentId } : null,
+      contract: this.form.contractType ? {
+        ...(this.isEditing && this.form.contract?.id ? { id: this.form.contract.id } : {}),
+        type: this.form.contractType,
+        startDate: this.form.contractStartDate || null,
+        endDate: this.form.contractEndDate || null,
+        salary: this.form.contractSalary || null
+      } : null
     };
 
     const obs = this.isEditing
@@ -175,5 +276,62 @@ export class EmployeeManagementComponent implements OnInit {
         next: () => this.loadEmployees()
       });
     }
+  }
+
+  // ── Documents ──
+
+  openDocuments(emp: any): void {
+    this.docEmployee = emp;
+    this.showDocModal = true;
+    this.selectedFile = null;
+    this.loadDocuments();
+  }
+
+  loadDocuments(): void {
+    if (this.docEmployee) {
+      this.employeeApi.getDocumentsByEmployee(this.docEmployee.id).subscribe({
+        next: (data) => this.documents = data
+      });
+    }
+  }
+
+  onFileSelected(event: any): void {
+    this.selectedFile = event.target.files[0] || null;
+  }
+
+  uploadFile(): void {
+    if (this.selectedFile && this.docEmployee) {
+      this.employeeApi.uploadDocument(this.docEmployee.id, this.selectedFile).subscribe({
+        next: () => { this.selectedFile = null; this.loadDocuments(); }
+      });
+    }
+  }
+
+  downloadDoc(doc: any): void {
+    this.employeeApi.downloadDocument(doc.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.fileName;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    });
+  }
+
+  deleteDoc(docId: number): void {
+    if (confirm('Supprimer ce document ?')) {
+      this.employeeApi.deleteDocument(docId).subscribe({
+        next: () => this.loadDocuments()
+      });
+    }
+  }
+
+  getFileIcon(fileType: string): string {
+    if (fileType?.includes('pdf')) return '\uD83D\uDCC4';
+    if (fileType?.includes('image')) return '\uD83D\uDDBC\uFE0F';
+    if (fileType?.includes('word') || fileType?.includes('document')) return '\uD83D\uDCC3';
+    return '\uD83D\uDCCE';
   }
 }

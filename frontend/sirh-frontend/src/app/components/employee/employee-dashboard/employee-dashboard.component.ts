@@ -47,6 +47,23 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
           <div class="info-row"><span>Fin</span><strong>{{ profile.contract.endDate || 'Indéterminé' }}</strong></div>
           <div class="info-row"><span>Salaire</span><strong>{{ profile.contract.salary | number:'1.2-2' }} DT</strong></div>
         </div>
+
+        <!-- Carte Documents -->
+        <div class="card">
+          <h3>📎 Mes Documents</h3>
+          <div class="doc-list" *ngIf="documents.length > 0">
+            <div class="doc-row" *ngFor="let doc of documents">
+              <div class="doc-row-info">
+                <strong>{{ doc.fileName }}</strong>
+                <span class="doc-date">{{ doc.uploadDate }}</span>
+              </div>
+              <button class="download-btn" (click)="downloadDocument(doc)">
+                Telecharger
+              </button>
+            </div>
+          </div>
+          <p *ngIf="documents.length === 0" class="no-docs">Aucun document disponible.</p>
+        </div>
       </div>
     </div>
   `,
@@ -70,10 +87,25 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
     .CDD { background: #fef9c3; color: #854d0e; }
     .STAGE { background: #dbeafe; color: #1e40af; }
     .loading { color: #94a3b8; font-style: italic; }
+    .doc-list { display: flex; flex-direction: column; gap: 0; }
+    .doc-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .doc-row-info { display: flex; flex-direction: column; }
+    .doc-row-info strong { color: #1e293b; font-size: 0.9rem; }
+    .doc-date { color: #94a3b8; font-size: 0.75rem; }
+    .download-btn {
+      padding: 5px 12px; background: #3b82f6; color: white; border: none;
+      border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+    }
+    .download-btn:hover { background: #2563eb; }
+    .no-docs { color: #94a3b8; font-style: italic; text-align: center; margin: 12px 0 0 0; }
   `]
 })
 export class EmployeeDashboardComponent implements OnInit {
   profile: any = null;
+  documents: any[] = [];
 
   constructor(
     public keycloakService: KeycloakService,
@@ -83,7 +115,35 @@ export class EmployeeDashboardComponent implements OnInit {
   ngOnInit(): void {
     this.employeeApi.getMyProfile().subscribe({
       next: (data) => this.profile = data,
-      error: (err) => console.error('Erreur chargement profil:', err)
+      error: () => {
+        // Fallback : afficher les infos Keycloak si pas de fiche employé
+        this.profile = {
+          firstName: this.keycloakService.keycloak.tokenParsed?.['given_name'] || '',
+          lastName: this.keycloakService.keycloak.tokenParsed?.['family_name'] || '',
+          email: this.keycloakService.getEmail(),
+          matricule: '\u2014',
+          position: this.keycloakService.isHrAdmin() ? 'RH Administrateur' : 'Employ\u00e9',
+          phone: '\u2014'
+        };
+      }
+    });
+
+    this.employeeApi.getMyDocuments().subscribe({
+      next: (data) => this.documents = data,
+      error: () => this.documents = []
+    });
+  }
+
+  downloadDocument(doc: any): void {
+    this.employeeApi.downloadDocument(doc.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.fileName;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
     });
   }
 }

@@ -71,9 +71,39 @@ export class EmployeeApiService {
     return this.http.delete<void>(`${this.baseUrl}/departments/${id}`);
   }
 
+  // ── Organigramme ──
+
+  getOrganigramme(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/employees/organigramme`);
+  }
+
   // ── Statistiques (HR Admin) ──
 
   getDashboardStats(): Observable<any> {
     return this.http.get(`${this.baseUrl}/employees/stats`);
+  }
+
+  // ── Documents ──
+
+  uploadDocument(employeeId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.baseUrl}/documents/employee/${employeeId}`, formData);
+  }
+
+  getDocumentsByEmployee(employeeId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/documents/employee/${employeeId}`);
+  }
+
+  getMyDocuments(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/documents/my`);
+  }
+
+  downloadDocument(documentId: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/documents/${documentId}/download`, { responseType: 'blob' });
+  }
+
+  deleteDocument(documentId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/documents/${documentId}`);
   }
 }
