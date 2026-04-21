@@ -39,6 +39,25 @@ spring:
 server:
   port: 8081
 
+# --- Keycloak Admin Client (pour le flux mot de passe oublie) ---
+# Le client "sirh-backend-admin" doit etre cree dans le realm "aziz" avec :
+#   - Client authentication: ON
+#   - Service accounts roles: ON
+#   - Service account role: realm-management / manage-users + view-users
+# Le secret se recupere dans Clients > sirh-backend-admin > Credentials.
+keycloak:
+  admin:
+    server-url: http://localhost:8180
+    realm: aziz
+    client-id: sirh-backend-admin
+    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:uM3AAgCaOy7xib8ZwYRP0lan67k1MPWw}
+  # Parametres du lien envoye dans l'email de reset password.
+  # Le client-id doit correspondre au client frontal (Angular) et le redirect-uri
+  # doit figurer dans ses Valid Redirect URIs.
+  reset-password:
+    client-id: angular-client
+    redirect-uri: http://localhost:4200
+
 # Répertoire d'upload des documents
 app:
   upload:

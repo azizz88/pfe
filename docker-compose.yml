@@ -15,6 +15,15 @@ services:
       - keycloak_data:/opt/keycloak/data
       - ./keycloak-theme/sirh-theme:/opt/keycloak/themes/sirh-theme
 
+  # ── Mailhog (serveur SMTP dev — capture les emails sans les envoyer) ──
+  # SMTP : mailhog:1025  |  UI web : http://localhost:8025
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   # ── MySQL (base de données des microservices) ──
   mysql:
     image: mysql:8.0

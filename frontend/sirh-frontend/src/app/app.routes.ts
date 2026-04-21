@@ -15,6 +15,9 @@ import { RecruitmentManagementComponent } from './components/admin/recruitment-m
 import { DepartmentManagementComponent } from './components/admin/department-management/department-management.component';
 import { OrganigrammeComponent } from './components/employee/organigramme/organigramme.component';
 
+// ── Composants Auth (public) ──
+import { ForgotPasswordComponent } from './components/auth/forgot-password/forgot-password.component';
+
 /**
  * Routes de l'application SIRH.
  * Protégées par des guards basés sur les rôles Keycloak.
@@ -22,6 +25,9 @@ import { OrganigrammeComponent } from './components/employee/organigramme/organi
 export const routes: Routes = [
   // Redirection par défaut
   { path: '', redirectTo: 'employee/dashboard', pathMatch: 'full' },
+
+  // ── Route publique : Mot de passe oublié (pas de guard, pas de login requis) ──
+  { path: 'forgot-password', component: ForgotPasswordComponent },
 
   // ── Espace Employé ──
   {

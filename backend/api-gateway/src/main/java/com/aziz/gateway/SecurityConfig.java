@@ -29,8 +29,9 @@ public class SecurityConfig {
             // Configuration CORS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            // Toutes les requêtes doivent être authentifiées
+            // Routes publiques (reset password) + reste authentifie
             .authorizeExchange(exchange -> exchange
+                .pathMatchers("/api/auth/**").permitAll()
                 .anyExchange().authenticated()
             )
 

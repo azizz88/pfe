@@ -1,7 +1,10 @@
 import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { KeycloakService } from './services/keycloak.service';
+
+// Routes publiques (pas de sidebar, pas de Keycloak init).
+const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
 
 /**
  * Composant racine de l'application SIRH.
@@ -12,6 +15,7 @@ import { KeycloakService } from './services/keycloak.service';
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
   template: `
+    <ng-container *ngIf="!isPublicRoute; else publicLayout">
     <div class="app-container">
       <!-- Barre de navigation -->
       <nav class="sidebar">
@@ -74,6 +78,12 @@ import { KeycloakService } from './services/keycloak.service';
         <router-outlet></router-outlet>
       </main>
     </div>
+    </ng-container>
+
+    <!-- Layout pour les pages publiques (forgot-password, etc.) -->
+    <ng-template #publicLayout>
+      <router-outlet></router-outlet>
+    </ng-template>
   `,
   styles: [`
     .app-container {
@@ -187,5 +197,9 @@ import { KeycloakService } from './services/keycloak.service';
   `]
 })
 export class AppComponent {
-  constructor(public keycloakService: KeycloakService) {}
+  constructor(public keycloakService: KeycloakService, private router: Router) {}
+
+  get isPublicRoute(): boolean {
+    return PUBLIC_ROUTE_PREFIXES.some(prefix => this.router.url.startsWith(prefix));
+  }
 }

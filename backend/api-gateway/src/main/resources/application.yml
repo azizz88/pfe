@@ -9,6 +9,12 @@ spring:
   cloud:
     gateway:
       routes:
+        # ── Route publique : reset password (pas de TokenRelay) ──
+        - id: auth-public
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**
+
         # ── Employee-Service ──
         - id: employee-service
           uri: http://localhost:8081

@@ -2,6 +2,7 @@ package com.aziz.employeeservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -33,8 +34,9 @@ public class SecurityConfig {
             // CORS géré par l'API Gateway — désactivé ici pour éviter le double header
             .cors(cors -> cors.disable())
 
-            // Toutes les requêtes doivent être authentifiées
+            // Routes publiques (reset password) + reste authentifie
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                 .anyRequest().authenticated()
             )
 

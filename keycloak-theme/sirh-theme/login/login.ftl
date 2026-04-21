@@ -89,7 +89,7 @@
 
                 <#if realm.resetPasswordAllowed>
                     <div class="forgot-password">
-                        <a tabindex="6" href="${url.loginResetCredentialsUrl}">
+                        <a tabindex="6" href="http://localhost:4200/forgot-password">
                             🔑 Mot de passe oublié ?
                         </a>
                     </div>
