@@ -45,6 +45,12 @@ public class ApplicationService {
         JobOffer offer = jobOfferRepository.findById(application.getJobOfferId())
                 .orElseThrow(() -> new RuntimeException("Offre non trouvée"));
 
+        // Vérifier que l'employé n'a pas déjà postulé à cette offre
+        if (applicationRepository.existsByEmployeeMatriculeAndJobOfferId(
+                application.getEmployeeMatricule(), application.getJobOfferId())) {
+            throw new RuntimeException("Vous avez déjà postulé à cette offre.");
+        }
+
         application.setJobOffer(offer);
         application.setJobOfferTitle(offer.getTitle());
         application.setStatus(ApplicationStatus.EN_ATTENTE);

@@ -25,6 +25,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     /** Liste les employés d'un département donné */
     List<Employee> findByDepartmentId(Long departmentId);
 
+    /** Liste les employés d'un service donné */
+    List<Employee> findByServiceId(Long serviceId);
+
     /** Liste les employés par type de contrat */
     @Query("SELECT e FROM Employee e WHERE e.contract.type = :contractType")
     List<Employee> findByContractType(@Param("contractType") ContractType contractType);

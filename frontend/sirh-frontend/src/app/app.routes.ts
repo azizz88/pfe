@@ -5,7 +5,7 @@ import { hrAdminGuard, employeeGuard } from './guards/auth.guard';
 import { EmployeeDashboardComponent } from './components/employee/employee-dashboard/employee-dashboard.component';
 import { EmployeeDirectoryComponent } from './components/employee/employee-directory/employee-directory.component';
 import { MyApplicationsComponent } from './components/employee/my-applications/my-applications.component';
-import { OrganigrammeComponent } from './components/employee/organigramme/organigramme.component';
+import { MyProfileComponent } from './components/employee/my-profile/my-profile.component';
 
 // ── Composants Espace RH Admin ──
 import { AdminDashboardComponent } from './components/admin/admin-dashboard/admin-dashboard.component';
@@ -13,6 +13,7 @@ import { EmployeeManagementComponent } from './components/admin/employee-managem
 import { ContractManagementComponent } from './components/admin/contract-management/contract-management.component';
 import { RecruitmentManagementComponent } from './components/admin/recruitment-management/recruitment-management.component';
 import { DepartmentManagementComponent } from './components/admin/department-management/department-management.component';
+import { OrganigrammeComponent } from './components/employee/organigramme/organigramme.component';
 
 /**
  * Routes de l'application SIRH.
@@ -39,8 +40,8 @@ export const routes: Routes = [
     canActivate: [employeeGuard]
   },
   {
-    path: 'employee/organigramme',
-    component: OrganigrammeComponent,
+    path: 'employee/profile',
+    component: MyProfileComponent,
     canActivate: [employeeGuard]
   },
 
@@ -68,6 +69,11 @@ export const routes: Routes = [
   {
     path: 'admin/departments',
     component: DepartmentManagementComponent,
+    canActivate: [hrAdminGuard]
+  },
+  {
+    path: 'admin/organigramme',
+    component: OrganigrammeComponent,
     canActivate: [hrAdminGuard]
   },
 

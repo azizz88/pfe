@@ -32,4 +32,9 @@ public class Department {
     @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Employee> employees = new ArrayList<>();
+
+    /** Liste des services de ce département */
+    @OneToMany(mappedBy = "department", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<ServiceEntity> services = new ArrayList<>();
 }

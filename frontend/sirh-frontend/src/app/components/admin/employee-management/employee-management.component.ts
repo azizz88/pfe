@@ -27,6 +27,7 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
               <th>Email</th>
               <th>Poste</th>
               <th>Département</th>
+              <th>Service</th>
               <th>Contrat</th>
               <th>Actions</th>
             </tr>
@@ -38,6 +39,7 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
               <td>{{ emp.email }}</td>
               <td>{{ emp.position || '—' }}</td>
               <td>{{ emp.department?.name || '—' }}</td>
+              <td>{{ emp.service?.name || '—' }}</td>
               <td>
                 <span *ngIf="emp.contract" class="badge" [class]="emp.contract.type">
                   {{ emp.contract.type }}
@@ -65,9 +67,13 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
             <input [(ngModel)]="form.phone" placeholder="Téléphone" />
             <input [(ngModel)]="form.position" placeholder="Poste" />
             <input [(ngModel)]="form.keycloakUsername" placeholder="Username Keycloak" />
-            <select [(ngModel)]="form.departmentId">
+            <select [(ngModel)]="form.departmentId" (change)="onDepartmentChange()">
               <option value="">-- Département --</option>
               <option *ngFor="let dept of departments" [value]="dept.id">{{ dept.name }}</option>
+            </select>
+            <select [(ngModel)]="form.serviceId" [disabled]="!form.departmentId">
+              <option value="">-- Service --</option>
+              <option *ngFor="let svc of filteredServices" [value]="svc.id">{{ svc.name }}</option>
             </select>
             <div class="form-full-row">
               <label>Date d'embauche</label>
@@ -201,6 +207,8 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
 export class EmployeeManagementComponent implements OnInit {
   employees: any[] = [];
   departments: any[] = [];
+  allServices: any[] = [];
+  filteredServices: any[] = [];
   showForm = false;
   isEditing = false;
   editId: number | null = null;
@@ -217,6 +225,7 @@ export class EmployeeManagementComponent implements OnInit {
   ngOnInit(): void {
     this.loadEmployees();
     this.loadDepartments();
+    this.loadServices();
   }
 
   loadEmployees(): void {
@@ -227,8 +236,22 @@ export class EmployeeManagementComponent implements OnInit {
     this.employeeApi.getDepartments().subscribe({ next: (data) => this.departments = data });
   }
 
+  loadServices(): void {
+    this.employeeApi.getServices().subscribe({ next: (data) => this.allServices = data });
+  }
+
+  onDepartmentChange(): void {
+    this.form.serviceId = '';
+    if (this.form.departmentId) {
+      this.filteredServices = this.allServices.filter(s => s.department?.id === +this.form.departmentId);
+    } else {
+      this.filteredServices = [];
+    }
+  }
+
   resetForm(): void {
-    this.form = { contractType: '', departmentId: '' };
+    this.form = { contractType: '', departmentId: '', serviceId: '' };
+    this.filteredServices = [];
     this.isEditing = false;
     this.editId = null;
   }
@@ -237,6 +260,7 @@ export class EmployeeManagementComponent implements OnInit {
     this.form = {
       ...emp,
       departmentId: emp.department?.id || '',
+      serviceId: emp.service?.id || '',
       contractType: emp.contract?.type || '',
       contractStartDate: emp.contract?.startDate || '',
       contractEndDate: emp.contract?.endDate || '',
@@ -244,6 +268,11 @@ export class EmployeeManagementComponent implements OnInit {
     };
     this.isEditing = true;
     this.editId = emp.id;
+    if (this.form.departmentId) {
+      this.filteredServices = this.allServices.filter(s => s.department?.id === +this.form.departmentId);
+    } else {
+      this.filteredServices = [];
+    }
     this.showForm = true;
   }
 
@@ -251,6 +280,7 @@ export class EmployeeManagementComponent implements OnInit {
     const payload = {
       ...this.form,
       department: this.form.departmentId ? { id: this.form.departmentId } : null,
+      service: this.form.serviceId ? { id: this.form.serviceId } : null,
       contract: this.form.contractType ? {
         ...(this.isEditing && this.form.contract?.id ? { id: this.form.contract.id } : {}),
         type: this.form.contractType,

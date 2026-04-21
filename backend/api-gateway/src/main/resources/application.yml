@@ -38,6 +38,13 @@ spring:
           filters:
             - TokenRelay=
 
+        - id: service-entity-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/services/**
+          filters:
+            - TokenRelay=
+
         # ── Recruitment-Service ──
         - id: job-offer-service
           uri: http://localhost:8082

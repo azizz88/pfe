@@ -31,4 +31,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     /** Nombre de candidatures par offre d'emploi */
     @Query("SELECT a.jobOfferTitle, COUNT(a) FROM Application a GROUP BY a.jobOfferTitle")
     List<Object[]> countByJobOffer();
+
+    /** Vérifie si un employé a déjà postulé à une offre */
+    boolean existsByEmployeeMatriculeAndJobOfferId(String employeeMatricule, Long jobOfferId);
 }

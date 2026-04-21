@@ -53,6 +53,12 @@ export class EmployeeApiService {
     return this.http.delete<void>(`${this.baseUrl}/employees/${id}`);
   }
 
+  // ── Organigramme ──
+
+  getOrganigramme(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/employees/organigramme`);
+  }
+
   // ── Départements ──
 
   getDepartments(): Observable<any[]> {
@@ -71,10 +77,26 @@ export class EmployeeApiService {
     return this.http.delete<void>(`${this.baseUrl}/departments/${id}`);
   }
 
-  // ── Organigramme ──
+  // ── Services ──
 
-  getOrganigramme(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/employees/organigramme`);
+  getServices(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/services`);
+  }
+
+  getServicesByDepartment(departmentId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/services/department/${departmentId}`);
+  }
+
+  createService(service: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/services`, service);
+  }
+
+  updateService(id: number, service: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/services/${id}`, service);
+  }
+
+  deleteService(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/services/${id}`);
   }
 
   // ── Statistiques (HR Admin) ──

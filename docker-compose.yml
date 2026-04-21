@@ -13,6 +13,7 @@ services:
       - "8180:8080"
     volumes:
       - keycloak_data:/opt/keycloak/data
+      - ./keycloak-theme/sirh-theme:/opt/keycloak/themes/sirh-theme
 
   # ── MySQL (base de données des microservices) ──
   mysql:

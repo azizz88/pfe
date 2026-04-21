@@ -49,6 +49,11 @@ public class Employee {
     @JoinColumn(name = "department_id")
     private Department department;
 
+    /** Service au sein du département */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "service_id")
+    private ServiceEntity service;
+
     /** Contrat de travail */
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinColumn(name = "contract_id")

@@ -4,6 +4,7 @@ import com.aziz.employeeservice.entities.Contract;
 import com.aziz.employeeservice.entities.Department;
 import com.aziz.employeeservice.entities.Employee;
 import com.aziz.employeeservice.entities.ContractType;
+import com.aziz.employeeservice.entities.ServiceEntity;
 import com.aziz.employeeservice.repositories.ContractRepository;
 import com.aziz.employeeservice.repositories.DepartmentRepository;
 import com.aziz.employeeservice.repositories.EmployeeRepository;
@@ -104,6 +105,7 @@ public class EmployeeService {
         employee.setPosition(employeeDetails.getPosition());
         employee.setHireDate(employeeDetails.getHireDate());
         employee.setDepartment(employeeDetails.getDepartment());
+        employee.setService(employeeDetails.getService());
         employee.setContract(employeeDetails.getContract());
         employee.setKeycloakUsername(employeeDetails.getKeycloakUsername());
 
@@ -195,7 +197,7 @@ public class EmployeeService {
     // Organigramme de l'entreprise
     // =============================================
 
-    /** Retourne la structure organisationnelle : départements avec leurs employés */
+    /** Retourne la structure organisationnelle : départements avec leurs services et employés */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getOrganigramme() {
         List<Map<String, Object>> organigramme = new ArrayList<>();
@@ -209,23 +211,55 @@ public class EmployeeService {
             deptInfo.put("description", dept.getDescription());
             node.put("department", deptInfo);
 
-            List<Map<String, Object>> employeeList = new ArrayList<>();
-            for (Employee emp : employeeRepository.findByDepartmentId(dept.getId())) {
-                Map<String, Object> empInfo = new HashMap<>();
-                empInfo.put("id", emp.getId());
-                empInfo.put("matricule", emp.getMatricule());
-                empInfo.put("firstName", emp.getFirstName());
-                empInfo.put("lastName", emp.getLastName());
-                empInfo.put("position", emp.getPosition());
-                empInfo.put("email", emp.getEmail());
-                employeeList.add(empInfo);
+            List<Employee> allDeptEmployees = employeeRepository.findByDepartmentId(dept.getId());
+            int totalEmployeeCount = allDeptEmployees.size();
+
+            // Grouper par service
+            List<Map<String, Object>> servicesList = new ArrayList<>();
+            for (ServiceEntity svc : dept.getServices()) {
+                Map<String, Object> svcNode = new HashMap<>();
+                Map<String, Object> svcInfo = new HashMap<>();
+                svcInfo.put("id", svc.getId());
+                svcInfo.put("name", svc.getName());
+                svcInfo.put("description", svc.getDescription());
+                svcNode.put("service", svcInfo);
+
+                List<Map<String, Object>> svcEmployees = new ArrayList<>();
+                for (Employee emp : allDeptEmployees) {
+                    if (emp.getService() != null && emp.getService().getId().equals(svc.getId())) {
+                        svcEmployees.add(mapEmployeeData(emp));
+                    }
+                }
+                svcNode.put("employees", svcEmployees);
+                svcNode.put("employeeCount", svcEmployees.size());
+                servicesList.add(svcNode);
             }
-            node.put("employees", employeeList);
-            node.put("employeeCount", employeeList.size());
+            node.put("services", servicesList);
+
+            // Employés non assignés à un service
+            List<Map<String, Object>> unassignedEmployees = new ArrayList<>();
+            for (Employee emp : allDeptEmployees) {
+                if (emp.getService() == null) {
+                    unassignedEmployees.add(mapEmployeeData(emp));
+                }
+            }
+            node.put("unassignedEmployees", unassignedEmployees);
+            node.put("totalEmployeeCount", totalEmployeeCount);
 
             organigramme.add(node);
         }
 
         return organigramme;
+    }
+
+    private Map<String, Object> mapEmployeeData(Employee emp) {
+        Map<String, Object> empInfo = new HashMap<>();
+        empInfo.put("id", emp.getId());
+        empInfo.put("matricule", emp.getMatricule());
+        empInfo.put("firstName", emp.getFirstName());
+        empInfo.put("lastName", emp.getLastName());
+        empInfo.put("position", emp.getPosition());
+        empInfo.put("email", emp.getEmail());
+        return empInfo;
     }
 }

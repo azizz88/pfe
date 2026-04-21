@@ -39,7 +39,8 @@ import { KeycloakService } from '../../../services/keycloak.service';
             <strong>Compétences :</strong> {{ offer.requiredSkills }}
           </p>
           <p class="offer-deadline" *ngIf="offer.deadline">📅 Date limite : {{ offer.deadline }}</p>
-          <button class="apply-btn" (click)="applyToOffer(offer)">Postuler</button>
+          <button class="apply-btn" *ngIf="!isAdmin && !hasApplied(offer.id)" (click)="applyToOffer(offer)">Postuler</button>
+          <button class="applied-btn" *ngIf="!isAdmin && hasApplied(offer.id)" disabled>✅ Déjà postulé</button>
         </div>
         <p *ngIf="activeOffers.length === 0" class="empty">Aucune offre active pour le moment.</p>
       </div>
@@ -101,6 +102,10 @@ import { KeycloakService } from '../../../services/keycloak.service';
       transition: background 0.2s;
     }
     .apply-btn:hover { background: #2563eb; }
+    .applied-btn {
+      margin-top: 12px; padding: 8px 20px; background: #e2e8f0; color: #64748b;
+      border: none; border-radius: 8px; cursor: not-allowed; font-size: 0.9rem;
+    }
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex;
       align-items: center; justify-content: center; z-index: 1000;
@@ -118,6 +123,10 @@ import { KeycloakService } from '../../../services/keycloak.service';
     .cancel-btn { padding: 8px 16px; border: 1px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; }
     .submit-btn { padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; }
     .empty { text-align: center; color: #94a3b8; font-style: italic; margin-top: 40px; }
+    .admin-notice {
+      margin-top: 12px; padding: 8px 16px; background: #fef3c7; color: #92400e;
+      border-radius: 8px; font-size: 0.85rem; border: 1px solid #fde68a;
+    }
   `]
 })
 export class MyApplicationsComponent implements OnInit {
@@ -127,6 +136,8 @@ export class MyApplicationsComponent implements OnInit {
   showApplyModal = false;
   selectedOffer: any = null;
   coverLetter = '';
+  isAdmin = false;
+  appliedOfferIds = new Set<number>();
 
   constructor(
     private recruitmentApi: RecruitmentApiService,
@@ -134,6 +145,7 @@ export class MyApplicationsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.isAdmin = this.keycloakService.isHrAdmin();
     this.loadActiveOffers();
     this.loadMyApplications();
   }
@@ -148,9 +160,16 @@ export class MyApplicationsComponent implements OnInit {
   loadMyApplications(): void {
     const username = this.keycloakService.getUserName();
     this.recruitmentApi.getMyApplications(username).subscribe({
-      next: (data) => this.myApplications = data,
+      next: (data) => {
+        this.myApplications = data;
+        this.appliedOfferIds = new Set(data.map((app: any) => app.jobOfferId));
+      },
       error: (err) => console.error('Erreur chargement candidatures:', err)
     });
+  }
+
+  hasApplied(offerId: number): boolean {
+    return this.appliedOfferIds.has(offerId);
   }
 
   applyToOffer(offer: any): void {
@@ -170,6 +189,7 @@ export class MyApplicationsComponent implements OnInit {
     this.recruitmentApi.submitApplication(application).subscribe({
       next: () => {
         this.showApplyModal = false;
+        this.appliedOfferIds.add(this.selectedOffer.id);
         this.loadMyApplications();
         this.activeTab = 'history';
       },

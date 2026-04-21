@@ -30,11 +30,11 @@ import { KeycloakService } from './services/keycloak.service';
           <a routerLink="/employee/directory" routerLinkActive="active">
             <span>📖</span> Annuaire
           </a>
+          <a routerLink="/employee/profile" routerLinkActive="active">
+            <span>👤</span> Mon Profil
+          </a>
           <a routerLink="/employee/applications" routerLinkActive="active">
             <span>📝</span> Mes Candidatures
-          </a>
-          <a routerLink="/employee/organigramme" routerLinkActive="active">
-            <span>🏢</span> Organigramme
           </a>
         </div>
 
@@ -55,6 +55,9 @@ import { KeycloakService } from './services/keycloak.service';
           </a>
           <a routerLink="/admin/recruitment" routerLinkActive="active">
             <span>🎯</span> Recrutement
+          </a>
+          <a routerLink="/admin/organigramme" routerLinkActive="active">
+            <span>🌳</span> Organigramme
           </a>
         </div>
 
