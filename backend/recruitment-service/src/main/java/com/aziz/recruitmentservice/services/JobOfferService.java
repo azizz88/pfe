@@ -1,15 +1,20 @@
 package com.aziz.recruitmentservice.services;
 
+import com.aziz.recruitmentservice.dto.JobOfferRequest;
 import com.aziz.recruitmentservice.entities.JobOffer;
 import com.aziz.recruitmentservice.entities.JobOfferStatus;
+import com.aziz.recruitmentservice.entities.Skill;
 import com.aziz.recruitmentservice.repositories.JobOfferRepository;
+import com.aziz.recruitmentservice.repositories.SkillRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Service métier pour la gestion des offres d'emploi internes.
@@ -19,9 +24,16 @@ import java.util.Optional;
 public class JobOfferService {
 
     private final JobOfferRepository jobOfferRepository;
+    private final SkillRepository skillRepository;
 
-    public JobOfferService(JobOfferRepository jobOfferRepository) {
+    public JobOfferService(JobOfferRepository jobOfferRepository, SkillRepository skillRepository) {
         this.jobOfferRepository = jobOfferRepository;
+        this.skillRepository = skillRepository;
+    }
+
+    private Set<Skill> resolveSkills(List<Long> skillIds) {
+        if (skillIds == null || skillIds.isEmpty()) return new HashSet<>();
+        return new HashSet<>(skillRepository.findAllById(skillIds));
     }
 
 
@@ -44,22 +56,29 @@ public class JobOfferService {
     }
 
     /** Crée et publie une nouvelle offre d'emploi */
-    public JobOffer createOffer(JobOffer jobOffer) {
-        jobOffer.setStatus(JobOfferStatus.ACTIVE);
-        jobOffer.setPublishDate(LocalDate.now());
-        return jobOfferRepository.save(jobOffer);
+    public JobOffer createOffer(JobOfferRequest req) {
+        JobOffer offer = JobOffer.builder()
+                .title(req.getTitle())
+                .description(req.getDescription())
+                .department(req.getDepartment())
+                .deadline(req.getDeadline())
+                .skills(resolveSkills(req.getSkillIds()))
+                .status(JobOfferStatus.ACTIVE)
+                .publishDate(LocalDate.now())
+                .build();
+        return jobOfferRepository.save(offer);
     }
 
     /** Met à jour une offre existante */
-    public JobOffer updateOffer(Long id, JobOffer offerDetails) {
+    public JobOffer updateOffer(Long id, JobOfferRequest req) {
         JobOffer offer = jobOfferRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Offre non trouvée avec l'ID: " + id));
 
-        offer.setTitle(offerDetails.getTitle());
-        offer.setDescription(offerDetails.getDescription());
-        offer.setDepartment(offerDetails.getDepartment());
-        offer.setRequiredSkills(offerDetails.getRequiredSkills());
-        offer.setDeadline(offerDetails.getDeadline());
+        offer.setTitle(req.getTitle());
+        offer.setDescription(req.getDescription());
+        offer.setDepartment(req.getDepartment());
+        offer.setDeadline(req.getDeadline());
+        offer.setSkills(resolveSkills(req.getSkillIds()));
         return jobOfferRepository.save(offer);
     }
 

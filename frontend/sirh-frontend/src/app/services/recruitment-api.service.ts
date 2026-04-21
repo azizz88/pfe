@@ -91,4 +91,22 @@ export class RecruitmentApiService {
   updateInterview(id: number, interview: any): Observable<any> {
     return this.http.put(`${this.baseUrl}/interviews/${id}`, interview);
   }
+
+  // ── Compétences (Skills) ──
+
+  getAllSkills(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/skills`);
+  }
+
+  createSkill(skill: { name: string; category?: string; description?: string }): Observable<any> {
+    return this.http.post(`${this.baseUrl}/skills`, skill);
+  }
+
+  updateSkill(id: number, skill: { name: string; category?: string; description?: string }): Observable<any> {
+    return this.http.put(`${this.baseUrl}/skills/${id}`, skill);
+  }
+
+  deleteSkill(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/skills/${id}`);
+  }
 }

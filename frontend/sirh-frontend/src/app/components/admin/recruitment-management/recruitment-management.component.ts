@@ -37,6 +37,10 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
             <span class="badge" [class]="offer.status">{{ offer.status }}</span>
           </div>
           <p class="offer-desc">{{ offer.description }}</p>
+          <div class="skills-row" *ngIf="offer.skills?.length">
+            <span class="skills-label">Compétences :</span>
+            <span class="skill-chip" *ngFor="let s of offer.skills">{{ s.name }}</span>
+          </div>
           <div class="offer-actions">
             <button class="edit-btn" (click)="editOffer(offer)">✏️ Modifier</button>
             <button *ngIf="offer.status === 'ACTIVE'" class="close-btn" (click)="closeOffer(offer.id)">🔒 Clôturer</button>
@@ -75,7 +79,43 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
           <input [(ngModel)]="offerForm.title" placeholder="Titre du poste" />
           <input [(ngModel)]="offerForm.department" placeholder="Département" />
           <textarea [(ngModel)]="offerForm.description" placeholder="Description du poste" rows="4"></textarea>
-          <textarea [(ngModel)]="offerForm.requiredSkills" placeholder="Compétences requises" rows="2"></textarea>
+
+          <!-- Selecteur de competences (multi-select) -->
+          <label class="skills-field-label">Compétences requises</label>
+          <div class="skills-picker">
+            <div class="chips" *ngIf="selectedSkillIds.size > 0">
+              <span class="chip" *ngFor="let id of selectedSkillIds">
+                {{ getSkillNameById(id) }}
+                <button type="button" class="chip-remove" (click)="toggleSkill(id)">×</button>
+              </span>
+            </div>
+            <input
+              type="text"
+              class="skill-search"
+              [(ngModel)]="skillSearch"
+              placeholder="Rechercher ou ajouter une compétence…"
+              (focus)="skillsOpen = true"
+            />
+            <div class="skill-options" *ngIf="skillsOpen">
+              <div class="skill-options-list">
+                <div *ngFor="let s of filteredSkillOptions"
+                     class="skill-option"
+                     [class.selected]="selectedSkillIds.has(s.id)"
+                     (click)="toggleSkill(s.id)">
+                  <span class="check">{{ selectedSkillIds.has(s.id) ? '✓' : '+' }}</span>
+                  {{ s.name }}
+                  <span class="opt-cat" *ngIf="s.category">· {{ s.category }}</span>
+                </div>
+                <div *ngIf="filteredSkillOptions.length === 0" class="empty-opt">
+                  Aucune compétence ne correspond. Créez-la depuis le menu "Compétences".
+                </div>
+              </div>
+              <button type="button" class="close-dropdown" (click)="skillsOpen = false">
+                Fermer
+              </button>
+            </div>
+          </div>
+
           <label>Date limite :</label>
           <input [(ngModel)]="offerForm.deadline" type="date" />
           <div class="modal-actions">
@@ -143,6 +183,125 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
     .cancel-btn { padding: 8px 16px; border: 1px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; }
     .submit-btn { padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; }
     .empty { text-align: center; color: #94a3b8; font-style: italic; margin-top: 40px; }
+
+    /* Skills display on offer card */
+    .skills-row {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+      margin: 10px 0;
+    }
+    .skills-label { font-size: 0.8rem; color: #64748b; font-weight: 600; margin-right: 4px; }
+    .skill-chip {
+      display: inline-block;
+      padding: 3px 10px;
+      background: #eff6ff;
+      color: #1e3a5f;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* Skills picker in modal */
+    .skills-field-label {
+      font-size: 0.85rem;
+      color: #334155;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .skills-picker {
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 12px;
+      background: white;
+    }
+    .skills-picker .chips {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;
+    }
+    .skills-picker .chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 4px 3px 10px;
+      background: #1e3a5f;
+      color: white;
+      border-radius: 999px;
+      font-size: 0.8rem;
+    }
+    .chip-remove {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      padding: 0;
+    }
+    .chip-remove:hover { background: rgba(255,255,255,0.35); }
+    .skill-search {
+      width: 100%;
+      border: none !important;
+      padding: 6px 4px !important;
+      margin: 0 !important;
+      outline: none;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+    .skill-options {
+      margin-top: 6px;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 6px;
+    }
+    .skill-options-list {
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: #f8fafc;
+    }
+    .skill-option {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.1s;
+    }
+    .skill-option:hover { background: #eff6ff; }
+    .skill-option.selected { background: #dbeafe; color: #1e3a5f; font-weight: 600; }
+    .skill-option .check {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px; height: 18px;
+      border-radius: 4px;
+      background: white;
+      border: 1px solid #cbd5e1;
+      font-size: 11px;
+      color: #1e3a5f;
+      font-weight: bold;
+    }
+    .opt-cat { font-size: 0.75rem; color: #94a3b8; font-weight: 400; }
+    .empty-opt {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.8rem;
+      font-style: italic;
+    }
+    .close-dropdown {
+      display: block;
+      margin: 6px 0 0 auto;
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: #64748b;
+    }
   `]
 })
 export class RecruitmentManagementComponent implements OnInit {
@@ -156,28 +315,81 @@ export class RecruitmentManagementComponent implements OnInit {
   editOfferId: number | null = null;
   offerForm: any = {};
 
+  // Skills picker state
+  allSkills: { id: number; name: string; category?: string }[] = [];
+  selectedSkillIds = new Set<number>();
+  skillSearch = '';
+  skillsOpen = false;
+
   constructor(private recruitmentApi: RecruitmentApiService) {}
 
-  ngOnInit(): void { this.loadOffers(); }
+  ngOnInit(): void {
+    this.loadOffers();
+    this.loadSkills();
+  }
 
   loadOffers(): void {
     this.recruitmentApi.getAllOffers().subscribe({ next: (data) => this.offers = data });
+  }
+
+  loadSkills(): void {
+    this.recruitmentApi.getAllSkills().subscribe({ next: (data) => this.allSkills = data });
   }
 
   loadAllApplications(): void {
     this.recruitmentApi.getAllApplications().subscribe({ next: (data) => this.applications = data });
   }
 
-  resetOfferForm(): void { this.offerForm = {}; this.isEditingOffer = false; this.editOfferId = null; }
+  // --- Skills picker helpers ---
+  get filteredSkillOptions() {
+    const q = this.skillSearch.trim().toLowerCase();
+    if (!q) return this.allSkills;
+    return this.allSkills.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      (s.category || '').toLowerCase().includes(q)
+    );
+  }
+
+  toggleSkill(id: number): void {
+    if (this.selectedSkillIds.has(id)) this.selectedSkillIds.delete(id);
+    else this.selectedSkillIds.add(id);
+  }
+
+  getSkillNameById(id: number): string {
+    return this.allSkills.find(s => s.id === id)?.name ?? '(inconnue)';
+  }
+
+  resetOfferForm(): void {
+    this.offerForm = {};
+    this.isEditingOffer = false;
+    this.editOfferId = null;
+    this.selectedSkillIds.clear();
+    this.skillSearch = '';
+    this.skillsOpen = false;
+  }
 
   editOffer(offer: any): void {
-    this.offerForm = { ...offer }; this.isEditingOffer = true; this.editOfferId = offer.id; this.showOfferForm = true;
+    this.offerForm = { ...offer };
+    this.isEditingOffer = true;
+    this.editOfferId = offer.id;
+    // Hydrate la selection depuis les objets Skill renvoyes par le backend
+    this.selectedSkillIds = new Set<number>((offer.skills || []).map((s: any) => s.id));
+    this.skillSearch = '';
+    this.skillsOpen = false;
+    this.showOfferForm = true;
   }
 
   saveOffer(): void {
+    const payload = {
+      title: this.offerForm.title,
+      description: this.offerForm.description,
+      department: this.offerForm.department,
+      deadline: this.offerForm.deadline,
+      skillIds: Array.from(this.selectedSkillIds)
+    };
     const obs = this.isEditingOffer
-      ? this.recruitmentApi.updateOffer(this.editOfferId!, this.offerForm)
-      : this.recruitmentApi.createOffer(this.offerForm);
+      ? this.recruitmentApi.updateOffer(this.editOfferId!, payload)
+      : this.recruitmentApi.createOffer(payload);
     obs.subscribe({ next: () => { this.showOfferForm = false; this.loadOffers(); } });
   }
 

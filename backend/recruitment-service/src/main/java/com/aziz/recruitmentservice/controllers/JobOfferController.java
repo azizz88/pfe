@@ -1,5 +1,6 @@
 package com.aziz.recruitmentservice.controllers;
 
+import com.aziz.recruitmentservice.dto.JobOfferRequest;
 import com.aziz.recruitmentservice.entities.JobOffer;
 import com.aziz.recruitmentservice.services.JobOfferService;
 import lombok.RequiredArgsConstructor;
@@ -49,15 +50,15 @@ public class JobOfferController {
     /** Crée une nouvelle offre d'emploi (RH Admin) */
     @PostMapping
     @PreAuthorize("hasRole('HR_ADMIN')")
-    public ResponseEntity<JobOffer> createOffer(@RequestBody JobOffer jobOffer) {
-        return ResponseEntity.ok(jobOfferService.createOffer(jobOffer));
+    public ResponseEntity<JobOffer> createOffer(@RequestBody JobOfferRequest request) {
+        return ResponseEntity.ok(jobOfferService.createOffer(request));
     }
 
     /** Met à jour une offre (RH Admin) */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('HR_ADMIN')")
-    public ResponseEntity<JobOffer> updateOffer(@PathVariable Long id, @RequestBody JobOffer jobOffer) {
-        return ResponseEntity.ok(jobOfferService.updateOffer(id, jobOffer));
+    public ResponseEntity<JobOffer> updateOffer(@PathVariable Long id, @RequestBody JobOfferRequest request) {
+        return ResponseEntity.ok(jobOfferService.updateOffer(id, request));
     }
 
     /** Clôture une offre (RH Admin) */

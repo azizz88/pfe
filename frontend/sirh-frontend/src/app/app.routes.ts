@@ -14,6 +14,7 @@ import { ContractManagementComponent } from './components/admin/contract-managem
 import { RecruitmentManagementComponent } from './components/admin/recruitment-management/recruitment-management.component';
 import { DepartmentManagementComponent } from './components/admin/department-management/department-management.component';
 import { OrganigrammeComponent } from './components/employee/organigramme/organigramme.component';
+import { SkillsManagementComponent } from './components/admin/skills-management/skills-management.component';
 
 // ── Composants Auth (public) ──
 import { ForgotPasswordComponent } from './components/auth/forgot-password/forgot-password.component';
@@ -80,6 +81,11 @@ export const routes: Routes = [
   {
     path: 'admin/organigramme',
     component: OrganigrammeComponent,
+    canActivate: [hrAdminGuard]
+  },
+  {
+    path: 'admin/skills',
+    component: SkillsManagementComponent,
     canActivate: [hrAdminGuard]
   },
 

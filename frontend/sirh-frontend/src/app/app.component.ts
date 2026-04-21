@@ -60,6 +60,9 @@ const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
           <a routerLink="/admin/recruitment" routerLinkActive="active">
             <span>🎯</span> Recrutement
           </a>
+          <a routerLink="/admin/skills" routerLinkActive="active">
+            <span>🎓</span> Compétences
+          </a>
           <a routerLink="/admin/organigramme" routerLinkActive="active">
             <span>🌳</span> Organigramme
           </a>

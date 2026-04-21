@@ -5,7 +5,9 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Entité représentant une offre d'emploi interne.
@@ -33,9 +35,15 @@ public class JobOffer {
     @Column(nullable = false)
     private String department;
 
-    /** Compétences requises */
-    @Column(columnDefinition = "TEXT")
-    private String requiredSkills;
+    /** Competences requises (relation ManyToMany avec Skill) */
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "job_offer_skills",
+        joinColumns = @JoinColumn(name = "job_offer_id"),
+        inverseJoinColumns = @JoinColumn(name = "skill_id")
+    )
+    @Builder.Default
+    private Set<Skill> skills = new HashSet<>();
 
     /** Statut de l'offre : ACTIVE ou CLOSED */
     @Enumerated(EnumType.STRING)

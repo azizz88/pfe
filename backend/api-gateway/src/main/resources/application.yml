@@ -73,6 +73,13 @@ spring:
           filters:
             - TokenRelay=
 
+        - id: skill-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/skills/**
+          filters:
+            - TokenRelay=
+
   # --- Keycloak / OAuth2 Resource Server ---
   security:
     oauth2:
