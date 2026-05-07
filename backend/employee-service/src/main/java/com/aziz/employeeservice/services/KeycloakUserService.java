@@ -62,6 +62,8 @@ public class KeycloakUserService {
         user.setLastName(lastName);
         user.setEnabled(true);
         user.setEmailVerified(false);  // N'est pas verifié jusqu'à l'activation
+        // Marqueur lu par le template d'email pour basculer en mode "activation"
+        user.setAttributes(java.util.Map.of("activationFlow", List.of("true")));
 
         // Pas de mot de passe initial — sera défini via le lien d'activation
         user.setCredentials(List.of());
@@ -185,10 +187,10 @@ public class KeycloakUserService {
     private String normalize(String input) {
         if (input == null) return "";
         return Normalizer.normalize(input.trim(), Normalizer.Form.NFD)
-                .replaceAll("[\p{InCombiningDiacriticalMarks}]", "")
+                .replaceAll("[\\p{InCombiningDiacriticalMarks}]", "")
                 .toLowerCase()
-                .replaceAll("\s+", "-")
-                .replaceAll("[^a-z0-9\-.]", "");
+                .replaceAll("\\s+", "-")
+                .replaceAll("[^a-z0-9\\-.]", "");
     }
 
     /** Si "jean.dupont" existe déjà, tente "jean.dupont2", "jean.dupont3", etc. */

@@ -27,7 +27,7 @@ const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
 
         <!-- Menu Employé (visible pour tous) -->
         <div class="nav-section">
-          <h3>📋 Espace Employé</h3>
+          <h3>📋 {{ keycloakService.isHrAdmin() ? 'Espace RH' : 'Espace Employé' }}</h3>
           <a routerLink="/employee/dashboard" routerLinkActive="active">
             <span>🏠</span> Mon Dashboard
           </a>
@@ -37,14 +37,13 @@ const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
           <a routerLink="/employee/profile" routerLinkActive="active">
             <span>👤</span> Mon Profil
           </a>
-          <a routerLink="/employee/applications" routerLinkActive="active">
+          <a *ngIf="!keycloakService.isHrAdmin()" routerLink="/employee/applications" routerLinkActive="active">
             <span>💼</span> Offres d'emploi
           </a>
         </div>
 
         <!-- Menu RH Admin (visible seulement pour HR_ADMIN) -->
         <div class="nav-section" *ngIf="keycloakService.isHrAdmin()">
-          <h3>⚙️ Espace RH Admin</h3>
           <a routerLink="/admin/dashboard" routerLinkActive="active">
             <span>📊</span> Dashboard Stats
           </a>

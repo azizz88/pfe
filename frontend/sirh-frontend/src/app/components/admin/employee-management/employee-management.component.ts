@@ -38,9 +38,9 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
         <div>
           <div class="sb-title">Employé créé avec succès</div>
           <div class="sb-body">
-            Le compte Keycloak a été créé.<br>
             Nom d'utilisateur : <span class="sb-username">{{ createdUsername }}</span><br>
-            L'employé doit changer son mot de passe à la première connexion.
+            Un email d'activation a été envoyé à <strong>{{ createdEmail }}</strong>.
+            L'employé doit cliquer sur le lien pour définir son mot de passe.
           </div>
         </div>
       </div>
@@ -148,7 +148,7 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
               <div class="section-title"><span class="st-icon">🔐</span> Compte d'accès</div>
               <div class="kc-info-banner">
                 <span class="kc-info-icon">ℹ️</span>
-                <span>Le nom d'utilisateur sera généré automatiquement : <strong>prénom.nom</strong></span>
+                <span>Un email d'activation sera envoyé à l'employé. Le nom d'utilisateur sera généré automatiquement : <strong>prénom.nom</strong></span>
               </div>
               <div class="grid-2">
                 <div class="field">
@@ -157,10 +157,6 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
                     <option value="EMPLOYEE">Employé</option>
                     <option value="HR_ADMIN">Administrateur RH</option>
                   </select>
-                </div>
-                <div class="field">
-                  <label>Mot de passe temporaire</label>
-                  <input [(ngModel)]="form.temporaryPassword" type="password" placeholder="Laissez vide pour le défaut" />
                 </div>
               </div>
             </div>
@@ -355,6 +351,7 @@ export class EmployeeManagementComponent implements OnInit {
   editId: number | null = null;
   form: any = {};
   createdUsername: string | null = null;
+  createdEmail: string | null = null;
   loadError: string | null = null;
 
   // Documents
@@ -399,11 +396,12 @@ export class EmployeeManagementComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.form = { contractType: '', departmentId: '', serviceId: '', keycloakRole: 'EMPLOYEE', temporaryPassword: '' };
+    this.form = { contractType: '', departmentId: '', serviceId: '', keycloakRole: 'EMPLOYEE' };
     this.filteredServices = [];
     this.isEditing = false;
     this.editId = null;
     this.createdUsername = null;
+    this.createdEmail = null;
   }
 
   editEmployee(emp: any): void {
@@ -460,16 +458,16 @@ export class EmployeeManagementComponent implements OnInit {
         department: this.form.departmentId ? { id: this.form.departmentId } : null,
         service: this.form.serviceId ? { id: this.form.serviceId } : null,
         contract,
-        keycloakRole: this.form.keycloakRole || 'EMPLOYEE',
-        temporaryPassword: this.form.temporaryPassword || null
+        keycloakRole: this.form.keycloakRole || 'EMPLOYEE'
       };
       this.employeeApi.createEmployee(payload).subscribe({
         next: (emp: any) => {
           this.showForm = false;
           this.createdUsername = emp.keycloakUsername;
+          this.createdEmail = emp.email;
           this.loadEmployees();
           // Effacer la bannière après 12 secondes
-          setTimeout(() => this.createdUsername = null, 12000);
+          setTimeout(() => { this.createdUsername = null; this.createdEmail = null; }, 12000);
         },
         error: (err: any) => alert('Erreur création : ' + (err.error?.message || err.message))
       });

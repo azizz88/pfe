@@ -1,10 +1,17 @@
 <#-- Template email pour les Required Actions (ex: UPDATE_PASSWORD) -->
 <#-- Envoye par Keycloak via `executeActionsEmail` -->
+<#-- Distingue activation (nouvel employe) vs reinitialisation (mot de passe oublie) -->
+<#-- via l'attribut utilisateur "activationFlow" pose par le backend a la creation. -->
+<#assign isActivation = ((user.attributes.activationFlow)!"") == "true">
+<#assign title = isActivation?then("Activation de votre compte", "Reinitialisation de votre mot de passe")>
+<#assign intro = isActivation?then("Votre compte SIRH a ete cree par votre administrateur RH. Pour l'activer, definissez votre mot de passe.", "Nous avons recu une demande de reinitialisation du mot de passe associe a votre compte " + user.email + ".")>
+<#assign cta = isActivation?then("Activer mon compte", "Reinitialiser mon mot de passe")>
+<#assign footer = isActivation?then("Vous n'attendiez pas ce message ? Verifiez aupres de votre service RH avant de cliquer sur le lien.", "Vous n'avez pas demande de reinitialisation ? Vous pouvez ignorer ce message en toute securite, votre mot de passe actuel reste inchange.")>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>SIRH - Reinitialisation mot de passe</title>
+    <title>SIRH - ${title}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#0f172a;">
 
@@ -33,7 +40,7 @@
                     <td style="padding:40px 32px;">
 
                         <h1 style="margin:0 0 20px 0;font-size:22px;color:#0f172a;font-weight:600;">
-                            Reinitialisation de votre mot de passe
+                            ${title}
                         </h1>
 
                         <p style="margin:0 0 16px 0;font-size:15px;color:#334155;line-height:1.6;">
@@ -41,12 +48,11 @@
                         </p>
 
                         <p style="margin:0 0 20px 0;font-size:15px;color:#334155;line-height:1.6;">
-                            Nous avons recu une demande de reinitialisation du mot de passe associe
-                            a votre compte <strong>${user.email}</strong>.
+                            ${intro}
                         </p>
 
                         <p style="margin:0 0 24px 0;font-size:15px;color:#334155;line-height:1.6;">
-                            Cliquez sur le bouton ci-dessous pour definir un nouveau mot de passe :
+                            Cliquez sur le bouton ci-dessous pour definir votre mot de passe :
                         </p>
 
                         <!-- CTA Button -->
@@ -55,7 +61,7 @@
                                 <td align="center" style="background-color:#1e3a5f;border-radius:8px;">
                                     <a href="${link}"
                                        style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;">
-                                        Reinitialiser mon mot de passe
+                                        ${cta}
                                     </a>
                                 </td>
                             </tr>
@@ -83,8 +89,7 @@
                         <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;" />
 
                         <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.6;">
-                            Vous n'avez pas demande de reinitialisation ? Vous pouvez ignorer ce message
-                            en toute securite, votre mot de passe actuel reste inchange.
+                            ${footer}
                         </p>
 
                     </td>
