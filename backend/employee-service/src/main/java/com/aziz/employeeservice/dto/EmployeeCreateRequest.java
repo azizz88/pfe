@@ -34,6 +34,9 @@ public class EmployeeCreateRequest {
     /** Rôle Keycloak à assigner : "EMPLOYEE" ou "HR_ADMIN" */
     private String keycloakRole = "EMPLOYEE";
 
-    /** Mot de passe temporaire. Si null/vide, un mot de passe par défaut est utilisé. */
-    private String temporaryPassword;
+    /** 
+     * Si true, un email d'activation est envoyé à l'employé pour qu'il définisse son mot de passe.
+     * Si false, l'HR admin doit gérer l'authentification manuellement.
+     */
+    private boolean sendActivationEmail = true;
 }

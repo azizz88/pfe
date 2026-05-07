@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Service de gestion des utilisateurs Keycloak.
@@ -22,30 +23,73 @@ import java.util.List;
 public class KeycloakUserService {
 
     private static final Logger log = LoggerFactory.getLogger(KeycloakUserService.class);
-    private static final String DEFAULT_TEMP_PASSWORD = "Sirh@2024!";
 
     private final Keycloak keycloakAdminClient;
 
     @Value("${keycloak.admin.realm}")
     private String realm;
 
+    @Value("${keycloak.activation.client-id:angular-client}")
+    private String activationClientId;
+
+    @Value("${keycloak.activation.redirect-uri:http://localhost:4200}")
+    private String activationRedirectUri;
+
     public KeycloakUserService(Keycloak keycloakAdminClient) {
         this.keycloakAdminClient = keycloakAdminClient;
     }
 
     /**
-     * Crée un utilisateur dans Keycloak, lui assigne un mot de passe temporaire
-     * et le rôle realm spécifié.
+     * Crée un utilisateur dans Keycloak pour un nouveau employé (sans mot de passe).
+     * Le mot de passe sera défini par l'employé via l'email d'activation.
      *
      * @param firstName  Prénom de l'employé
      * @param lastName   Nom de l'employé
      * @param email      Email professionnel
      * @param role       Rôle realm Keycloak ("EMPLOYEE" ou "HR_ADMIN")
-     * @param password   Mot de passe temporaire (null → valeur par défaut)
      * @return           Le username généré et créé dans Keycloak
      */
-    public String createKeycloakUser(String firstName, String lastName, String email,
-                                     String role, String password) {
+    public String createKeycloakUser(String firstName, String lastName, String email, String role) {
+        String username = generateUsername(firstName, lastName);
+
+        // Vérifier si le username existe déjà et le rendre unique
+        username = ensureUniqueUsername(username);
+
+        UserRepresentation user = new UserRepresentation();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setEnabled(true);
+        user.setEmailVerified(false);  // N'est pas verifié jusqu'à l'activation
+
+        // Pas de mot de passe initial — sera défini via le lien d'activation
+        user.setCredentials(List.of());
+
+        // Création dans Keycloak
+        Response response = keycloakAdminClient.realm(realm).users().create(user);
+        if (response.getStatus() != 201) {
+            throw new RuntimeException("Échec création utilisateur Keycloak (HTTP " + response.getStatus() + "): " + response.readEntity(String.class));
+        }
+
+        String userId = CreatedResponseUtil.getCreatedId(response);
+        log.info("Utilisateur Keycloak créé : {} (id={})", username, userId);
+
+        // Assignation du rôle realm
+        assignRealmRole(userId, role);
+
+        return username;
+    }
+
+    /**
+     * Crée un utilisateur Keycloak avec mot de passe temporaire (ancienne méthode, conservée pour compatibilité).
+     * Préférez createKeycloakUser() + sendActivationEmail() pour le nouveau flux.
+     *
+     * @deprecated Utilisez createKeycloakUser() + sendActivationEmail() à la place
+     */
+    @Deprecated
+    public String createKeycloakUserWithPassword(String firstName, String lastName, String email,
+                                                  String role, String password) {
         String username = generateUsername(firstName, lastName);
 
         // Vérifier si le username existe déjà et le rendre unique
@@ -62,7 +106,7 @@ public class KeycloakUserService {
         // Mot de passe temporaire (l'utilisateur devra le changer à la première connexion)
         CredentialRepresentation credential = new CredentialRepresentation();
         credential.setType(CredentialRepresentation.PASSWORD);
-        credential.setValue(password != null && !password.isBlank() ? password : DEFAULT_TEMP_PASSWORD);
+        credential.setValue(password != null && !password.isBlank() ? password : UUID.randomUUID().toString());
         credential.setTemporary(true);
         user.setCredentials(List.of(credential));
 
@@ -79,6 +123,22 @@ public class KeycloakUserService {
         assignRealmRole(userId, role);
 
         return username;
+    }
+
+    /**
+     * Envoie un email d'activation à l'utilisateur Keycloak avec une action UPDATE_PASSWORD.
+     * L'employé clique sur le lien dans l'email pour définir son mot de passe.
+     */
+    public void sendActivationEmail(String username) {
+        List<UserRepresentation> users = keycloakAdminClient.realm(realm).users()
+                .searchByUsername(username.trim(), true);
+        if (users.isEmpty()) {
+            throw new RuntimeException("Utilisateur Keycloak introuvable : " + username);
+        }
+        String userId = users.get(0).getId();
+        keycloakAdminClient.realm(realm).users().get(userId)
+                .executeActionsEmail(activationClientId, activationRedirectUri, List.of("UPDATE_PASSWORD"));
+        log.info("Email d'activation envoyé pour l'utilisateur {}", username);
     }
 
     /**
@@ -125,10 +185,10 @@ public class KeycloakUserService {
     private String normalize(String input) {
         if (input == null) return "";
         return Normalizer.normalize(input.trim(), Normalizer.Form.NFD)
-                .replaceAll("[\\p{InCombiningDiacriticalMarks}]", "")
+                .replaceAll("[\p{InCombiningDiacriticalMarks}]", "")
                 .toLowerCase()
-                .replaceAll("\\s+", "-")
-                .replaceAll("[^a-z0-9\\-.]", "");
+                .replaceAll("\s+", "-")
+                .replaceAll("[^a-z0-9\-.]", "");
     }
 
     /** Si "jean.dupont" existe déjà, tente "jean.dupont2", "jean.dupont3", etc. */

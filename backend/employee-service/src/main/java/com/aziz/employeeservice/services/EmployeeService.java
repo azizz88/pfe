@@ -1,4 +1,4 @@
-package com.aziz.employeeservice.services;
+﻿package com.aziz.employeeservice.services;
 
 import com.aziz.employeeservice.dto.EmployeeCreateRequest;
 import com.aziz.employeeservice.entities.Contract;
@@ -10,6 +10,8 @@ import com.aziz.employeeservice.repositories.ContractRepository;
 import com.aziz.employeeservice.repositories.DepartmentRepository;
 import com.aziz.employeeservice.repositories.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,8 @@ import java.util.*;
 @Service
 @Transactional
 public class EmployeeService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmployeeService.class);
 
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
@@ -93,20 +97,22 @@ public class EmployeeService {
     }
 
     /**
-     * Crée un nouvel employé :
-     * 1. Crée l'utilisateur dans Keycloak avec le rôle choisi
-     * 2. Stocke le username Keycloak généré dans l'entité
-     * 3. Persiste l'employé en base
+     * Crée un nouvel employé avec activation par email :
+     * 1. Crée l'utilisateur dans Keycloak SANS mot de passe
+     * 2. Persiste l'employé en base
+     * 3. Envoie un email d'activation (si sendActivationEmail = true)
+     *    -> L'employé clique sur le lien et définit son propre mot de passe
      */
     public Employee createEmployee(EmployeeCreateRequest request) {
+        // Créer l'utilisateur Keycloak (sans mot de passe)
         String username = keycloakUserService.createKeycloakUser(
                 request.getFirstName(),
                 request.getLastName(),
                 request.getEmail(),
-                request.getKeycloakRole() != null ? request.getKeycloakRole() : "EMPLOYEE",
-                request.getTemporaryPassword()
+                request.getKeycloakRole() != null ? request.getKeycloakRole() : "EMPLOYEE"
         );
 
+        // Persister l'employé en base
         Employee employee = new Employee();
         employee.setMatricule(request.getMatricule());
         employee.setFirstName(request.getFirstName());
@@ -120,7 +126,23 @@ public class EmployeeService {
         employee.setContract(request.getContract());
         employee.setKeycloakUsername(username);
 
-        return employeeRepository.save(employee);
+        Employee savedEmployee = employeeRepository.save(employee);
+        
+        log.info("Employé créé: {} {} ({})", request.getFirstName(), request.getLastName(), username);
+
+        // Envoyer l'email d'activation si demandé
+        if (request.isSendActivationEmail()) {
+            try {
+                keycloakUserService.sendActivationEmail(username);
+                log.info("Email d'activation envoyé pour l'employé {}", username);
+            } catch (Exception e) {
+                log.error("Impossible d'envoyer l'email d'activation pour l'employé {}: {}", 
+                         username, e.getMessage());
+                // Ne pas échouer la création de l'employé si l'email ne peut pas être envoyé
+            }
+        }
+
+        return savedEmployee;
     }
 
     /** Met à jour un employé existant */
