@@ -4,7 +4,7 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
 
 /**
  * Organigramme de l'entreprise.
- * Affiche la structure organisationnelle : départements -> services -> employés.
+ * Affiche la structure organisationnelle : départements -> services avec nombre d'employés.
  */
 @Component({
   selector: 'app-organigramme',
@@ -12,218 +12,264 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
   imports: [CommonModule],
   template: `
     <div class="organigramme">
-      <h1>Organigramme de l'entreprise</h1>
+      <div class="page-header">
+        <div class="header-icon">🏛️</div>
+        <h1>Organigramme de l'entreprise</h1>
+        <p class="header-subtitle">Structure organisationnelle et répartition des effectifs</p>
+      </div>
 
+      <!-- Stats summary -->
+      <div class="stats-bar" *ngIf="data.length > 0">
+        <div class="stat-chip">
+          <span class="stat-icon">🏗️</span>
+          <span class="stat-value">{{ data.length }}</span>
+          <span class="stat-label">Départements</span>
+        </div>
+        <div class="stat-chip">
+          <span class="stat-icon">📂</span>
+          <span class="stat-value">{{ getTotalServices() }}</span>
+          <span class="stat-label">Services</span>
+        </div>
+        <div class="stat-chip">
+          <span class="stat-icon">👥</span>
+          <span class="stat-value">{{ getTotalEmployees() }}</span>
+          <span class="stat-label">Employés</span>
+        </div>
+      </div>
+
+      <!-- Tree -->
       <div class="tree" *ngIf="data.length > 0">
-        <!-- Noeud racine -->
+        <!-- Root node -->
         <div class="root-node">
           <div class="node company-node">
-            <div class="node-icon">🏢</div>
+            <div class="node-icon-wrap company-icon-wrap">🏢</div>
             <div class="node-title">Entreprise</div>
-            <div class="node-subtitle">{{ getTotalEmployees() }} employé(s) &bull; {{ data.length }} département(s)</div>
+            <div class="node-meta">{{ getTotalEmployees() }} employé(s) • {{ data.length }} département(s)</div>
           </div>
         </div>
 
-        <div class="connector-vertical"></div>
-        <div class="connector-horizontal" *ngIf="data.length > 1"></div>
+        <div class="connector-v"></div>
 
-        <!-- Départements -->
-        <div class="departments-row">
-          <div class="department-branch" *ngFor="let node of data; let i = index">
-            <div class="branch-connector"></div>
+        <!-- Departments grid -->
+        <div class="departments-grid">
+          <div class="dept-card" *ngFor="let node of data; let i = index"
+               [class.expanded]="expandedDepts[i]"
+               (click)="toggleDepartment(i)">
 
-            <!-- Noeud département -->
-            <div class="node dept-node" (click)="toggleDepartment(i)">
-              <div class="node-icon">🏗️</div>
-              <div class="node-title">{{ node.department.name }}</div>
-              <div class="node-subtitle">{{ node.totalEmployeeCount }} employé(s)</div>
-              <div class="expand-icon">{{ expandedDepts[i] ? '▼' : '▶' }}</div>
+            <div class="dept-header">
+              <div class="dept-icon-wrap">🏗️</div>
+              <div class="dept-info">
+                <div class="dept-name">{{ node.department.name }}</div>
+                <div class="dept-meta">
+                  <span class="meta-tag services-tag">
+                    📂 {{ node.services?.length || 0 }} service(s)
+                  </span>
+                  <span class="meta-tag employees-tag">
+                    👥 {{ node.totalEmployeeCount }} employé(s)
+                  </span>
+                </div>
+              </div>
+              <div class="dept-expand">
+                <span class="expand-arrow" [class.rotated]="expandedDepts[i]">▶</span>
+              </div>
             </div>
 
-            <!-- Contenu du département (Services & Employés non assignés) -->
-            <div class="dept-content" *ngIf="expandedDepts[i]">
-              <div class="dept-connector"></div>
-
-              <!-- Services -->
-              <div class="services-list" *ngIf="node.services?.length > 0">
-                <div class="service-item" *ngFor="let svcNode of node.services; let j = index">
-                  <div class="node service-node" (click)="toggleService(i, j)">
-                    <div class="node-icon">📂</div>
-                    <div class="node-title">{{ svcNode.service.name }}</div>
-                    <div class="node-subtitle">{{ svcNode.employeeCount }} employé(s)</div>
-                    <div class="expand-icon">{{ isServiceExpanded(i, j) ? '▼' : '▶' }}</div>
-                  </div>
-
-                  <!-- Employés du service -->
-                  <div class="employees-list" *ngIf="isServiceExpanded(i, j) && svcNode.employees?.length > 0">
-                    <div class="employee-connector"></div>
-                    <div class="employee-node" *ngFor="let emp of svcNode.employees">
-                      <div class="emp-avatar">{{ getInitials(emp.firstName, emp.lastName) }}</div>
-                      <div class="emp-info">
-                        <div class="emp-name">{{ emp.firstName }} {{ emp.lastName }}</div>
-                        <div class="emp-position">{{ emp.position || 'Non défini' }}</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Message aucun employé dans le service -->
-                  <div class="no-employees" *ngIf="isServiceExpanded(i, j) && svcNode.employees?.length === 0">
-                    Aucun employé dans ce service
-                  </div>
+            <!-- Services inside department -->
+            <div class="services-container" *ngIf="expandedDepts[i]" (click)="$event.stopPropagation()">
+              <div class="service-row" *ngFor="let svcNode of node.services">
+                <div class="service-dot"></div>
+                <div class="service-info">
+                  <span class="service-name">{{ svcNode.service.name }}</span>
+                </div>
+                <div class="service-count-badge">
+                  <span class="count-number">{{ svcNode.employeeCount }}</span>
+                  <span class="count-label">employé(s)</span>
                 </div>
               </div>
 
-              <!-- Employés sans service -->
-              <div class="unassigned-group" *ngIf="node.unassignedEmployees?.length > 0">
-                <div class="unassigned-label">Employés rattachés au département (hors service)</div>
-                <div class="employees-list standalone-emps">
-                  <div class="employee-connector standalone-conn"></div>
-                  <div class="employee-node" *ngFor="let emp of node.unassignedEmployees">
-                    <div class="emp-avatar">{{ getInitials(emp.firstName, emp.lastName) }}</div>
-                    <div class="emp-info">
-                      <div class="emp-name">{{ emp.firstName }} {{ emp.lastName }}</div>
-                      <div class="emp-position">{{ emp.position || 'Non défini' }}</div>
-                    </div>
-                  </div>
+              <div class="no-services" *ngIf="!node.services || node.services.length === 0">
+                Aucun service dans ce département
+              </div>
+
+              <div class="service-row unassigned-row" *ngIf="node.unassignedEmployees?.length > 0">
+                <div class="service-dot unassigned-dot"></div>
+                <div class="service-info">
+                  <span class="service-name unassigned-name">Non affectés</span>
+                </div>
+                <div class="service-count-badge unassigned-badge">
+                  <span class="count-number">{{ node.unassignedEmployees.length }}</span>
+                  <span class="count-label">employé(s)</span>
                 </div>
               </div>
-
-              <div class="no-data" *ngIf="node.services?.length === 0 && node.unassignedEmployees?.length === 0">
-                Aucune donnée dans ce département
-              </div>
-
             </div>
           </div>
         </div>
       </div>
 
-      <div class="empty" *ngIf="data.length === 0 && !loading">
-        Aucun département trouvé. Veuillez créer des départements dans l'espace RH Admin.
+      <div class="empty-state" *ngIf="data.length === 0 && !loading">
+        <div class="empty-icon">📭</div>
+        <p>Aucun département trouvé.</p>
+        <span>Veuillez créer des départements dans l'espace RH Admin.</span>
       </div>
 
-      <div class="loading" *ngIf="loading">
-        Chargement de l'organigramme...
+      <div class="loading-state" *ngIf="loading">
+        <div class="spinner"></div>
+        <p>Chargement de l'organigramme...</p>
       </div>
     </div>
   `,
   styles: [`
-    .organigramme { max-width: 1400px; margin: 0 auto; padding-bottom: 50px; overflow-x: auto; }
-    .organigramme h1 { color: #1e3a5f; margin: 0 0 32px 0; text-align: center; }
-
-    .tree { display: flex; flex-direction: column; align-items: center; min-width: max-content; }
-
-    .root-node { display: flex; justify-content: center; }
-
-    .node {
-      background: white;
-      border-radius: 12px;
-      padding: 16px 24px;
-      text-align: center;
-      border: 2px solid #e2e8f0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      cursor: default;
-      position: relative;
+    .organigramme {
+      max-width: 1200px; margin: 0 auto; padding-bottom: 60px;
+      animation: fadeIn 0.4s ease;
     }
-    .node-icon { font-size: 1.6rem; margin-bottom: 4px; }
-    .node-title { font-weight: 700; color: #1e293b; font-size: 1rem; }
-    .node-subtitle { color: #64748b; font-size: 0.8rem; margin-top: 4px; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-    .company-node { border-color: #3b82f6; background: linear-gradient(135deg, #eff6ff, #dbeafe); padding: 20px 32px; }
-    .company-node .node-title { color: #1d4ed8; font-size: 1.2rem; }
+    /* Header */
+    .page-header {
+      text-align: center; margin-bottom: 32px;
+    }
+    .header-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .page-header h1 {
+      color: #1e293b; margin: 0 0 8px 0; font-size: 1.8rem; font-weight: 800;
+      background: linear-gradient(135deg, #1e3a5f, #3b82f6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .header-subtitle { color: #64748b; font-size: 0.95rem; margin: 0; }
 
-    .dept-node {
-      cursor: pointer;
+    /* Stats bar */
+    .stats-bar {
+      display: flex; justify-content: center; gap: 16px; margin-bottom: 36px; flex-wrap: wrap;
+    }
+    .stat-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 10px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .stat-icon { font-size: 1.2rem; }
+    .stat-value { font-size: 1.3rem; font-weight: 800; color: #1e293b; }
+    .stat-label { font-size: 0.8rem; color: #64748b; }
+
+    /* Tree */
+    .tree { display: flex; flex-direction: column; align-items: center; }
+
+    /* Root node */
+    .root-node { display: flex; justify-content: center; margin-bottom: 0; }
+    .company-node {
+      background: linear-gradient(135deg, #1e3a5f, #2563eb);
+      border: none; border-radius: 16px; padding: 20px 36px; text-align: center;
+      box-shadow: 0 8px 24px rgba(37,99,235,0.25);
+    }
+    .company-icon-wrap { font-size: 2rem; margin-bottom: 6px; }
+    .node-title { font-weight: 800; color: white; font-size: 1.15rem; }
+    .node-meta { color: rgba(255,255,255,0.8); font-size: 0.8rem; margin-top: 4px; }
+
+    .connector-v { width: 3px; height: 28px; background: linear-gradient(180deg, #2563eb, #cbd5e1); border-radius: 2px; }
+
+    /* Department grid */
+    .departments-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 20px; width: 100%; margin-top: 4px;
+    }
+
+    .dept-card {
+      background: white; border-radius: 16px; border: 2px solid #e2e8f0;
+      overflow: hidden; cursor: pointer; transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .dept-card:hover { border-color: #93c5fd; box-shadow: 0 8px 24px rgba(59,130,246,0.12); transform: translateY(-2px); }
+    .dept-card.expanded { border-color: #3b82f6; }
+
+    .dept-header {
+      display: flex; align-items: center; gap: 14px; padding: 18px 20px;
+    }
+    .dept-icon-wrap {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    .dept-info { flex: 1; min-width: 0; }
+    .dept-name { font-weight: 700; color: #1e293b; font-size: 1.05rem; }
+    .dept-meta { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+    .meta-tag {
+      font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 500;
+    }
+    .services-tag { background: #f0fdf4; color: #166534; }
+    .employees-tag { background: #eff6ff; color: #1d4ed8; }
+
+    .dept-expand { flex-shrink: 0; }
+    .expand-arrow {
+      display: inline-block; font-size: 0.7rem; color: #94a3b8;
+      transition: transform 0.3s ease;
+    }
+    .expand-arrow.rotated { transform: rotate(90deg); }
+
+    /* Services container */
+    .services-container {
+      border-top: 1px solid #f1f5f9; padding: 12px 20px 16px;
+      background: #f8fafc; animation: slideDown 0.25s ease;
+    }
+    @keyframes slideDown { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 500px; } }
+
+    .service-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 10px; margin-bottom: 6px;
+      background: white; border: 1px solid #e2e8f0;
       transition: all 0.2s;
-      border-color: #cbd5e1;
-      min-width: 200px;
-      background: #f8fafc;
     }
-    .dept-node:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59,130,246,0.15); background: white; }
-    
-    .expand-icon {
-      position: absolute; top: 8px; right: 10px; font-size: 0.7rem; color: #94a3b8;
+    .service-row:last-child { margin-bottom: 0; }
+    .service-row:hover { border-color: #a7f3d0; background: #f0fdf4; }
+
+    .service-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: linear-gradient(135deg, #10b981, #059669); flex-shrink: 0;
+    }
+    .unassigned-dot { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+    .service-info { flex: 1; }
+    .service-name { font-weight: 600; color: #334155; font-size: 0.9rem; }
+    .unassigned-name { color: #92400e; font-style: italic; }
+
+    .service-count-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+      padding: 5px 14px; border-radius: 20px;
+    }
+    .unassigned-badge { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    .count-number { font-weight: 800; color: #047857; font-size: 1rem; }
+    .unassigned-badge .count-number { color: #92400e; }
+    .count-label { font-size: 0.7rem; color: #64748b; }
+
+    .no-services {
+      text-align: center; color: #94a3b8; font-style: italic;
+      font-size: 0.85rem; padding: 16px 0;
     }
 
-    .connector-vertical { width: 2px; height: 24px; background: #cbd5e1; }
-    .connector-horizontal { height: 2px; background: #cbd5e1; width: calc(100% - 200px); }
+    /* Empty & loading states */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: #94a3b8;
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state p { font-size: 1.1rem; color: #64748b; margin: 0 0 4px 0; }
+    .empty-state span { font-size: 0.85rem; }
 
-    .departments-row {
-      display: flex; justify-content: center; gap: 32px; flex-wrap: nowrap; padding-top: 0;
+    .loading-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #3b82f6;
+      border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px;
     }
-    .department-branch {
-      display: flex; flex-direction: column; align-items: center; min-width: 280px;
-    }
-    .branch-connector { width: 2px; height: 20px; background: #cbd5e1; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Contenu du département */
-    .dept-content {
-      display: flex; flex-direction: column; align-items: center; width: 100%; position: relative;
+    @media (max-width: 480px) {
+      .departments-grid { grid-template-columns: 1fr; }
+      .stats-bar { flex-direction: column; align-items: center; }
     }
-    .dept-connector { width: 2px; height: 16px; background: #cbd5e1; }
-
-    /* Services */
-    .services-list {
-      display: flex; flex-direction: column; gap: 16px; width: 100%; align-items: center;
-    }
-    .service-item {
-      display: flex; flex-direction: column; align-items: center; width: 100%;
-    }
-    
-    .service-node {
-      cursor: pointer; padding: 12px 20px; background: white; border-color: #10b981; 
-      min-width: 200px; transition: all 0.2s; box-shadow: 0 1px 4px rgba(16,185,129,0.1);
-    }
-    .service-node:hover { box-shadow: 0 4px 12px rgba(16,185,129,0.2); }
-    .service-node .node-title { color: #047857; }
-
-    /* Employés */
-    .employees-list {
-      margin-top: 12px; display: flex; flex-direction: column; gap: 8px;
-      position: relative; padding-left: 24px; min-width: 220px; align-items: flex-start;
-    }
-    .employee-connector {
-      position: absolute; left: 10px; top: 0; bottom: 15px; width: 2px; background: #e2e8f0;
-    }
-
-    .standalone-emps { margin-top: 8px; padding-left: 0; align-items: center; }
-    .standalone-conn { display: none; }
-
-    .employee-node {
-      display: flex; align-items: center; gap: 12px; background: white; padding: 10px 16px;
-      border-radius: 10px; border: 1px solid #f1f5f9; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      position: relative; width: 100%; box-sizing: border-box; text-align: left;
-    }
-    .employees-list:not(.standalone-emps) .employee-node::before {
-      content: ''; position: absolute; left: -14px; top: 50%; width: 14px; height: 2px; background: #e2e8f0;
-    }
-
-    .emp-avatar {
-      width: 32px; height: 32px; border-radius: 50%;
-      background: linear-gradient(135deg, #3b82f6, #6366f1);
-      color: white; display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
-    }
-    .emp-name { font-weight: 600; color: #1e293b; font-size: 0.85rem; }
-    .emp-position { color: #64748b; font-size: 0.75rem; }
-
-    .unassigned-group {
-      margin-top: 24px; border-top: 1px dashed #cbd5e1; padding-top: 16px; width: 100%; display: flex; flex-direction: column; align-items: center;
-    }
-    .unassigned-label { color: #64748b; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
-
-    .no-employees, .no-data {
-      margin-top: 12px; color: #94a3b8; font-style: italic; font-size: 0.8rem;
-    }
-    .empty, .loading { text-align: center; color: #94a3b8; font-style: italic; margin-top: 60px; }
   `]
 })
 export class OrganigrammeComponent implements OnInit {
   data: any[] = [];
   expandedDepts: boolean[] = [];
-  
-  // Track expanded state for services: deptIndex -> serviceIndex -> boolean
-  expandedServices: { [deptIdx: number]: { [svcIdx: number]: boolean } } = {};
-  
   loading = true;
 
   constructor(private employeeApi: EmployeeApiService) {}
@@ -232,19 +278,7 @@ export class OrganigrammeComponent implements OnInit {
     this.employeeApi.getOrganigramme().subscribe({
       next: (data) => {
         this.data = data;
-        // Expand departments by default
         this.expandedDepts = data.map(() => true);
-        
-        // Initialize service expanded states (expand services by default too for visibility)
-        data.forEach((dept: any, i: number) => {
-          this.expandedServices[i] = {};
-          if (dept.services && Array.isArray(dept.services)) {
-            dept.services.forEach((_: any, j: number) => {
-              this.expandedServices[i][j] = true;
-            });
-          }
-        });
-        
         this.loading = false;
       },
       error: () => { this.loading = false; }
@@ -255,22 +289,11 @@ export class OrganigrammeComponent implements OnInit {
     this.expandedDepts[index] = !this.expandedDepts[index];
   }
 
-  toggleService(deptIndex: number, svcIndex: number): void {
-    if (!this.expandedServices[deptIndex]) {
-      this.expandedServices[deptIndex] = {};
-    }
-    this.expandedServices[deptIndex][svcIndex] = !this.expandedServices[deptIndex][svcIndex];
-  }
-
-  isServiceExpanded(deptIndex: number, svcIndex: number): boolean {
-    return this.expandedServices[deptIndex]?.[svcIndex] ?? false;
-  }
-
   getTotalEmployees(): number {
     return this.data.reduce((sum, node) => sum + node.totalEmployeeCount, 0);
   }
 
-  getInitials(firstName: string, lastName: string): string {
-    return (firstName?.charAt(0) || '') + (lastName?.charAt(0) || '');
+  getTotalServices(): number {
+    return this.data.reduce((sum, node) => sum + (node.services?.length || 0), 0);
   }
 }

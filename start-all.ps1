@@ -5,7 +5,7 @@
 Write-Host "=== Lancement du projet SIRH Complet ===" -ForegroundColor Cyan
 
 # Configuration de la version Java exacte (pour ce terminal)
-$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-25.0.2.10-hotspot"
+$env:JAVA_HOME = "C:\Users\MSI\jdk-17\jdk-17.0.18+8"
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 $mvnPath = "C:\Program Files\Apache\maven\bin\mvn.cmd"
 
@@ -17,7 +17,7 @@ Write-Host "Attente de 10 secondes pour l'initialisation des bases de données..
 Start-Sleep -Seconds 10
 
 # Les commandes pour configurer Java dans les nouvelles fenêtres
-$javaConfig = "`$env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-25.0.2.10-hotspot'; `$env:PATH=`$env:JAVA_HOME + '\bin;' + `$env:PATH;"
+$javaConfig = "`$env:JAVA_HOME='C:\Users\MSI\jdk-17\jdk-17.0.18+8'; `$env:PATH=`$env:JAVA_HOME + '\bin;' + `$env:PATH;"
 
 # 2. Démarrer les Microservices (chacun dans une nouvelle fenêtre)
 Write-Host "-> [2/3] Démarrage des Microservices Backend..." -ForegroundColor Yellow

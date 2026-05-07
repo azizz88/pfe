@@ -39,3 +39,20 @@ a, button {
 button:hover {
   transform: translateY(-1px);
 }
+
+/* Amélioration du rendu des textes */
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.01em;
+}
+
+/* Focus visible pour l'accessibilité */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Selection styling */
+::selection {
+  background: #bfdbfe;
+  color: #1e293b;
+}

@@ -1,0 +1,256 @@
+<div class="management">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">🎯</div>
+      <div>
+        <h1>Gestion du Recrutement</h1>
+        <p class="header-sub">Gérez vos offres d'emploi et suivez les candidatures</p>
+      </div>
+    </div>
+    <button class="add-btn" (click)="showOfferForm = true; resetOfferForm()">
+      <span>+</span> Nouvelle Offre
+    </button>
+  </div>
+
+  <!-- KPI Summary -->
+  <div class="kpi-row">
+    <div class="kpi-card" style="--accent: #3b82f6; --accent-light: #eff6ff; --delay: 0">
+      <div class="kpi-icon-wrap" style="background: linear-gradient(135deg, #3b82f6, #6366f1)">
+        <span class="kpi-icon">📋</span>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ offers.length }}</span>
+        <span class="kpi-label">Total Offres</span>
+      </div>
+    </div>
+    <div class="kpi-card" style="--accent: #22c55e; --accent-light: #f0fdf4; --delay: 1">
+      <div class="kpi-icon-wrap" style="background: linear-gradient(135deg, #22c55e, #10b981)">
+        <span class="kpi-icon">✅</span>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ activeOffers }}</span>
+        <span class="kpi-label">Offres Actives</span>
+      </div>
+    </div>
+    <div class="kpi-card" style="--accent: #64748b; --accent-light: #f8fafc; --delay: 2">
+      <div class="kpi-icon-wrap" style="background: linear-gradient(135deg, #94a3b8, #64748b)">
+        <span class="kpi-icon">🔒</span>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ closedOffers }}</span>
+        <span class="kpi-label">Offres Clôturées</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs + Search -->
+  <div class="toolbar">
+    <div class="tabs">
+      <button [class.active]="activeTab === 'offers'" (click)="switchTab('offers')">
+        <span class="tab-icon">📋</span> Offres
+        <span class="tab-count">{{ offers.length }}</span>
+      </button>
+      <button [class.active]="activeTab === 'applications'" (click)="switchTab('applications')">
+        <span class="tab-icon">👥</span> Candidatures
+        <span class="tab-count" *ngIf="applications.length">{{ applications.length }}</span>
+      </button>
+    </div>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" [(ngModel)]="searchQuery"
+             [placeholder]="activeTab === 'offers' ? 'Rechercher une offre…' : 'Rechercher un candidat…'" />
+    </div>
+    <select class="filter-select" [(ngModel)]="statusFilter" *ngIf="activeTab === 'offers'">
+      <option value="">Tous les statuts</option>
+      <option value="ACTIVE">Active</option>
+      <option value="CLOSED">Clôturée</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="statusFilter" *ngIf="activeTab === 'applications'">
+      <option value="">Tous les statuts</option>
+      <option *ngFor="let s of statuses" [value]="s">{{ getStatusLabel(s) }}</option>
+    </select>
+  </div>
+
+  <!-- ═══ OFFRES ═══ -->
+  <div *ngIf="activeTab === 'offers'" class="content-area">
+    <div class="offer-card" *ngFor="let offer of filteredOffers; let i = index"
+         [style.animation-delay.ms]="i * 60">
+      <div class="offer-top">
+        <div class="offer-info">
+          <h3 class="offer-title">{{ offer.title }}</h3>
+          <div class="offer-meta">
+            <span class="meta-item"><span class="meta-icon">🏢</span> {{ offer.department }}</span>
+            <span class="meta-divider">•</span>
+            <span class="meta-item"><span class="meta-icon">📅</span> {{ offer.publishDate }}</span>
+            <span class="meta-divider" *ngIf="offer.deadline">•</span>
+            <span class="meta-item deadline" *ngIf="offer.deadline">
+              <span class="meta-icon">⏰</span> Expire le {{ offer.deadline }}
+            </span>
+          </div>
+        </div>
+        <span class="status-badge" [ngClass]="offer.status">
+          <span class="badge-dot"></span>
+          {{ offer.status === 'ACTIVE' ? 'Active' : 'Clôturée' }}
+        </span>
+      </div>
+
+      <p class="offer-desc" *ngIf="offer.description">{{ offer.description }}</p>
+
+      <div class="skills-row" *ngIf="offer.skills?.length">
+        <span class="skills-label">Compétences requises</span>
+        <div class="skills-chips">
+          <span class="skill-chip" *ngFor="let s of offer.skills">{{ s.name }}</span>
+        </div>
+      </div>
+
+      <div class="offer-footer">
+        <div class="offer-actions">
+          <button class="action-btn edit" (click)="editOffer(offer)" title="Modifier">
+            <span>✏️</span> Modifier
+          </button>
+          <button *ngIf="offer.status === 'ACTIVE'" class="action-btn close" (click)="closeOffer(offer.id)" title="Clôturer">
+            <span>🔒</span> Clôturer
+          </button>
+          <button class="action-btn view" (click)="viewApplications(offer)" title="Voir les candidatures">
+            <span>👥</span> Candidatures
+          </button>
+        </div>
+        <button class="action-btn-icon delete" (click)="deleteOffer(offer.id)" title="Supprimer">🗑️</button>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="filteredOffers.length === 0">
+      <div class="empty-icon">📭</div>
+      <p class="empty-title">Aucune offre trouvée</p>
+      <p class="empty-sub">{{ searchQuery ? 'Essayez avec d\'autres mots-clés' : 'Créez votre première offre d\'emploi' }}</p>
+    </div>
+  </div>
+
+  <!-- ═══ CANDIDATURES ═══ -->
+  <div *ngIf="activeTab === 'applications'" class="content-area">
+    <div class="app-card" *ngFor="let app of filteredApplications; let i = index"
+         [style.animation-delay.ms]="i * 60">
+      <div class="app-top">
+        <div class="app-avatar">{{ app.applicantName?.charAt(0) || '?' }}</div>
+        <div class="app-info">
+          <h3 class="app-name">{{ app.applicantName }}</h3>
+          <div class="app-meta">
+            <span class="meta-item"><span class="meta-icon">📋</span> {{ app.jobOfferTitle }}</span>
+            <span class="meta-divider">•</span>
+            <span class="meta-item"><span class="meta-icon">📅</span> {{ app.applicationDate }}</span>
+          </div>
+        </div>
+        <span class="status-badge" [ngClass]="app.status">
+          <span class="badge-dot"></span>
+          {{ getStatusLabel(app.status) }}
+        </span>
+      </div>
+
+      <div class="cover-letter-section" *ngIf="app.coverLetter">
+        <div class="cl-label">💬 Lettre de motivation</div>
+        <p class="cover-letter">{{ app.coverLetter }}</p>
+      </div>
+
+      <!-- Status workflow -->
+      <div class="workflow-section">
+        <div class="workflow-label">Changer le statut :</div>
+        <div class="workflow-steps">
+          <button *ngFor="let s of statuses"
+                  class="workflow-btn"
+                  [ngClass]="s"
+                  [class.current]="app.status === s"
+                  [disabled]="app.status === s"
+                  (click)="changeStatus(app.id, s)">
+            <span class="wf-icon">{{ getStatusIcon(s) }}</span>
+            <span class="wf-text">{{ getStatusLabel(s) }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="filteredApplications.length === 0">
+      <div class="empty-icon">📭</div>
+      <p class="empty-title">Aucune candidature</p>
+      <p class="empty-sub">{{ searchQuery ? 'Essayez avec d\'autres mots-clés' : 'Les candidatures apparaîtront ici' }}</p>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL OFFRE ═══ -->
+  <div class="modal-overlay" *ngIf="showOfferForm" (click)="showOfferForm = false">
+    <div class="modal-form" (click)="$event.stopPropagation()">
+      <div class="mf-header">
+        <div class="mf-icon">{{ isEditingOffer ? '✏️' : '📋' }}</div>
+        <h3>{{ isEditingOffer ? 'Modifier' : 'Créer' }} une offre</h3>
+        <p class="mf-sub">{{ isEditingOffer ? 'Modifiez les informations ci-dessous' : 'Remplissez les détails de la nouvelle offre' }}</p>
+      </div>
+
+      <div class="mf-body">
+        <div class="section">
+          <div class="section-title"><span class="st-icon">📝</span> Détails de l'offre</div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Titre du poste</label>
+              <input [(ngModel)]="offerForm.title" placeholder="Ex: Développeur Java Senior" />
+            </div>
+            <div class="field">
+              <label>Département</label>
+              <input [(ngModel)]="offerForm.department" placeholder="Ex: Informatique" />
+            </div>
+          </div>
+          <div class="field" style="margin-top: 14px">
+            <label>Description du poste</label>
+            <textarea [(ngModel)]="offerForm.description" placeholder="Décrivez les responsabilités et les exigences du poste…" rows="4"></textarea>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="st-icon">🛠️</span> Compétences requises</div>
+          <div class="skills-picker">
+            <div class="chips" *ngIf="selectedSkillIds.size > 0">
+              <span class="chip" *ngFor="let id of selectedSkillIds">
+                {{ getSkillNameById(id) }}
+                <button type="button" class="chip-remove" (click)="toggleSkill(id)">×</button>
+              </span>
+            </div>
+            <input type="text" class="skill-search"
+                   [(ngModel)]="skillSearch"
+                   placeholder="Rechercher ou ajouter une compétence…"
+                   (focus)="skillsOpen = true" />
+            <div class="skill-options" *ngIf="skillsOpen">
+              <div class="skill-options-list">
+                <div *ngFor="let s of filteredSkillOptions"
+                     class="skill-option"
+                     [class.selected]="selectedSkillIds.has(s.id)"
+                     (click)="toggleSkill(s.id)">
+                  <span class="check">{{ selectedSkillIds.has(s.id) ? '✓' : '+' }}</span>
+                  {{ s.name }}
+                  <span class="opt-cat" *ngIf="s.category">· {{ s.category }}</span>
+                </div>
+                <div *ngIf="filteredSkillOptions.length === 0" class="empty-opt">
+                  Aucune compétence ne correspond.
+                </div>
+              </div>
+              <button type="button" class="close-dropdown" (click)="skillsOpen = false">Fermer</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="st-icon">📅</span> Échéance</div>
+          <div class="field">
+            <label>Date limite de candidature</label>
+            <input [(ngModel)]="offerForm.deadline" type="date" />
+          </div>
+        </div>
+      </div>
+
+      <div class="mf-footer">
+        <button class="btn-cancel" (click)="showOfferForm = false">✕ Annuler</button>
+        <button class="btn-submit" (click)="saveOffer()">
+          {{ isEditingOffer ? '💾 Enregistrer' : '🚀 Publier l\'offre' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

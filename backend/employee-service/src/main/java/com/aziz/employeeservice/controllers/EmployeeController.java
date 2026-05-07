@@ -1,5 +1,6 @@
 package com.aziz.employeeservice.controllers;
 
+import com.aziz.employeeservice.dto.EmployeeCreateRequest;
 import com.aziz.employeeservice.entities.Employee;
 import com.aziz.employeeservice.entities.ContractType;
 import com.aziz.employeeservice.services.EmployeeService;
@@ -92,11 +93,11 @@ public class EmployeeController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /** Crée un nouvel employé */
+    /** Crée un nouvel employé (et son compte Keycloak) */
     @PostMapping
     @PreAuthorize("hasRole('HR_ADMIN')")
-    public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee) {
-        return ResponseEntity.ok(employeeService.createEmployee(employee));
+    public ResponseEntity<Employee> createEmployee(@RequestBody EmployeeCreateRequest request) {
+        return ResponseEntity.ok(employeeService.createEmployee(request));
     }
 
     /** Met à jour un employé */

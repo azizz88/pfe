@@ -1,5 +1,6 @@
 package com.aziz.employeeservice.services;
 
+import com.aziz.employeeservice.dto.EmployeeCreateRequest;
 import com.aziz.employeeservice.entities.Contract;
 import com.aziz.employeeservice.entities.Department;
 import com.aziz.employeeservice.entities.Employee;
@@ -27,13 +28,16 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
     private final ContractRepository contractRepository;
+    private final KeycloakUserService keycloakUserService;
 
     public EmployeeService(EmployeeRepository employeeRepository,
                            DepartmentRepository departmentRepository,
-                           ContractRepository contractRepository) {
+                           ContractRepository contractRepository,
+                           KeycloakUserService keycloakUserService) {
         this.employeeRepository = employeeRepository;
         this.departmentRepository = departmentRepository;
         this.contractRepository = contractRepository;
+        this.keycloakUserService = keycloakUserService;
     }
 
 
@@ -88,8 +92,34 @@ public class EmployeeService {
         return employeeRepository.findByMatricule(matricule);
     }
 
-    /** Crée un nouvel employé */
-    public Employee createEmployee(Employee employee) {
+    /**
+     * Crée un nouvel employé :
+     * 1. Crée l'utilisateur dans Keycloak avec le rôle choisi
+     * 2. Stocke le username Keycloak généré dans l'entité
+     * 3. Persiste l'employé en base
+     */
+    public Employee createEmployee(EmployeeCreateRequest request) {
+        String username = keycloakUserService.createKeycloakUser(
+                request.getFirstName(),
+                request.getLastName(),
+                request.getEmail(),
+                request.getKeycloakRole() != null ? request.getKeycloakRole() : "EMPLOYEE",
+                request.getTemporaryPassword()
+        );
+
+        Employee employee = new Employee();
+        employee.setMatricule(request.getMatricule());
+        employee.setFirstName(request.getFirstName());
+        employee.setLastName(request.getLastName());
+        employee.setEmail(request.getEmail());
+        employee.setPhone(request.getPhone());
+        employee.setPosition(request.getPosition());
+        employee.setHireDate(request.getHireDate());
+        employee.setDepartment(request.getDepartment());
+        employee.setService(request.getService());
+        employee.setContract(request.getContract());
+        employee.setKeycloakUsername(username);
+
         return employeeRepository.save(employee);
     }
 
@@ -112,9 +142,12 @@ public class EmployeeService {
         return employeeRepository.save(employee);
     }
 
-    /** Supprime un employé */
+    /** Supprime un employé et son compte Keycloak associé */
     public void deleteEmployee(Long id) {
-        employeeRepository.deleteById(id);
+        employeeRepository.findById(id).ifPresent(emp -> {
+            keycloakUserService.deleteKeycloakUser(emp.getKeycloakUsername());
+            employeeRepository.delete(emp);
+        });
     }
 
     /** Liste les employés d'un département */

@@ -38,7 +38,7 @@ const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
             <span>👤</span> Mon Profil
           </a>
           <a routerLink="/employee/applications" routerLinkActive="active">
-            <span>📝</span> Mes Candidatures
+            <span>💼</span> Offres d'emploi
           </a>
         </div>
 
@@ -92,110 +92,140 @@ const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
     .app-container {
       display: flex;
       min-height: 100vh;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     .sidebar {
-      width: 260px;
-      background: linear-gradient(135deg, #1e3a5f 0%, #0d1b2a 100%);
+      width: 270px;
+      background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
       color: white;
       padding: 0;
       display: flex;
       flex-direction: column;
-      box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+      box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
     }
 
     .sidebar-header {
-      padding: 24px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 28px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       text-align: center;
+      background: rgba(255, 255, 255, 0.02);
     }
 
     .sidebar-header h2 {
-      margin: 0 0 8px 0;
-      font-size: 1.5rem;
+      margin: 0 0 10px 0;
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .user-info {
       margin: 0;
       font-size: 0.9rem;
-      opacity: 0.9;
+      opacity: 0.85;
+      font-weight: 500;
     }
 
     .user-role {
       display: inline-block;
-      margin-top: 6px;
-      padding: 3px 12px;
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      font-size: 0.75rem;
+      margin-top: 8px;
+      padding: 4px 14px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.25));
+      border: 1px solid rgba(96, 165, 250, 0.2);
+      border-radius: 20px;
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
+      font-weight: 600;
     }
 
     .nav-section {
       padding: 16px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
 
     .nav-section h3 {
-      padding: 0 20px;
-      margin: 0 0 8px 0;
-      font-size: 0.75rem;
+      padding: 0 24px;
+      margin: 0 0 10px 0;
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      opacity: 0.6;
+      letter-spacing: 2px;
+      opacity: 0.4;
+      font-weight: 600;
     }
 
     .nav-section a {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 20px;
-      color: rgba(255, 255, 255, 0.8);
+      gap: 12px;
+      padding: 11px 24px;
+      color: rgba(255, 255, 255, 0.65);
       text-decoration: none;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 500;
       transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+      position: relative;
     }
 
     .nav-section a:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
       color: white;
+      border-left-color: rgba(96, 165, 250, 0.4);
     }
 
     .nav-section a.active {
-      background: rgba(59, 130, 246, 0.3);
+      background: linear-gradient(90deg, rgba(59, 130, 246, 0.15), transparent);
       color: white;
-      border-right: 3px solid #3b82f6;
+      border-left-color: #60a5fa;
+      font-weight: 600;
+    }
+
+    .nav-section a span {
+      font-size: 1.05rem;
+      width: 22px;
+      text-align: center;
     }
 
     .logout-section {
       margin-top: auto;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       border-bottom: none;
+      padding: 8px 0;
     }
 
     .logout-btn {
       width: 100%;
-      padding: 14px 20px;
+      padding: 14px 24px;
       background: transparent;
-      color: #f87171;
+      color: rgba(248, 113, 113, 0.8);
       border: none;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 500;
       text-align: left;
       transition: all 0.2s ease;
     }
 
     .logout-btn:hover {
-      background: rgba(248, 113, 113, 0.1);
+      background: rgba(248, 113, 113, 0.08);
+      color: #f87171;
     }
 
     .main-content {
       flex: 1;
       background: #f1f5f9;
-      padding: 24px;
+      padding: 28px 32px;
       overflow-y: auto;
+      min-height: 100vh;
     }
   `]
 })
