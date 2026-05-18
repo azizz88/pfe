@@ -44,6 +44,13 @@ spring:
           filters:
             - TokenRelay=
 
+        - id: cv-extraction-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/cv/**
+          filters:
+            - TokenRelay=
+
         - id: service-entity-service
           uri: http://localhost:8081
           predicates:
@@ -77,6 +84,13 @@ spring:
           uri: http://localhost:8082
           predicates:
             - Path=/api/skills/**
+          filters:
+            - TokenRelay=
+
+        - id: matching-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/matching/**
           filters:
             - TokenRelay=
 

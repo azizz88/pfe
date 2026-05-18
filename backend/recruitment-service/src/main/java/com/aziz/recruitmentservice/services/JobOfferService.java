@@ -11,8 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -34,6 +36,21 @@ public class JobOfferService {
     private Set<Skill> resolveSkills(List<Long> skillIds) {
         if (skillIds == null || skillIds.isEmpty()) return new HashSet<>();
         return new HashSet<>(skillRepository.findAllById(skillIds));
+    }
+
+    /**
+     * Normalise les niveaux requis : ne garde que les skillIds présents dans la liste
+     * et applique un niveau par défaut (3) si absent.
+     */
+    private Map<Long, Integer> resolveSkillLevels(List<Long> skillIds, Map<Long, Integer> provided) {
+        Map<Long, Integer> result = new HashMap<>();
+        if (skillIds == null) return result;
+        for (Long id : skillIds) {
+            Integer lvl = (provided != null) ? provided.get(id) : null;
+            if (lvl == null || lvl < 1 || lvl > 5) lvl = 3;
+            result.put(id, lvl);
+        }
+        return result;
     }
 
 
@@ -63,6 +80,7 @@ public class JobOfferService {
                 .department(req.getDepartment())
                 .deadline(req.getDeadline())
                 .skills(resolveSkills(req.getSkillIds()))
+                .skillLevels(resolveSkillLevels(req.getSkillIds(), req.getSkillLevels()))
                 .status(JobOfferStatus.ACTIVE)
                 .publishDate(LocalDate.now())
                 .build();
@@ -79,6 +97,7 @@ public class JobOfferService {
         offer.setDepartment(req.getDepartment());
         offer.setDeadline(req.getDeadline());
         offer.setSkills(resolveSkills(req.getSkillIds()));
+        offer.setSkillLevels(resolveSkillLevels(req.getSkillIds(), req.getSkillLevels()));
         return jobOfferRepository.save(offer);
     }
 

@@ -11,12 +11,12 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
-  # --- Base de données MySQL ---
+  # --- Base de données PostgreSQL ---
   datasource:
-    url: jdbc:mysql://localhost:3306/sirh_employees?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:postgresql://localhost:5432/sirh_employees
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
 
   # --- JPA / Hibernate ---
   jpa:
@@ -25,7 +25,7 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
   # --- Keycloak / OAuth2 Resource Server ---
@@ -35,22 +35,41 @@ spring:
         jwt:
           issuer-uri: http://localhost:8180/realms/aziz
 
+  # --- SMTP (Mailhog en dev — capture les emails sans les envoyer pour de vrai) ---
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
 # Port du service
 server:
   port: 8081
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# URL de recruitment-service (pour récupérer le catalogue Skill lors de l'extraction CV)
+services:
+  recruitment-service:
+    url: http://localhost:8082
 
 # --- Keycloak Admin Client (pour les flux de reset et activation) ---
-# Le client "sirh-backend-admin" doit etre cree dans le realm "aziz" avec :
-#   - Client authentication: ON
-#   - Service accounts roles: ON
-#   - Service account role: realm-management / manage-users + view-users
-# Le secret se recupere dans Clients > sirh-backend-admin > Credentials.
+# Authentification via le superuser admin/admin du realm "master" (client "admin-cli")
+# → aucune configuration Keycloak nécessaire en plus de ce qui est créé par défaut.
+# Le champ "realm" ci-dessous = realm CIBLE sur lequel les opérations s'appliquent.
 keycloak:
   admin:
     server-url: http://localhost:8180
     realm: aziz
-    client-id: sirh-backend-admin
-    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:4FIwzVyrTTfZXN3fjLOtqofWFAPuTAst}
+    auth-realm: master
+    client-id: admin-cli
+    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
   
   # Parametres du lien envoye dans l'email de reset password (flux "mot de passe oublie").
   # Le client-id doit correspondre au client frontal (Angular) et le redirect-uri
@@ -66,8 +85,13 @@ keycloak:
     client-id: angular-client
     redirect-uri: http://localhost:4200
 
-# Répertoire d'upload des documents
+# --- Paramètres de l'application ---
 app:
+  # URL envoyée dans l'email de bienvenue (page de login Angular)
+  login-url: http://localhost:4200
+  mail:
+    from: noreply@sirh.local
+  # Répertoire d'upload des documents
   upload:
     dir: ./uploads
 

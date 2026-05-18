@@ -1,5 +1,6 @@
--- Script d'initialisation MySQL
--- Crée les bases de données pour les microservices SIRH
+-- Initialisation PostgreSQL
+-- Crée les deux bases utilisées par les microservices SIRH.
+-- (POSTGRES_DB = "sirh" est créée automatiquement par l'image, on ajoute juste les deux bases applicatives.)
 
-CREATE DATABASE IF NOT EXISTS sirh_employees;
-CREATE DATABASE IF NOT EXISTS sirh_recruitment;
+CREATE DATABASE sirh_employees;
+CREATE DATABASE sirh_recruitment;

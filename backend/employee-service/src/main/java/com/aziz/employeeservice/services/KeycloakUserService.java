@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.UUID;
@@ -77,8 +78,92 @@ public class KeycloakUserService {
         String userId = CreatedResponseUtil.getCreatedId(response);
         log.info("Utilisateur Keycloak créé : {} (id={})", username, userId);
 
-        // Assignation du rôle realm
-        assignRealmRole(userId, role);
+        // Assignation du rôle realm — en cas d'échec, on supprime l'utilisateur pour éviter les orphelins
+        try {
+            assignRealmRole(userId, role);
+        } catch (RuntimeException e) {
+            try {
+                keycloakAdminClient.realm(realm).users().delete(userId);
+                log.info("Utilisateur Keycloak {} supprimé après échec d'assignation du rôle", username);
+            } catch (Exception cleanup) {
+                log.error("Échec nettoyage de l'utilisateur Keycloak {} après erreur de rôle: {}", username, cleanup.getMessage());
+            }
+            throw e;
+        }
+
+        return username;
+    }
+
+    /**
+     * Génère un mot de passe temporaire sécurisé (12 caractères : majuscule + minuscule + chiffre + spécial).
+     */
+    public String generateTempPassword() {
+        SecureRandom rnd = new SecureRandom();
+        String upper = "ABCDEFGHJKMNPQRSTUVWXYZ";
+        String lower = "abcdefghjkmnpqrstuvwxyz";
+        String digit = "23456789";
+        String special = "@!#$%";
+        String all = upper + lower + digit + special;
+        StringBuilder sb = new StringBuilder();
+        sb.append(upper.charAt(rnd.nextInt(upper.length())));
+        sb.append(lower.charAt(rnd.nextInt(lower.length())));
+        sb.append(digit.charAt(rnd.nextInt(digit.length())));
+        sb.append(special.charAt(rnd.nextInt(special.length())));
+        for (int i = 0; i < 8; i++) sb.append(all.charAt(rnd.nextInt(all.length())));
+        char[] arr = sb.toString().toCharArray();
+        for (int i = arr.length - 1; i > 0; i--) {
+            int j = rnd.nextInt(i + 1);
+            char tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+        }
+        return new String(arr);
+    }
+
+    /**
+     * Crée un utilisateur Keycloak avec un mot de passe temporaire et l'action requise UPDATE_PASSWORD,
+     * de sorte qu'à la première connexion Keycloak forcera le changement du mot de passe.
+     *
+     * @return le username généré (à inclure dans l'email de bienvenue avec le password)
+     */
+    public String createKeycloakUserWithTempPassword(String firstName, String lastName, String email,
+                                                     String role, String tempPassword) {
+        String username = generateUsername(firstName, lastName);
+        username = ensureUniqueUsername(username);
+
+        UserRepresentation user = new UserRepresentation();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setEnabled(true);
+        user.setEmailVerified(true);
+        // Force le changement du mot de passe à la première connexion
+        user.setRequiredActions(List.of("UPDATE_PASSWORD"));
+
+        CredentialRepresentation credential = new CredentialRepresentation();
+        credential.setType(CredentialRepresentation.PASSWORD);
+        credential.setValue(tempPassword);
+        credential.setTemporary(true);
+        user.setCredentials(List.of(credential));
+
+        Response response = keycloakAdminClient.realm(realm).users().create(user);
+        if (response.getStatus() != 201) {
+            throw new RuntimeException("Échec création utilisateur Keycloak (HTTP " + response.getStatus() + "): " + response.readEntity(String.class));
+        }
+
+        String userId = CreatedResponseUtil.getCreatedId(response);
+        log.info("Utilisateur Keycloak créé avec mot de passe temporaire : {} (id={})", username, userId);
+
+        try {
+            assignRealmRole(userId, role);
+        } catch (RuntimeException e) {
+            try {
+                keycloakAdminClient.realm(realm).users().delete(userId);
+                log.info("Utilisateur Keycloak {} supprimé après échec d'assignation du rôle", username);
+            } catch (Exception cleanup) {
+                log.error("Échec nettoyage utilisateur Keycloak orphelin {}: {}", username, cleanup.getMessage());
+            }
+            throw e;
+        }
 
         return username;
     }
@@ -164,13 +249,28 @@ public class KeycloakUserService {
     // ── Privé ──
 
     private void assignRealmRole(String userId, String roleName) {
+        // 1. Récupérer la représentation du rôle (404 si le rôle n'existe pas dans le realm)
+        RoleRepresentation role;
         try {
-            RoleRepresentation role = keycloakAdminClient.realm(realm).roles().get(roleName).toRepresentation();
+            role = keycloakAdminClient.realm(realm).roles().get(roleName).toRepresentation();
+        } catch (jakarta.ws.rs.NotFoundException nf) {
+            log.error("Rôle realm '{}' inexistant dans le realm '{}'", roleName, realm);
+            throw new RuntimeException("Rôle Keycloak introuvable : " + roleName);
+        } catch (Exception e) {
+            log.error("Erreur lors de la lecture du rôle '{}' dans le realm '{}'", roleName, realm, e);
+            throw new RuntimeException("Erreur lecture rôle Keycloak '" + roleName + "' : " + e.getMessage());
+        }
+
+        // 2. Assigner le rôle à l'utilisateur (peut échouer si le service account n'a pas les droits)
+        try {
             keycloakAdminClient.realm(realm).users().get(userId).roles().realmLevel().add(List.of(role));
             log.info("Rôle '{}' assigné à l'utilisateur {}", roleName, userId);
+        } catch (jakarta.ws.rs.ForbiddenException fe) {
+            log.error("Permissions insuffisantes pour assigner le rôle '{}' (service account 'sirh-backend-admin' doit avoir realm-management/manage-users + manage-realm)", roleName, fe);
+            throw new RuntimeException("Permissions insuffisantes pour assigner le rôle Keycloak '" + roleName + "' (le service account 'sirh-backend-admin' a-t-il les rôles realm-management 'manage-users' + 'view-realm' ?)");
         } catch (Exception e) {
-            log.error("Échec assignation du rôle '{}' à l'utilisateur {}: {}", roleName, userId, e.getMessage());
-            throw new RuntimeException("Rôle Keycloak introuvable : " + roleName);
+            log.error("Échec assignation du rôle '{}' à l'utilisateur {}", roleName, userId, e);
+            throw new RuntimeException("Échec assignation rôle '" + roleName + "' : " + e.getMessage());
         }
     }
 

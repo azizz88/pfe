@@ -109,4 +109,27 @@ export class RecruitmentApiService {
   deleteSkill(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/skills/${id}`);
   }
+
+  // ── Matching IA (HR Admin) ──
+
+  /**
+   * Lance le matching IA pour une offre.
+   * Retourne { results: MatchingResult[], diagnostic: { skillRequirementsCount, applicationsCount, ... } }.
+   */
+  runMatching(offerId: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}/matching/job-offer/${offerId}`, {});
+  }
+
+  /**
+   * Applique en bulk les statuts validés par le RH après matching.
+   * updates : [{ applicationId, status, matchingCategory?, matchingScore? }]
+   */
+  applyMatchingStatuses(updates: { applicationId: number; status: string; matchingCategory?: string; matchingScore?: number }[]): Observable<any> {
+    return this.http.post(`${this.baseUrl}/matching/apply-statuses`, { updates });
+  }
+
+  /** Recommande une formation interne pour une candidature (catégorie TRAINING) */
+  recommendTraining(applicationId: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}/matching/recommend-training/${applicationId}`, {});
+  }
 }

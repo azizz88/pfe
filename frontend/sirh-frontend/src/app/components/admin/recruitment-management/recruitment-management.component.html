@@ -55,6 +55,9 @@
         <span class="tab-icon">👥</span> Candidatures
         <span class="tab-count" *ngIf="applications.length">{{ applications.length }}</span>
       </button>
+      <button [class.active]="activeTab === 'pipeline'" (click)="switchTab('pipeline')">
+        <span class="tab-icon">🚀</span> Pipeline
+      </button>
     </div>
     <div class="search-bar">
       <span class="search-icon">🔍</span>
@@ -100,12 +103,20 @@
       <div class="skills-row" *ngIf="offer.skills?.length">
         <span class="skills-label">Compétences requises</span>
         <div class="skills-chips">
-          <span class="skill-chip" *ngFor="let s of offer.skills">{{ s.name }}</span>
+          <span class="skill-chip" *ngFor="let s of offer.skills">
+            {{ s.name }}
+            <span class="skill-chip-level" *ngIf="offer.skillLevels?.[s.id]">
+              · Niv. {{ offer.skillLevels[s.id] }}/5
+            </span>
+          </span>
         </div>
       </div>
 
       <div class="offer-footer">
         <div class="offer-actions">
+          <button class="action-btn match" (click)="runMatching(offer)" title="Lancer le matching IA des candidats">
+            <span>🤖</span> Matching IA
+          </button>
           <button class="action-btn edit" (click)="editOffer(offer)" title="Modifier">
             <span>✏️</span> Modifier
           </button>
@@ -176,6 +187,212 @@
     </div>
   </div>
 
+  <!-- ═══ PIPELINE (Kanban post-matching) ═══ -->
+  <div *ngIf="activeTab === 'pipeline'" class="content-area pipeline-view">
+    <div class="pipeline-header">
+      <div class="pipeline-title">
+        <span class="pt-icon">🚀</span>
+        <div>
+          <h2>Pipeline de Recrutement</h2>
+          <p>Workflow des candidatures par statut · les décisions IA sont reflétées ici</p>
+        </div>
+      </div>
+      <select class="filter-select" [(ngModel)]="pipelineOfferFilter">
+        <option value="">Toutes les offres</option>
+        <option *ngFor="let o of offers" [value]="o.id">{{ o.title }}</option>
+      </select>
+    </div>
+
+    <!-- Stats résumé -->
+    <div class="pipeline-stats">
+      <div class="pstat pending">
+        <div class="pstat-icon">⏳</div>
+        <div class="pstat-val">{{ pipelineStats().EN_ATTENTE }}</div>
+        <div class="pstat-lbl">En attente</div>
+      </div>
+      <div class="pstat interview">
+        <div class="pstat-icon">🗣️</div>
+        <div class="pstat-val">{{ pipelineStats().ENTRETIEN }}</div>
+        <div class="pstat-lbl">En entretien</div>
+      </div>
+      <div class="pstat hired">
+        <div class="pstat-icon">✅</div>
+        <div class="pstat-val">{{ pipelineStats().RETENU }}</div>
+        <div class="pstat-lbl">Retenus</div>
+      </div>
+      <div class="pstat rejected">
+        <div class="pstat-icon">❌</div>
+        <div class="pstat-val">{{ pipelineStats().REFUSE }}</div>
+        <div class="pstat-lbl">Refusés</div>
+      </div>
+    </div>
+
+    <!-- Kanban 4 colonnes -->
+    <div class="kanban">
+      <!-- EN_ATTENTE -->
+      <div class="kcol col-pending">
+        <div class="kcol-head">
+          <span class="kcol-title">⏳ En attente</span>
+          <span class="kcol-count">{{ pipelineByStatus('EN_ATTENTE').length }}</span>
+        </div>
+        <div class="kcards">
+          <div class="kcard" *ngFor="let app of pipelineByStatus('EN_ATTENTE')">
+            <div class="kcard-name">{{ app.applicantName }}</div>
+            <div class="kcard-offer">{{ app.jobOfferTitle }}</div>
+            <div class="kcard-meta">
+              <span class="km-matricule">{{ app.employeeMatricule }}</span>
+              <span class="km-date">📅 {{ app.applicationDate }}</span>
+            </div>
+          </div>
+          <p class="kempty" *ngIf="pipelineByStatus('EN_ATTENTE').length === 0">Aucune candidature</p>
+        </div>
+      </div>
+
+      <!-- ENTRETIEN -->
+      <div class="kcol col-interview">
+        <div class="kcol-head">
+          <span class="kcol-title">🗣️ Entretien</span>
+          <span class="kcol-count">{{ pipelineByStatus('ENTRETIEN').length }}</span>
+        </div>
+        <div class="kcards">
+          <div class="kcard" *ngFor="let app of pipelineByStatus('ENTRETIEN')"
+               [class.training]="app.matchingCategory === 'TRAINING'">
+            <div class="kcard-top">
+              <div>
+                <div class="kcard-name">{{ app.applicantName }}</div>
+                <div class="kcard-offer">{{ app.jobOfferTitle }}</div>
+              </div>
+              <span class="kcard-score" *ngIf="app.matchingScore != null">
+                {{ app.matchingScore }}
+              </span>
+            </div>
+            <div class="kcard-cat" *ngIf="app.matchingCategory">
+              <span class="cat-pill" [ngClass]="app.matchingCategory">
+                {{ getCategoryIcon(app.matchingCategory) }} {{ getCategoryLabel(app.matchingCategory) }}
+              </span>
+              <span class="training-flag" *ngIf="app.trainingRecommended">📚 Formation envoyée</span>
+            </div>
+            <div class="kcard-meta">
+              <span class="km-matricule">{{ app.employeeMatricule }}</span>
+            </div>
+            <!-- Action : envoyer en formation pour les TRAINING -->
+            <button *ngIf="app.matchingCategory === 'TRAINING' && !app.trainingRecommended"
+                    class="kcard-train-btn"
+                    (click)="openTrainingModal(app)">
+              📚 Envoyer en formation
+            </button>
+          </div>
+          <p class="kempty" *ngIf="pipelineByStatus('ENTRETIEN').length === 0">Aucun entretien</p>
+        </div>
+      </div>
+
+      <!-- RETENU -->
+      <div class="kcol col-hired">
+        <div class="kcol-head">
+          <span class="kcol-title">✅ Retenu</span>
+          <span class="kcol-count">{{ pipelineByStatus('RETENU').length }}</span>
+        </div>
+        <div class="kcards">
+          <div class="kcard hired" *ngFor="let app of pipelineByStatus('RETENU')">
+            <div class="kcard-top">
+              <div>
+                <div class="kcard-name">{{ app.applicantName }}</div>
+                <div class="kcard-offer">{{ app.jobOfferTitle }}</div>
+              </div>
+              <span class="kcard-score" *ngIf="app.matchingScore != null">
+                {{ app.matchingScore }}
+              </span>
+            </div>
+            <div class="kcard-cat" *ngIf="app.matchingCategory">
+              <span class="cat-pill" [ngClass]="app.matchingCategory">
+                {{ getCategoryIcon(app.matchingCategory) }} {{ getCategoryLabel(app.matchingCategory) }}
+              </span>
+            </div>
+            <div class="kcard-meta">
+              <span class="km-matricule">{{ app.employeeMatricule }}</span>
+            </div>
+          </div>
+          <p class="kempty" *ngIf="pipelineByStatus('RETENU').length === 0">Aucun candidat retenu</p>
+        </div>
+      </div>
+
+      <!-- REFUSE -->
+      <div class="kcol col-rejected">
+        <div class="kcol-head">
+          <span class="kcol-title">❌ Refusé</span>
+          <span class="kcol-count">{{ pipelineByStatus('REFUSE').length }}</span>
+        </div>
+        <div class="kcards">
+          <div class="kcard rejected" *ngFor="let app of pipelineByStatus('REFUSE')">
+            <div class="kcard-top">
+              <div>
+                <div class="kcard-name">{{ app.applicantName }}</div>
+                <div class="kcard-offer">{{ app.jobOfferTitle }}</div>
+              </div>
+              <span class="kcard-score" *ngIf="app.matchingScore != null">
+                {{ app.matchingScore }}
+              </span>
+            </div>
+            <div class="kcard-cat" *ngIf="app.matchingCategory">
+              <span class="cat-pill" [ngClass]="app.matchingCategory">
+                {{ getCategoryIcon(app.matchingCategory) }} {{ getCategoryLabel(app.matchingCategory) }}
+              </span>
+            </div>
+            <div class="kcard-meta">
+              <span class="km-matricule">{{ app.employeeMatricule }}</span>
+            </div>
+            <div class="kcard-reco" *ngIf="app.matchingCategory === 'EXTERNAL'">
+              🌐 Envisager recrutement externe
+            </div>
+          </div>
+          <p class="kempty" *ngIf="pipelineByStatus('REFUSE').length === 0">Aucun refus</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL FORMATION ═══ -->
+  <div class="modal-overlay" *ngIf="showTrainingModal" (click)="closeTrainingModal()">
+    <div class="train-modal" (click)="$event.stopPropagation()">
+      <div class="train-header">
+        <div class="train-icon">📚</div>
+        <div>
+          <h3>Recommander une formation</h3>
+          <p class="train-sub">{{ trainingApp?.applicantName }} · {{ trainingApp?.jobOfferTitle }}</p>
+        </div>
+        <button class="match-close" (click)="closeTrainingModal()">✕</button>
+      </div>
+      <div class="train-body">
+        <p class="train-intro">
+          Le candidat sera marqué comme <strong>"à former"</strong> dans le pipeline.
+          Le module formation pourra utiliser cette information pour proposer un plan de montée en compétences.
+        </p>
+        <div class="train-info">
+          <div class="train-row">
+            <span class="train-lbl">Score matching</span>
+            <strong>{{ trainingApp?.matchingScore }}/100</strong>
+          </div>
+          <div class="train-row">
+            <span class="train-lbl">Catégorie</span>
+            <span class="cat-pill" [ngClass]="trainingApp?.matchingCategory">
+              🎓 À Former
+            </span>
+          </div>
+          <div class="train-row">
+            <span class="train-lbl">Matricule</span>
+            <strong>{{ trainingApp?.employeeMatricule }}</strong>
+          </div>
+        </div>
+      </div>
+      <div class="train-footer">
+        <button class="btn-cancel" (click)="closeTrainingModal()">Annuler</button>
+        <button class="train-confirm" (click)="confirmTraining()">
+          📚 Confirmer & envoyer en formation
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ MODAL OFFRE ═══ -->
   <div class="modal-overlay" *ngIf="showOfferForm" (click)="showOfferForm = false">
     <div class="modal-form" (click)="$event.stopPropagation()">
@@ -205,14 +422,8 @@
         </div>
 
         <div class="section">
-          <div class="section-title"><span class="st-icon">🛠️</span> Compétences requises</div>
+          <div class="section-title"><span class="st-icon">🛠️</span> Compétences requises & niveau</div>
           <div class="skills-picker">
-            <div class="chips" *ngIf="selectedSkillIds.size > 0">
-              <span class="chip" *ngFor="let id of selectedSkillIds">
-                {{ getSkillNameById(id) }}
-                <button type="button" class="chip-remove" (click)="toggleSkill(id)">×</button>
-              </span>
-            </div>
             <input type="text" class="skill-search"
                    [(ngModel)]="skillSearch"
                    placeholder="Rechercher ou ajouter une compétence…"
@@ -233,6 +444,32 @@
               </div>
               <button type="button" class="close-dropdown" (click)="skillsOpen = false">Fermer</button>
             </div>
+
+            <!-- Liste des compétences sélectionnées avec sélecteur de niveau -->
+            <div class="selected-skills" *ngIf="selectedSkillIds.size > 0">
+              <div class="ss-header">
+                <span class="ss-title">Niveau requis (1–5) par compétence</span>
+                <span class="ss-hint">Utilisé pour le matching IA</span>
+              </div>
+              <div class="ss-row" *ngFor="let id of selectedSkillIds">
+                <div class="ss-name">
+                  <span class="ss-bullet">●</span>
+                  {{ getSkillNameById(id) }}
+                </div>
+                <div class="level-picker">
+                  <button type="button"
+                          *ngFor="let lvl of [1,2,3,4,5]"
+                          class="lvl-btn"
+                          [class.active]="skillLevels[id] === lvl"
+                          (click)="setSkillLevel(id, lvl)"
+                          [title]="getLevelLabel(lvl)">
+                    {{ lvl }}
+                  </button>
+                </div>
+                <span class="ss-label">{{ getLevelLabel(skillLevels[id] || 3) }}</span>
+                <button type="button" class="ss-remove" (click)="toggleSkill(id)" title="Retirer">×</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -250,6 +487,221 @@
         <button class="btn-submit" (click)="saveOffer()">
           {{ isEditingOffer ? '💾 Enregistrer' : '🚀 Publier l\'offre' }}
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL MATCHING IA ═══ -->
+  <div class="modal-overlay" *ngIf="showMatchingModal" (click)="closeMatching()">
+    <div class="match-modal" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="match-header">
+        <div class="match-header-left">
+          <div class="match-icon">🤖</div>
+          <div>
+            <h3>Matching IA — {{ matchingOffer?.title }}</h3>
+            <p class="match-sub">Candidats classés par score selon compétences + ancienneté</p>
+          </div>
+        </div>
+        <button class="match-close" (click)="closeMatching()">✕</button>
+      </div>
+
+      <!-- Loading -->
+      <div class="match-loading" *ngIf="matchingLoading">
+        <div class="spinner"></div>
+        <p>Analyse des candidats en cours…</p>
+      </div>
+
+      <!-- Error -->
+      <div class="match-error" *ngIf="matchingError">
+        <span>⚠️</span> {{ matchingError }}
+      </div>
+
+      <!-- Résumé par catégorie -->
+      <div class="match-summary" *ngIf="!matchingLoading && !matchingError && matchingResults.length > 0">
+        <div class="summary-card ideal">
+          <div class="summary-icon">✅</div>
+          <div>
+            <div class="summary-value">{{ countByCategory('IDEAL') }}</div>
+            <div class="summary-label">Candidats idéaux</div>
+          </div>
+        </div>
+        <div class="summary-card training">
+          <div class="summary-icon">🎓</div>
+          <div>
+            <div class="summary-value">{{ countByCategory('TRAINING') }}</div>
+            <div class="summary-label">À former</div>
+          </div>
+        </div>
+        <div class="summary-card external">
+          <div class="summary-icon">🌐</div>
+          <div>
+            <div class="summary-value">{{ countByCategory('EXTERNAL') }}</div>
+            <div class="summary-label">Recrutement externe</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Résultats détaillés -->
+      <div class="match-results" *ngIf="!matchingLoading && !matchingError && matchingResults.length > 0">
+        <div class="result-card" *ngFor="let r of matchingResults; let i = index"
+             [style.animation-delay.ms]="i * 60"
+             [ngClass]="r.category">
+          <div class="result-top">
+            <div class="result-rank">#{{ i + 1 }}</div>
+            <div class="result-info">
+              <h4 class="result-name">{{ r.applicantName }}</h4>
+              <span class="result-matricule">{{ r.employeeMatricule }}</span>
+            </div>
+            <div class="result-score-wrap">
+              <div class="result-score">{{ r.score }}<span class="score-out">/100</span></div>
+              <span class="category-badge" [ngClass]="r.category">
+                {{ getCategoryIcon(r.category) }} {{ getCategoryLabel(r.category) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Sous-scores -->
+          <div class="sub-scores">
+            <div class="sub-score">
+              <span class="sub-label">🛠️ Compétences</span>
+              <div class="sub-bar"><div class="sub-fill skills" [style.width.%]="r.skillsScore"></div></div>
+              <span class="sub-val">{{ r.skillsScore }}</span>
+            </div>
+            <div class="sub-score">
+              <span class="sub-label">⏱️ Ancienneté</span>
+              <div class="sub-bar"><div class="sub-fill seniority" [style.width.%]="r.seniorityScore"></div></div>
+              <span class="sub-val">{{ r.seniorityScore }}</span>
+            </div>
+          </div>
+
+          <!-- Skill gaps -->
+          <div class="gaps-section" *ngIf="r.gaps?.length > 0">
+            <div class="gaps-label">
+              {{ r.category === 'TRAINING' ? '🎓 Formation recommandée sur :' : '⚠️ Compétences manquantes ou insuffisantes :' }}
+            </div>
+            <div class="gaps-list">
+              <span class="gap-chip" *ngFor="let g of r.gaps">
+                <strong>{{ g.skillName }}</strong>
+                <span class="gap-detail">
+                  requis Niv. {{ g.requiredLevel }} ·
+                  <span *ngIf="g.actualLevel != null">actuel Niv. {{ g.actualLevel }}</span>
+                  <span *ngIf="g.actualLevel == null" class="missing">absent</span>
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Recommandation contextuelle -->
+          <div class="reco" *ngIf="r.category === 'EXTERNAL'">
+            🌐 Score insuffisant — envisager un recrutement externe (LinkedIn / scraping).
+          </div>
+
+          <!-- ═══ Décision de statut (validation RH) ═══ -->
+          <div class="decision-row">
+            <div class="decision-info">
+              <span class="dec-label">Statut actuel :</span>
+              <span class="status-pill" [ngClass]="r.currentStatus">
+                {{ getStatusIcon(r.currentStatus) }} {{ getStatusLabel(r.currentStatus) }}
+              </span>
+            </div>
+            <div class="decision-info" *ngIf="r.proposedStatus">
+              <span class="dec-label">Proposé par l'IA :</span>
+              <span class="status-pill proposed" [ngClass]="r.proposedStatus">
+                {{ getStatusIcon(r.proposedStatus) }} {{ getStatusLabel(r.proposedStatus) }}
+              </span>
+            </div>
+            <div class="decision-info" *ngIf="!r.proposedStatus">
+              <span class="dec-label dec-info">ℹ️ Décision déjà prise — pas de proposition</span>
+            </div>
+            <div class="decision-action" *ngIf="r.proposedStatus">
+              <label class="dec-label">Décision RH :</label>
+              <select class="decision-select"
+                      [ngModel]="decisions[r.applicationId] || 'SKIP'"
+                      (ngModelChange)="setDecision(r.applicationId, $event)">
+                <option value="SKIP">— Ne rien changer —</option>
+                <option *ngFor="let s of statuses" [value]="s">
+                  {{ getStatusIcon(s) }} {{ getStatusLabel(s) }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Footer : Appliquer les statuts ═══ -->
+      <div class="apply-footer" *ngIf="!matchingLoading && !matchingError && matchingResults.length > 0">
+        <div class="apply-info">
+          <span class="apply-count">
+            <strong>{{ pendingDecisionsCount() }}</strong> changement(s) en attente
+          </span>
+          <span class="apply-hint">Les statuts seront appliqués uniquement après validation</span>
+        </div>
+        <button class="apply-btn"
+                [disabled]="pendingDecisionsCount() === 0 || applyingStatuses"
+                (click)="applyMatchingStatuses()">
+          {{ applyingStatuses ? '⏳ Application...' : '✅ Appliquer les statuts validés' }}
+        </button>
+      </div>
+
+      <!-- Empty state actionnable (avec diagnostic backend) -->
+      <div class="match-empty" *ngIf="!matchingLoading && !matchingError && matchingResults.length === 0">
+        <div class="empty-icon">📭</div>
+        <p class="diag-reason">{{ getDiagnosticReason(matchingDiagnostic?.reason) }}</p>
+
+        <!-- Diagnostic détaillé -->
+        <div class="diag-grid" *ngIf="matchingDiagnostic">
+          <div class="diag-item" [class.ok]="matchingDiagnostic.skillRequirementsCount > 0"
+                                 [class.ko]="matchingDiagnostic.skillRequirementsCount === 0">
+            <span class="diag-icon">{{ matchingDiagnostic.skillRequirementsCount > 0 ? '✅' : '❌' }}</span>
+            <div>
+              <div class="diag-label">Compétences requises sur l'offre</div>
+              <div class="diag-value">{{ matchingDiagnostic.skillRequirementsCount }}</div>
+            </div>
+          </div>
+          <div class="diag-item" [class.ok]="matchingDiagnostic.applicationsCount > 0"
+                                 [class.ko]="matchingDiagnostic.applicationsCount === 0">
+            <span class="diag-icon">{{ matchingDiagnostic.applicationsCount > 0 ? '✅' : '❌' }}</span>
+            <div>
+              <div class="diag-label">Candidatures reçues</div>
+              <div class="diag-value">{{ matchingDiagnostic.applicationsCount }}</div>
+            </div>
+          </div>
+          <div class="diag-item" [class.ok]="matchingDiagnostic.profilesLoaded > 0"
+                                 [class.ko]="matchingDiagnostic.profilesLoaded === 0 && matchingDiagnostic.applicationsCount > 0">
+            <span class="diag-icon">{{ matchingDiagnostic.profilesLoaded > 0 ? '✅' : (matchingDiagnostic.applicationsCount > 0 ? '❌' : '⚪') }}</span>
+            <div>
+              <div class="diag-label">Profils employés chargés</div>
+              <div class="diag-value">{{ matchingDiagnostic.profilesLoaded }}</div>
+            </div>
+          </div>
+          <div class="diag-item" [class.warn]="matchingDiagnostic.candidatesWithSkills === 0 && matchingDiagnostic.profilesLoaded > 0">
+            <span class="diag-icon">{{ matchingDiagnostic.candidatesWithSkills > 0 ? '✅' : '⚠️' }}</span>
+            <div>
+              <div class="diag-label">Candidats avec compétences</div>
+              <div class="diag-value">{{ matchingDiagnostic.candidatesWithSkills }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions correctives -->
+        <div class="diag-actions" *ngIf="matchingDiagnostic">
+          <div class="diag-action-title">🛠️ Comment corriger ?</div>
+          <ul class="diag-action-list">
+            <li *ngIf="matchingDiagnostic.reason === 'NO_SKILLS_ON_OFFER'">
+              Édite l'offre <strong>{{ matchingDiagnostic.offerTitle }}</strong> et ajoute des compétences requises avec leur niveau.
+            </li>
+            <li *ngIf="matchingDiagnostic.reason === 'NO_APPLICATIONS'">
+              Aucun employé n'a postulé. Vérifie que l'offre est <strong>active</strong> et que des employés l'ont vue dans leur espace.
+            </li>
+            <li *ngIf="matchingDiagnostic.reason === 'NO_CANDIDATE_PROFILES'">
+              Les matricules des candidatures ne correspondent à aucun employé en base. Vérifie la cohérence des données.
+            </li>
+            <li *ngIf="matchingDiagnostic.applicationsCount > 0 && matchingDiagnostic.candidatesWithSkills === 0">
+              Va dans <strong>Gestion Employés</strong> → 🎓 sur chaque candidat → ajoute leurs compétences avec niveau.
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>

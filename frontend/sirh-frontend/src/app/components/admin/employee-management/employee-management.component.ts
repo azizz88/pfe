@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EmployeeApiService } from '../../../services/employee-api.service';
+import { RecruitmentApiService } from '../../../services/recruitment-api.service';
 
 /**
  * Gestion des employés (CRUD complet) pour le RH Admin.
@@ -39,8 +40,8 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
           <div class="sb-title">Employé créé avec succès</div>
           <div class="sb-body">
             Nom d'utilisateur : <span class="sb-username">{{ createdUsername }}</span><br>
-            Un email d'activation a été envoyé à <strong>{{ createdEmail }}</strong>.
-            L'employé doit cliquer sur le lien pour définir son mot de passe.
+            Un email contenant ses identifiants a été envoyé à <strong>{{ createdEmail }}</strong>.
+            Il devra changer son mot de passe lors de sa première connexion.
           </div>
         </div>
       </div>
@@ -50,14 +51,13 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
         <table>
           <thead>
             <tr>
-              <th>Matricule</th><th>Nom Complet</th><th>Email</th>
+              <th>Nom Complet</th><th>Email</th>
               <th>Poste</th><th>Département</th><th>Service</th>
               <th>Contrat</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let emp of employees">
-              <td><strong>{{ emp.matricule }}</strong></td>
               <td>{{ emp.firstName }} {{ emp.lastName }}</td>
               <td>{{ emp.email }}</td>
               <td>{{ emp.position || '—' }}</td>
@@ -67,9 +67,10 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
                 <span *ngIf="emp.contract" class="badge" [class]="emp.contract.type">{{ emp.contract.type }}</span>
               </td>
               <td class="actions">
-                <button class="edit-btn" (click)="editEmployee(emp)">✏️</button>
-                <button class="doc-btn" (click)="openDocuments(emp)">📎</button>
-                <button class="delete-btn" (click)="deleteEmployee(emp.id)">🗑️</button>
+                <button class="edit-btn" (click)="editEmployee(emp)" title="Modifier">✏️</button>
+                <button class="skill-btn" (click)="openSkills(emp)" title="Compétences">🎓</button>
+                <button class="doc-btn" (click)="openDocuments(emp)" title="Documents">📎</button>
+                <button class="delete-btn" (click)="deleteEmployee(emp.id)" title="Supprimer">🗑️</button>
               </td>
             </tr>
           </tbody>
@@ -91,10 +92,6 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
             <div class="section">
               <div class="section-title"><span class="st-icon">📋</span> Informations personnelles</div>
               <div class="grid-2">
-                <div class="field">
-                  <label>Matricule</label>
-                  <input [(ngModel)]="form.matricule" placeholder="Ex: EMP-001" />
-                </div>
                 <div class="field">
                   <label>Prénom</label>
                   <input [(ngModel)]="form.firstName" placeholder="Prénom" />
@@ -161,6 +158,82 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
               </div>
             </div>
 
+            <!-- Section: Extraction IA depuis CV (création uniquement) -->
+            <div class="section" *ngIf="!isEditing">
+              <div class="section-title"><span class="st-icon">🤖</span> Extraction IA des compétences</div>
+              <div class="cv-zone">
+                <div class="cv-upload-row">
+                  <label class="cv-file-label">
+                    <input #cvInput type="file" accept=".pdf,.docx,.txt"
+                           (change)="onCvSelected($event)" class="cv-file-input" />
+                    <span class="cv-file-btn">📎 Choisir un CV (PDF / DOCX / TXT)</span>
+                    <span class="cv-file-name" *ngIf="cvFile">{{ cvFile.name }}</span>
+                  </label>
+                  <button type="button" class="cv-extract-btn"
+                          [disabled]="!cvFile || cvExtracting"
+                          (click)="extractCvSkills()">
+                    {{ cvExtracting ? '⏳ Analyse…' : '🤖 Extraire les compétences' }}
+                  </button>
+                </div>
+                <p class="cv-hint" *ngIf="!cvExtractResult && !cvError">
+                  L'IA analysera le CV et proposera les compétences avec un niveau estimé.
+                  Vous pourrez valider/ajuster avant de créer l'employé.
+                </p>
+                <div class="cv-error" *ngIf="cvError">⚠️ {{ cvError }}</div>
+
+                <!-- Résultats d'extraction -->
+                <div class="cv-result" *ngIf="cvExtractResult">
+                  <div class="cv-summary">
+                    <span class="cv-summary-item">
+                      <strong>{{ cvExtractResult.skills.length }}</strong> compétence(s) détectée(s)
+                    </span>
+                    <span class="cv-summary-item" *ngIf="cvExtractResult.estimatedYearsOfExperience">
+                      ⏱️ {{ cvExtractResult.estimatedYearsOfExperience }} ans d'expérience détectés
+                    </span>
+                    <span class="cv-selected-count">
+                      ✅ {{ selectedExtractedCount() }} sélectionnée(s)
+                    </span>
+                  </div>
+
+                  <div class="cv-skill-row" *ngFor="let sk of cvExtractResult.skills">
+                    <input type="checkbox" [(ngModel)]="sk.preselected"
+                           [ngModelOptions]="{standalone: true}"
+                           class="cv-check" />
+                    <div class="cv-skill-info">
+                      <div class="cv-skill-head">
+                        <strong>{{ sk.skillName }}</strong>
+                        <span class="cv-skill-cat" *ngIf="sk.category">{{ sk.category }}</span>
+                        <span class="cv-conf" [class.high]="sk.confidence >= 0.75"
+                                              [class.mid]="sk.confidence >= 0.5 && sk.confidence < 0.75"
+                                              [class.low]="sk.confidence < 0.5">
+                          {{ getConfidenceLabel(sk.confidence) }}
+                        </span>
+                      </div>
+                      <div class="cv-evidence" *ngIf="sk.evidence">
+                        <span class="ev-icon">💬</span> {{ sk.evidence }}
+                      </div>
+                    </div>
+                    <div class="level-picker cv-level">
+                      <button type="button"
+                              *ngFor="let lvl of [1,2,3,4,5]"
+                              class="lvl-btn"
+                              [class.active]="sk.level === lvl"
+                              (click)="sk.level = lvl"
+                              [title]="getLevelLabel(lvl)">
+                        {{ lvl }}
+                      </button>
+                    </div>
+                    <span class="cv-lvl-label">{{ getLevelLabel(sk.level) }}</span>
+                  </div>
+
+                  <p *ngIf="cvExtractResult.skills.length === 0" class="cv-empty">
+                    Aucune compétence du catalogue détectée dans ce CV.
+                    Vous pouvez ajouter les compétences manuellement après création.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <!-- Section: Contrat -->
             <div class="section">
               <div class="section-title"><span class="st-icon">📄</span> Contrat</div>
@@ -196,6 +269,78 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
             <button class="btn-submit" (click)="saveEmployee()">
               {{ isEditing ? '💾 Enregistrer' : '✅ Créer l\\'employé' }}
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Modal Compétences ═══ -->
+      <div class="modal-overlay" *ngIf="showSkillModal" (click)="showSkillModal = false">
+        <div class="modal-form skill-modal" (click)="$event.stopPropagation()">
+          <div class="mf-header skill-header">
+            <div class="mf-icon">🎓</div>
+            <h3>Compétences</h3>
+            <p class="mf-sub">{{ skillEmployee?.firstName }} {{ skillEmployee?.lastName }}</p>
+          </div>
+
+          <div class="mf-body">
+            <!-- Ajout d'une compétence -->
+            <div class="add-skill-zone">
+              <div class="ask-title">➕ Ajouter une compétence</div>
+              <div class="ask-row">
+                <select [(ngModel)]="newSkillId" class="ask-select">
+                  <option [ngValue]="null">— Choisir une compétence —</option>
+                  <option *ngFor="let s of availableSkillsForAdd()" [ngValue]="s.id">
+                    {{ s.name }}{{ s.category ? ' (' + s.category + ')' : '' }}
+                  </option>
+                </select>
+                <div class="ask-levels">
+                  <button type="button"
+                          *ngFor="let lvl of [1,2,3,4,5]"
+                          class="lvl-btn"
+                          [class.active]="newSkillLevel === lvl"
+                          (click)="newSkillLevel = lvl"
+                          [title]="getLevelLabel(lvl)">
+                    {{ lvl }}
+                  </button>
+                </div>
+                <button class="ask-add" [disabled]="!newSkillId" (click)="addSkillToEmployee()">
+                  ✅ Ajouter
+                </button>
+              </div>
+              <p class="ask-hint">{{ getLevelLabel(newSkillLevel) }} — utilisé par le matching IA</p>
+            </div>
+
+            <!-- Liste des compétences actuelles -->
+            <div class="current-skills">
+              <div class="cs-title">📋 Compétences actuelles ({{ employeeSkills.length }})</div>
+
+              <div class="cs-empty" *ngIf="employeeSkills.length === 0">
+                <p>Aucune compétence assignée.</p>
+                <p class="cs-empty-sub">L'employé n'apparaîtra pas dans le matching pour les offres nécessitant des compétences.</p>
+              </div>
+
+              <div class="cs-row" *ngFor="let sk of employeeSkills">
+                <div class="cs-info">
+                  <strong>{{ sk.skillName }}</strong>
+                  <span class="cs-cat" *ngIf="sk.category">{{ sk.category }}</span>
+                </div>
+                <div class="level-picker">
+                  <button type="button"
+                          *ngFor="let lvl of [1,2,3,4,5]"
+                          class="lvl-btn"
+                          [class.active]="sk.level === lvl"
+                          (click)="updateSkillLevel(sk, lvl)">
+                    {{ lvl }}
+                  </button>
+                </div>
+                <span class="cs-label">{{ getLevelLabel(sk.level) }}</span>
+                <button class="cs-remove" (click)="removeSkill(sk)" title="Retirer">×</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mf-footer">
+            <button class="btn-cancel" (click)="showSkillModal = false">Fermer</button>
           </div>
         </div>
       </div>
@@ -256,8 +401,217 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
     .badge { padding:3px 12px; border-radius:20px; font-size:0.73rem; font-weight:700; }
     .CDI { background:#dcfce7; color:#166534; } .CDD { background:#fef9c3; color:#854d0e; } .STAGE { background:#dbeafe; color:#1e40af; }
     .actions { display:flex; gap:6px; }
-    .edit-btn,.delete-btn,.doc-btn { border:none; background:none; cursor:pointer; font-size:1.05rem; padding:5px; border-radius:8px; transition:background 0.15s; }
+    .edit-btn,.delete-btn,.doc-btn,.skill-btn { border:none; background:none; cursor:pointer; font-size:1.05rem; padding:5px; border-radius:8px; transition:background 0.15s; }
     .edit-btn:hover { background:#dbeafe; } .delete-btn:hover { background:#fee2e2; } .doc-btn:hover { background:#f0fdf4; }
+    .skill-btn:hover { background:#f3e8ff; }
+
+    /* ══════════════ Modal Compétences ══════════════ */
+    .skill-modal { max-width:720px; }
+    .skill-header { background:linear-gradient(135deg,#f5f3ff,#ede9fe) !important; }
+    .add-skill-zone {
+      background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;
+      padding:14px 16px; margin-bottom:20px;
+    }
+    .ask-title { font-weight:700; color:#1e293b; font-size:0.9rem; margin-bottom:12px; }
+    .ask-row {
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    }
+    .ask-select {
+      flex:1; min-width:200px;
+      padding:9px 12px; border:2px solid #e2e8f0; border-radius:10px;
+      font-size:0.88rem; outline:none; background:white;
+    }
+    .ask-select:focus { border-color:#8b5cf6; }
+    .ask-levels {
+      display:flex; gap:4px;
+      background:white; padding:3px; border-radius:8px;
+      border:1px solid #e2e8f0;
+    }
+    .lvl-btn {
+      width:30px; height:30px;
+      border:none; background:transparent;
+      border-radius:6px; cursor:pointer;
+      font-size:0.85rem; font-weight:600;
+      color:#64748b; transition:all 0.15s;
+    }
+    .lvl-btn:hover { background:#f1f5f9; color:#1e293b; }
+    .lvl-btn.active {
+      background:linear-gradient(135deg,#8b5cf6,#6366f1);
+      color:white;
+      box-shadow:0 2px 6px rgba(139,92,246,0.3);
+    }
+    .ask-add {
+      padding:9px 18px;
+      background:linear-gradient(135deg,#10b981,#059669);
+      color:white; border:none; border-radius:10px;
+      cursor:pointer; font-size:0.85rem; font-weight:700;
+      transition:all 0.2s;
+    }
+    .ask-add:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 10px rgba(16,185,129,0.3); }
+    .ask-add:disabled { opacity:0.4; cursor:not-allowed; }
+    .ask-hint {
+      margin:8px 0 0; font-size:0.78rem; color:#64748b;
+    }
+
+    .current-skills {}
+    .cs-title { font-weight:700; color:#1e293b; font-size:0.92rem; margin-bottom:12px; }
+    .cs-empty {
+      text-align:center; padding:32px 16px;
+      background:#fffbeb; border:1px dashed #fde68a;
+      border-radius:12px;
+    }
+    .cs-empty p { margin:4px 0; color:#92400e; font-weight:500; }
+    .cs-empty-sub { font-size:0.82rem; color:#a16207 !important; font-weight:400 !important; }
+    .cs-row {
+      display:flex; align-items:center; gap:12px;
+      padding:12px;
+      border-bottom:1px solid #f1f5f9;
+      transition:background 0.15s;
+    }
+    .cs-row:hover { background:#fafafa; }
+    .cs-info { flex:1; display:flex; flex-direction:column; gap:2px; }
+    .cs-info strong { color:#1e293b; font-size:0.9rem; }
+    .cs-cat {
+      font-size:0.72rem; color:#94a3b8;
+      background:#f1f5f9; padding:2px 8px;
+      border-radius:6px; align-self:flex-start;
+    }
+    .level-picker {
+      display:flex; gap:4px;
+      background:#f8fafc; padding:3px; border-radius:8px;
+      border:1px solid #e2e8f0;
+    }
+    .cs-label {
+      min-width:90px; text-align:right;
+      font-size:0.78rem; color:#64748b; font-weight:500;
+    }
+    .cs-remove {
+      width:28px; height:28px;
+      border:none; background:#fee2e2; color:#b91c1c;
+      border-radius:8px; cursor:pointer;
+      font-size:1rem; font-weight:700;
+    }
+    .cs-remove:hover { background:#fecaca; }
+
+    /* ══════════════ Extraction CV par IA ══════════════ */
+    .cv-zone {
+      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+      border: 1px solid #ddd6fe;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .cv-upload-row {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    }
+    .cv-file-label {
+      flex: 1; min-width: 200px;
+      display: flex; gap: 10px; align-items: center;
+      cursor: pointer;
+    }
+    .cv-file-input { display: none; }
+    .cv-file-btn {
+      padding: 10px 16px;
+      background: white; border: 2px dashed #8b5cf6;
+      border-radius: 10px;
+      color: #6d28d9; font-size: 0.85rem; font-weight: 600;
+      transition: all 0.2s;
+    }
+    .cv-file-label:hover .cv-file-btn {
+      background: #f5f3ff; border-color: #6d28d9;
+    }
+    .cv-file-name {
+      font-size: 0.82rem; color: #475569;
+      font-family: monospace; padding: 4px 10px;
+      background: white; border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    .cv-extract-btn {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      color: white; border: none; border-radius: 10px;
+      cursor: pointer; font-size: 0.88rem; font-weight: 700;
+      box-shadow: 0 3px 10px rgba(139, 92, 246, 0.3);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .cv-extract-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 5px 14px rgba(139, 92, 246, 0.45);
+    }
+    .cv-extract-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+    .cv-hint {
+      margin: 12px 0 0; font-size: 0.8rem; color: #6d28d9; font-style: italic;
+    }
+    .cv-error {
+      margin-top: 12px; padding: 10px 14px;
+      background: #fef2f2; border: 1px solid #fecaca;
+      border-radius: 8px; color: #991b1b; font-size: 0.85rem;
+    }
+
+    .cv-result {
+      margin-top: 16px; padding-top: 14px;
+      border-top: 1px solid #ddd6fe;
+    }
+    .cv-summary {
+      display: flex; gap: 18px; flex-wrap: wrap;
+      padding: 10px 14px; margin-bottom: 12px;
+      background: white; border-radius: 10px;
+      font-size: 0.83rem; color: #475569;
+    }
+    .cv-summary-item strong { color: #1e293b; font-weight: 700; }
+    .cv-selected-count {
+      margin-left: auto;
+      font-weight: 700; color: #15803d;
+    }
+
+    .cv-skill-row {
+      display: flex; gap: 10px; align-items: center;
+      padding: 10px 12px; margin-bottom: 8px;
+      background: white; border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s;
+    }
+    .cv-skill-row:hover { border-color: #c4b5fd; }
+    .cv-check {
+      width: 20px; height: 20px;
+      cursor: pointer; accent-color: #8b5cf6;
+      flex-shrink: 0;
+    }
+    .cv-skill-info { flex: 1; min-width: 0; }
+    .cv-skill-head {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    }
+    .cv-skill-head strong { color: #1e293b; font-size: 0.9rem; }
+    .cv-skill-cat {
+      font-size: 0.7rem; color: #6d28d9;
+      background: #ede9fe; padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .cv-conf {
+      font-size: 0.7rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 6px;
+    }
+    .cv-conf.high { background: #dcfce7; color: #166534; }
+    .cv-conf.mid { background: #fef9c3; color: #854d0e; }
+    .cv-conf.low { background: #f1f5f9; color: #64748b; }
+    .cv-evidence {
+      margin-top: 4px;
+      font-size: 0.74rem; color: #64748b;
+      font-style: italic; line-height: 1.4;
+    }
+    .ev-icon { opacity: 0.6; }
+    .cv-level {
+      flex-shrink: 0;
+    }
+    .cv-lvl-label {
+      min-width: 90px; text-align: right;
+      font-size: 0.75rem; color: #64748b; font-weight: 500;
+    }
+    .cv-empty {
+      text-align: center; padding: 24px;
+      background: white; border-radius: 10px;
+      color: #6d28d9; font-size: 0.85rem;
+    }
 
     /* Modal overlay */
     .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:1000; animation:fadeIn 0.2s ease; }
@@ -360,12 +714,37 @@ export class EmployeeManagementComponent implements OnInit {
   documents: any[] = [];
   selectedFile: File | null = null;
 
-  constructor(private employeeApi: EmployeeApiService) {}
+  // Compétences (matching IA)
+  showSkillModal = false;
+  skillEmployee: any = null;
+  employeeSkills: any[] = [];
+  allSkills: any[] = [];
+  newSkillId: number | null = null;
+  newSkillLevel = 3;
+
+  // Extraction CV par IA (création employé)
+  cvFile: File | null = null;
+  cvExtracting = false;
+  cvExtractResult: any = null;
+  cvError: string | null = null;
+
+  constructor(
+    private employeeApi: EmployeeApiService,
+    private recruitmentApi: RecruitmentApiService
+  ) {}
 
   ngOnInit(): void {
     this.loadEmployees();
     this.loadDepartments();
     this.loadServices();
+    this.loadAllSkills();
+  }
+
+  loadAllSkills(): void {
+    this.recruitmentApi.getAllSkills().subscribe({
+      next: (data) => this.allSkills = data,
+      error: () => this.allSkills = []
+    });
   }
 
   loadEmployees(): void {
@@ -402,6 +781,54 @@ export class EmployeeManagementComponent implements OnInit {
     this.editId = null;
     this.createdUsername = null;
     this.createdEmail = null;
+    this.resetCvExtraction();
+  }
+
+  // ─── Extraction CV par IA ────────────────────────────
+
+  resetCvExtraction(): void {
+    this.cvFile = null;
+    this.cvExtracting = false;
+    this.cvExtractResult = null;
+    this.cvError = null;
+  }
+
+  onCvSelected(event: any): void {
+    const file = event.target.files[0];
+    if (!file) return;
+    this.cvFile = file;
+    this.cvExtractResult = null;
+    this.cvError = null;
+  }
+
+  extractCvSkills(): void {
+    if (!this.cvFile) return;
+    this.cvExtracting = true;
+    this.cvError = null;
+    this.cvExtractResult = null;
+    this.employeeApi.extractCvSkills(this.cvFile).subscribe({
+      next: (result) => {
+        this.cvExtractResult = result;
+        this.cvExtracting = false;
+      },
+      error: (err) => {
+        this.cvError = err.status === 400
+          ? 'Format de fichier non supporté ou fichier vide.'
+          : (err.error?.message || err.message || 'Erreur lors de l\'extraction du CV.');
+        this.cvExtracting = false;
+      }
+    });
+  }
+
+  selectedExtractedCount(): number {
+    if (!this.cvExtractResult?.skills) return 0;
+    return this.cvExtractResult.skills.filter((s: any) => s.preselected).length;
+  }
+
+  getConfidenceLabel(confidence: number): string {
+    if (confidence >= 0.75) return '🟢 Haute';
+    if (confidence >= 0.5) return '🟡 Moyenne';
+    return '⚪ Faible';
   }
 
   editEmployee(emp: any): void {
@@ -437,8 +864,8 @@ export class EmployeeManagementComponent implements OnInit {
       // Mise à jour : on envoie l'entité Employee directement (pas de Keycloak)
       const payload = {
         ...this.form,
-        department: this.form.departmentId ? { id: this.form.departmentId } : null,
-        service: this.form.serviceId ? { id: this.form.serviceId } : null,
+        department: this.form.departmentId ? { id: +this.form.departmentId } : null,
+        service: this.form.serviceId ? { id: +this.form.serviceId } : null,
         contract
       };
       this.employeeApi.updateEmployee(this.editId!, payload).subscribe({
@@ -446,19 +873,32 @@ export class EmployeeManagementComponent implements OnInit {
         error: (err: any) => alert('Erreur mise à jour : ' + (err.error?.message || err.message))
       });
     } else {
+      // Compétences validées par le RH après extraction CV (le cas échéant)
+      const initialSkills = this.cvExtractResult?.skills
+        ? this.cvExtractResult.skills
+            .filter((s: any) => s.preselected && s.skillId && s.level)
+            .map((s: any) => ({
+              skillId: s.skillId,
+              skillName: s.skillName,
+              category: s.category,
+              level: s.level
+            }))
+        : [];
+
       // Création : on envoie le DTO avec les champs Keycloak
+      // (le matricule est généré côté backend à partir de l'ID auto-incrémenté)
       const payload = {
-        matricule: this.form.matricule,
         firstName: this.form.firstName,
         lastName: this.form.lastName,
         email: this.form.email,
         phone: this.form.phone,
         position: this.form.position,
         hireDate: this.form.hireDate || null,
-        department: this.form.departmentId ? { id: this.form.departmentId } : null,
-        service: this.form.serviceId ? { id: this.form.serviceId } : null,
+        department: this.form.departmentId ? { id: +this.form.departmentId } : null,
+        service: this.form.serviceId ? { id: +this.form.serviceId } : null,
         contract,
-        keycloakRole: this.form.keycloakRole || 'EMPLOYEE'
+        keycloakRole: this.form.keycloakRole || 'EMPLOYEE',
+        initialSkills
       };
       this.employeeApi.createEmployee(payload).subscribe({
         next: (emp: any) => {
@@ -537,5 +977,70 @@ export class EmployeeManagementComponent implements OnInit {
     if (fileType?.includes('image')) return '\uD83D\uDDBC\uFE0F';
     if (fileType?.includes('word') || fileType?.includes('document')) return '\uD83D\uDCC3';
     return '\uD83D\uDCCE';
+  }
+
+  // \u2500\u2500\u2500 Comp\u00E9tences (matching IA) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+  openSkills(emp: any): void {
+    this.skillEmployee = emp;
+    this.showSkillModal = true;
+    this.newSkillId = null;
+    this.newSkillLevel = 3;
+    this.loadEmployeeSkills();
+  }
+
+  loadEmployeeSkills(): void {
+    if (!this.skillEmployee) return;
+    this.employeeApi.getEmployeeSkills(this.skillEmployee.matricule).subscribe({
+      next: (data) => this.employeeSkills = data || [],
+      error: () => this.employeeSkills = []
+    });
+  }
+
+  /** Liste des comp\u00E9tences disponibles (= toutes - celles d\u00E9j\u00E0 assign\u00E9es) */
+  availableSkillsForAdd(): any[] {
+    const assignedIds = new Set(this.employeeSkills.map(s => s.skillId));
+    return this.allSkills.filter(s => !assignedIds.has(s.id));
+  }
+
+  addSkillToEmployee(): void {
+    if (!this.skillEmployee || !this.newSkillId) return;
+    const skill = this.allSkills.find(s => s.id === this.newSkillId);
+    if (!skill) return;
+    this.employeeApi.addEmployeeSkill(this.skillEmployee.matricule, {
+      skillId: skill.id,
+      skillName: skill.name,
+      category: skill.category,
+      level: this.newSkillLevel
+    }).subscribe({
+      next: () => {
+        this.newSkillId = null;
+        this.newSkillLevel = 3;
+        this.loadEmployeeSkills();
+      },
+      error: (err) => alert('Erreur ajout comp\u00E9tence : ' + (err.error?.message || err.message))
+    });
+  }
+
+  updateSkillLevel(sk: any, level: number): void {
+    if (sk.level === level) return;
+    this.employeeApi.updateEmployeeSkillLevel(this.skillEmployee.matricule, sk.skillId, level).subscribe({
+      next: () => { sk.level = level; },
+      error: (err) => alert('Erreur mise \u00E0 jour : ' + (err.error?.message || err.message))
+    });
+  }
+
+  removeSkill(sk: any): void {
+    if (!confirm(`Retirer la comp\u00E9tence "${sk.skillName}" ?`)) return;
+    this.employeeApi.removeEmployeeSkill(this.skillEmployee.matricule, sk.skillId).subscribe({
+      next: () => this.loadEmployeeSkills()
+    });
+  }
+
+  getLevelLabel(level: number): string {
+    const labels: { [k: number]: string } = {
+      1: 'D\u00E9butant', 2: 'Notions', 3: 'Interm\u00E9diaire', 4: 'Avanc\u00E9', 5: 'Expert'
+    };
+    return labels[level] || '\u2014';
   }
 }

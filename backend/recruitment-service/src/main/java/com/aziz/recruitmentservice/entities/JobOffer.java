@@ -5,8 +5,10 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -44,6 +46,17 @@ public class JobOffer {
     )
     @Builder.Default
     private Set<Skill> skills = new HashSet<>();
+
+    /** Niveau requis (1-5) par compétence, indexé par skillId. Utilisé pour le matching IA. */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "job_offer_skill_levels",
+        joinColumns = @JoinColumn(name = "job_offer_id")
+    )
+    @MapKeyColumn(name = "skill_id")
+    @Column(name = "required_level")
+    @Builder.Default
+    private Map<Long, Integer> skillLevels = new HashMap<>();
 
     /** Statut de l'offre : ACTIVE ou CLOSED */
     @Enumerated(EnumType.STRING)

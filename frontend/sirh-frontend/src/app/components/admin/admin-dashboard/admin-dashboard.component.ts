@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { EmployeeApiService } from '../../../services/employee-api.service';
 import { RecruitmentApiService } from '../../../services/recruitment-api.service';
 
@@ -11,7 +12,7 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="admin-dashboard" [class.loaded]="dataLoaded">
       <!-- Header -->
@@ -98,7 +99,69 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
         </div>
       </div>
 
+      <!-- ══════════════ Accès Rapide (miroir de la sidebar admin) ══════════════ -->
+      <div class="quick-section">
+        <h2 class="quick-heading"><span>🏢</span> Administration RH</h2>
+        <div class="quick-tiles">
+          <a class="q-tile tile-employees" routerLink="/admin/employees">
+            <div class="q-icon">👥</div>
+            <div class="q-body">
+              <h4>Gestion Employés</h4>
+              <p>Créer, modifier, gérer les employés</p>
+            </div>
+            <span class="q-arrow">→</span>
+          </a>
+          <a class="q-tile tile-departments" routerLink="/admin/departments">
+            <div class="q-icon">🏗️</div>
+            <div class="q-body">
+              <h4>Départements</h4>
+              <p>Structure organisationnelle</p>
+            </div>
+            <span class="q-arrow">→</span>
+          </a>
+          <a class="q-tile tile-contracts" routerLink="/admin/contracts">
+            <div class="q-icon">📄</div>
+            <div class="q-body">
+              <h4>Contrats</h4>
+              <p>Gérer les contrats CDI / CDD / STAGE</p>
+            </div>
+            <span class="q-arrow">→</span>
+          </a>
+          <a class="q-tile tile-org" routerLink="/admin/organigramme">
+            <div class="q-icon">🌳</div>
+            <div class="q-body">
+              <h4>Organigramme</h4>
+              <p>Visualiser la hiérarchie</p>
+            </div>
+            <span class="q-arrow">→</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="quick-section">
+        <h2 class="quick-heading"><span>🎯</span> Recrutement</h2>
+        <div class="quick-tiles">
+          <a class="q-tile tile-recruitment" routerLink="/admin/recruitment">
+            <div class="q-icon">🎯</div>
+            <div class="q-body">
+              <h4>Offres & candidatures</h4>
+              <p>Gérer les offres et candidatures</p>
+            </div>
+            <span class="q-arrow">→</span>
+          </a>
+          <a class="q-tile tile-skills" routerLink="/admin/skills">
+            <div class="q-icon">🎓</div>
+            <div class="q-body">
+              <h4>Compétences</h4>
+              <p>Catalogue des compétences</p>
+            </div>
+            <span class="q-arrow">→</span>
+          </a>
+        </div>
+      </div>
+
       <!-- Section grille -->
+      <h2 class="quick-heading"><span>📊</span> Analyses détaillées</h2>
       <div class="section-grid">
         <!-- Par Département -->
         <div class="card" style="--card-delay: 6">
@@ -318,6 +381,95 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
       letter-spacing: 0.01em;
     }
     .alert-value { color: #ef4444; }
+
+    /* ── Quick Access Sections (miroir sidebar) ── */
+    .quick-section {
+      margin-top: 28px;
+      animation: cardFadeIn 0.5s ease forwards;
+      animation-delay: 0.4s;
+      opacity: 0;
+    }
+    .quick-heading {
+      margin: 28px 0 14px 0;
+      font-size: 1.05rem;
+      color: #0f172a;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .quick-heading span { font-size: 1.15rem; }
+    .quick-tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .q-tile {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      background: white;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .q-tile::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, #60a5fa, #a78bfa);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .q-tile:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(59,130,246,0.12);
+      border-color: #93c5fd;
+    }
+    .q-tile:hover::before { opacity: 1; }
+    .q-tile:hover .q-arrow { transform: translateX(4px); color: #2563eb; }
+
+    .q-icon {
+      width: 44px; height: 44px;
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+    .tile-employees .q-icon { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
+    .tile-departments .q-icon { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
+    .tile-contracts .q-icon { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    .tile-org .q-icon { background: linear-gradient(135deg, #f3e8ff, #e9d5ff); }
+    .tile-recruitment .q-icon { background: linear-gradient(135deg, #ffe4e6, #fecdd3); }
+    .tile-skills .q-icon { background: linear-gradient(135deg, #ede9fe, #ddd6fe); }
+
+    .q-body { flex: 1; min-width: 0; }
+    .q-body h4 {
+      margin: 0 0 3px 0;
+      color: #0f172a;
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+    .q-body p {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.78rem;
+    }
+    .q-arrow {
+      color: #94a3b8;
+      font-size: 1.15rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
 
     /* ── Section Grid ── */
     .section-grid {

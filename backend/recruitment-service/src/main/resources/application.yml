@@ -5,12 +5,12 @@ spring:
   application:
     name: recruitment-service
 
-  # --- Base de données MySQL ---
+  # --- Base de données PostgreSQL ---
   datasource:
-    url: jdbc:mysql://localhost:3306/sirh_recruitment?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:postgresql://localhost:5432/sirh_recruitment
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
 
   # --- JPA / Hibernate ---
   jpa:
@@ -19,7 +19,7 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
   # --- Keycloak / OAuth2 Resource Server ---
@@ -32,6 +32,11 @@ spring:
 # Port du service
 server:
   port: 8082
+
+# URL d'employee-service (appel cross-service pour le matching IA)
+services:
+  employee-service:
+    url: http://localhost:8081
 
 ---
 # ===================================================

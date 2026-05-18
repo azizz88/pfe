@@ -128,4 +128,38 @@ export class EmployeeApiService {
   deleteDocument(documentId: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/documents/${documentId}`);
   }
+
+  // ── Extraction CV (HR Admin) ──
+
+  /**
+   * Envoie un CV (PDF/DOCX/TXT) au backend qui extrait les compétences détectées
+   * et propose un niveau estimé (1-5) pour chacune. Le RH valide ensuite la sélection.
+   */
+  extractCvSkills(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.baseUrl}/cv/extract`, formData);
+  }
+
+  // ── Compétences employé (HR Admin) ──
+
+  /** Liste les compétences d'un employé avec leur niveau (1-5) */
+  getEmployeeSkills(matricule: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/employees/matricule/${matricule}/skills`);
+  }
+
+  /** Ajoute (upsert) une compétence avec niveau pour un employé */
+  addEmployeeSkill(matricule: string, payload: { skillId: number; skillName: string; category?: string; level: number }): Observable<any> {
+    return this.http.post(`${this.baseUrl}/employees/matricule/${matricule}/skills`, payload);
+  }
+
+  /** Modifie le niveau d'une compétence existante */
+  updateEmployeeSkillLevel(matricule: string, skillId: number, level: number): Observable<any> {
+    return this.http.put(`${this.baseUrl}/employees/matricule/${matricule}/skills/${skillId}`, { level });
+  }
+
+  /** Retire une compétence d'un employé */
+  removeEmployeeSkill(matricule: string, skillId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/employees/matricule/${matricule}/skills/${skillId}`);
+  }
 }

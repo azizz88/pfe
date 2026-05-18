@@ -4,11 +4,13 @@ import com.aziz.employeeservice.dto.EmployeeCreateRequest;
 import com.aziz.employeeservice.entities.Contract;
 import com.aziz.employeeservice.entities.Department;
 import com.aziz.employeeservice.entities.Employee;
+import com.aziz.employeeservice.entities.EmployeeSkill;
 import com.aziz.employeeservice.entities.ContractType;
 import com.aziz.employeeservice.entities.ServiceEntity;
 import com.aziz.employeeservice.repositories.ContractRepository;
 import com.aziz.employeeservice.repositories.DepartmentRepository;
 import com.aziz.employeeservice.repositories.EmployeeRepository;
+import com.aziz.employeeservice.repositories.ServiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,16 +34,22 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
     private final ContractRepository contractRepository;
+    private final ServiceRepository serviceRepository;
     private final KeycloakUserService keycloakUserService;
+    private final WelcomeEmailService welcomeEmailService;
 
     public EmployeeService(EmployeeRepository employeeRepository,
                            DepartmentRepository departmentRepository,
                            ContractRepository contractRepository,
-                           KeycloakUserService keycloakUserService) {
+                           ServiceRepository serviceRepository,
+                           KeycloakUserService keycloakUserService,
+                           WelcomeEmailService welcomeEmailService) {
         this.employeeRepository = employeeRepository;
         this.departmentRepository = departmentRepository;
         this.contractRepository = contractRepository;
+        this.serviceRepository = serviceRepository;
         this.keycloakUserService = keycloakUserService;
+        this.welcomeEmailService = welcomeEmailService;
     }
 
 
@@ -104,42 +112,100 @@ public class EmployeeService {
      *    -> L'employé clique sur le lien et définit son propre mot de passe
      */
     public Employee createEmployee(EmployeeCreateRequest request) {
-        // Créer l'utilisateur Keycloak (sans mot de passe)
-        String username = keycloakUserService.createKeycloakUser(
+        // Génère un mot de passe temporaire et crée le user Keycloak (qui forcera le changement à la 1ère connexion)
+        String tempPassword = keycloakUserService.generateTempPassword();
+        String role = request.getKeycloakRole() != null ? request.getKeycloakRole() : "EMPLOYEE";
+        String username = keycloakUserService.createKeycloakUserWithTempPassword(
                 request.getFirstName(),
                 request.getLastName(),
                 request.getEmail(),
-                request.getKeycloakRole() != null ? request.getKeycloakRole() : "EMPLOYEE"
+                role,
+                tempPassword
         );
 
-        // Persister l'employé en base
-        Employee employee = new Employee();
-        employee.setMatricule(request.getMatricule());
-        employee.setFirstName(request.getFirstName());
-        employee.setLastName(request.getLastName());
-        employee.setEmail(request.getEmail());
-        employee.setPhone(request.getPhone());
-        employee.setPosition(request.getPosition());
-        employee.setHireDate(request.getHireDate());
-        employee.setDepartment(request.getDepartment());
-        employee.setService(request.getService());
-        employee.setContract(request.getContract());
-        employee.setKeycloakUsername(username);
+        Employee savedEmployee;
+        try {
+            // Persister l'employé en base
+            Employee employee = new Employee();
+            // Matricule temporaire unique — sera remplacé par EMP-{id} après le premier save
+            employee.setMatricule("TMP-" + java.util.UUID.randomUUID());
+            employee.setFirstName(request.getFirstName());
+            employee.setLastName(request.getLastName());
+            employee.setEmail(request.getEmail());
+            employee.setPhone(request.getPhone());
+            employee.setPosition(request.getPosition());
+            employee.setHireDate(request.getHireDate());
+            employee.setKeycloakUsername(username);
 
-        Employee savedEmployee = employeeRepository.save(employee);
-        
+            // Résoudre le département depuis la BDD (le frontend envoie {id: X})
+            if (request.getDepartment() != null && request.getDepartment().getId() != null) {
+                Department dept = departmentRepository.findById(request.getDepartment().getId())
+                        .orElse(null);
+                employee.setDepartment(dept);
+            }
+
+            // Résoudre le service depuis la BDD (le frontend envoie {id: X})
+            if (request.getService() != null && request.getService().getId() != null) {
+                ServiceEntity svc = serviceRepository.findById(request.getService().getId())
+                        .orElse(null);
+                employee.setService(svc);
+            }
+
+            // Gérer le contrat (cascade ALL depuis Employee, donc on le crée et l'associe).
+            // startDate est NOT NULL en base : on prend hireDate à défaut, sinon aujourd'hui.
+            if (request.getContract() != null && request.getContract().getType() != null) {
+                Contract contract = request.getContract();
+                if (contract.getStartDate() == null) {
+                    contract.setStartDate(request.getHireDate() != null ? request.getHireDate() : LocalDate.now());
+                }
+                employee.setContract(contract);
+            }
+
+            // Compétences pré-validées (extraction CV par IA)
+            if (request.getInitialSkills() != null && !request.getInitialSkills().isEmpty()) {
+                for (EmployeeCreateRequest.InitialSkillRequest s : request.getInitialSkills()) {
+                    if (s.getSkillId() == null || s.getLevel() == null) continue;
+                    int lvl = Math.max(1, Math.min(5, s.getLevel()));
+                    EmployeeSkill es = EmployeeSkill.builder()
+                            .employee(employee)
+                            .skillId(s.getSkillId())
+                            .skillName(s.getSkillName())
+                            .category(s.getCategory())
+                            .level(lvl)
+                            .build();
+                    employee.getSkills().add(es);
+                }
+            }
+
+            savedEmployee = employeeRepository.save(employee);
+            // Génère le matricule final à partir de l'ID auto-incrémenté
+            savedEmployee.setMatricule(String.format("EMP-%03d", savedEmployee.getId()));
+            savedEmployee = employeeRepository.save(savedEmployee);
+        } catch (RuntimeException e) {
+            // Compensation : éviter un utilisateur Keycloak orphelin si la persistance échoue
+            log.error("Échec persistance employé {} — suppression de l'utilisateur Keycloak {}", request.getEmail(), username, e);
+            try {
+                keycloakUserService.deleteKeycloakUser(username);
+            } catch (Exception cleanup) {
+                log.error("Échec suppression Keycloak de l'utilisateur orphelin {}: {}", username, cleanup.getMessage());
+            }
+            throw e;
+        }
+
         log.info("Employé créé: {} {} ({})", request.getFirstName(), request.getLastName(), username);
 
-        // Envoyer l'email d'activation si demandé
-        if (request.isSendActivationEmail()) {
-            try {
-                keycloakUserService.sendActivationEmail(username);
-                log.info("Email d'activation envoyé pour l'employé {}", username);
-            } catch (Exception e) {
-                log.error("Impossible d'envoyer l'email d'activation pour l'employé {}: {}", 
-                         username, e.getMessage());
-                // Ne pas échouer la création de l'employé si l'email ne peut pas être envoyé
-            }
+        // Email de bienvenue avec username + mot de passe temporaire + lien de connexion
+        try {
+            welcomeEmailService.sendWelcomeEmail(
+                    request.getEmail(),
+                    request.getFirstName(),
+                    username,
+                    tempPassword
+            );
+        } catch (Exception e) {
+            // L'employé est déjà créé : on n'annule pas, mais on log l'incident
+            log.error("Échec envoi email de bienvenue à {} (employé créé sans email envoyé): {}",
+                    request.getEmail(), e.getMessage());
         }
 
         return savedEmployee;
@@ -156,10 +222,44 @@ public class EmployeeService {
         employee.setPhone(employeeDetails.getPhone());
         employee.setPosition(employeeDetails.getPosition());
         employee.setHireDate(employeeDetails.getHireDate());
-        employee.setDepartment(employeeDetails.getDepartment());
-        employee.setService(employeeDetails.getService());
-        employee.setContract(employeeDetails.getContract());
         employee.setKeycloakUsername(employeeDetails.getKeycloakUsername());
+
+        // Résoudre le département depuis la BDD
+        if (employeeDetails.getDepartment() != null && employeeDetails.getDepartment().getId() != null) {
+            Department dept = departmentRepository.findById(employeeDetails.getDepartment().getId())
+                    .orElse(null);
+            employee.setDepartment(dept);
+        } else {
+            employee.setDepartment(null);
+        }
+
+        // Résoudre le service depuis la BDD
+        if (employeeDetails.getService() != null && employeeDetails.getService().getId() != null) {
+            ServiceEntity svc = serviceRepository.findById(employeeDetails.getService().getId())
+                    .orElse(null);
+            employee.setService(svc);
+        } else {
+            employee.setService(null);
+        }
+
+        // Gérer le contrat (startDate NOT NULL : retombée sur hireDate puis aujourd'hui)
+        if (employeeDetails.getContract() != null && employeeDetails.getContract().getType() != null) {
+            Contract contract = employeeDetails.getContract();
+            LocalDate startDate = contract.getStartDate();
+            if (startDate == null) {
+                startDate = employee.getHireDate() != null ? employee.getHireDate() : LocalDate.now();
+            }
+            if (employee.getContract() != null) {
+                // Mise à jour du contrat existant
+                employee.getContract().setType(contract.getType());
+                employee.getContract().setStartDate(startDate);
+                employee.getContract().setEndDate(contract.getEndDate());
+                employee.getContract().setSalary(contract.getSalary());
+            } else {
+                contract.setStartDate(startDate);
+                employee.setContract(contract);
+            }
+        }
 
         return employeeRepository.save(employee);
     }

@@ -24,22 +24,52 @@ services:
       - "1025:1025"
       - "8025:8025"
 
-  # ── MySQL (base de données des microservices) ──
-  mysql:
-    image: mysql:8.0
-    container_name: sirh-mysql
+  # ── PostgreSQL (base de données des microservices) ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: sirh-postgres
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sirh
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 10s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── pgAdmin (UI web pour Postgres — http://localhost:5050) ──
+  # Auto-enregistre le serveur "SIRH Docker" au démarrage (servers.json + pgpass).
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sirh-pgadmin
+    user: root
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    entrypoint: >
+      /bin/sh -c "
+      cp /tmp/pgpass /var/lib/pgadmin/pgpass &&
+      chmod 600 /var/lib/pgadmin/pgpass &&
+      chown 5050:0 /var/lib/pgadmin/pgpass &&
+      /entrypoint.sh
+      "
+    volumes:
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin/pgpass:/tmp/pgpass:ro
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
 
 volumes:
   keycloak_data:
-  mysql_data:
+  postgres_data:
+  mysql_data:  # conservé pour rollback éventuel ; non utilisé par défaut

@@ -58,4 +58,23 @@ public class Application {
     /** Entretiens associés à cette candidature */
     @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Interview> interviews = new ArrayList<>();
+
+    /** Catégorie issue du matching IA (IDEAL/TRAINING/EXTERNAL). Null si pas encore matché. */
+    @Column(name = "matching_category", length = 20)
+    private String matchingCategory;
+
+    /** Score global du matching (0-100). Null si pas encore matché. */
+    @Column(name = "matching_score")
+    private Double matchingScore;
+
+    /**
+     * True si le RH a marqué la candidature comme "à former".
+     * Nullable pour permettre la migration sans casser les lignes existantes (NULL == false côté UI).
+     */
+    @Column(name = "training_recommended")
+    private Boolean trainingRecommended = false;
+
+    /** Date à laquelle la formation a été recommandée (audit). */
+    @Column(name = "training_recommended_at")
+    private java.time.LocalDateTime trainingRecommendedAt;
 }

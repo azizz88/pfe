@@ -25,47 +25,60 @@ const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
           <span class="user-role">{{ keycloakService.isHrAdmin() ? 'RH Admin' : 'Employé' }}</span>
         </div>
 
-        <!-- Menu Employé (visible pour tous) -->
-        <div class="nav-section">
-          <h3>📋 {{ keycloakService.isHrAdmin() ? 'Espace RH' : 'Espace Employé' }}</h3>
-          <a routerLink="/employee/dashboard" routerLinkActive="active">
-            <span>🏠</span> Mon Dashboard
-          </a>
-          <a routerLink="/employee/directory" routerLinkActive="active">
-            <span>📖</span> Annuaire
-          </a>
-          <a routerLink="/employee/profile" routerLinkActive="active">
-            <span>👤</span> Mon Profil
-          </a>
-          <a *ngIf="!keycloakService.isHrAdmin()" routerLink="/employee/applications" routerLinkActive="active">
-            <span>💼</span> Offres d'emploi
-          </a>
-        </div>
+        <!-- ============================================ -->
+        <!-- SIDEBAR EMPLOYÉ (visible uniquement pour EMPLOYEE) -->
+        <!-- ============================================ -->
+        <ng-container *ngIf="!keycloakService.isHrAdmin()">
+          <div class="nav-section">
+            <h3>📋 Espace Employé</h3>
+            <a routerLink="/employee/dashboard" routerLinkActive="active">
+              <span>🏠</span> Mon Dashboard
+            </a>
+            <a routerLink="/employee/profile" routerLinkActive="active">
+              <span>👤</span> Mon Profil
+            </a>
+            <a routerLink="/employee/directory" routerLinkActive="active">
+              <span>📖</span> Annuaire
+            </a>
+            <a routerLink="/employee/applications" routerLinkActive="active">
+              <span>💼</span> Offres d'emploi
+            </a>
+          </div>
+        </ng-container>
 
-        <!-- Menu RH Admin (visible seulement pour HR_ADMIN) -->
-        <div class="nav-section" *ngIf="keycloakService.isHrAdmin()">
-          <a routerLink="/admin/dashboard" routerLinkActive="active">
-            <span>📊</span> Dashboard Stats
-          </a>
-          <a routerLink="/admin/employees" routerLinkActive="active">
-            <span>👥</span> Gestion Employés
-          </a>
-          <a routerLink="/admin/departments" routerLinkActive="active">
-            <span>🏗️</span> Départements
-          </a>
-          <a routerLink="/admin/contracts" routerLinkActive="active">
-            <span>📄</span> Contrats
-          </a>
-          <a routerLink="/admin/recruitment" routerLinkActive="active">
-            <span>🎯</span> Recrutement
-          </a>
-          <a routerLink="/admin/skills" routerLinkActive="active">
-            <span>🎓</span> Compétences
-          </a>
-          <a routerLink="/admin/organigramme" routerLinkActive="active">
-            <span>🌳</span> Organigramme
-          </a>
-        </div>
+        <!-- ============================================ -->
+        <!-- SIDEBAR RH ADMIN (visible uniquement pour HR_ADMIN) -->
+        <!-- ============================================ -->
+        <ng-container *ngIf="keycloakService.isHrAdmin()">
+          <div class="nav-section">
+            <h3>🏢 Administration RH</h3>
+            <a routerLink="/admin/dashboard" routerLinkActive="active">
+              <span>📊</span> Dashboard Stats
+            </a>
+            <a routerLink="/admin/employees" routerLinkActive="active">
+              <span>👥</span> Gestion Employés
+            </a>
+            <a routerLink="/admin/departments" routerLinkActive="active">
+              <span>🏗️</span> Départements
+            </a>
+            <a routerLink="/admin/contracts" routerLinkActive="active">
+              <span>📄</span> Contrats
+            </a>
+            <a routerLink="/admin/organigramme" routerLinkActive="active">
+              <span>🌳</span> Organigramme
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <h3>🎯 Recrutement</h3>
+            <a routerLink="/admin/recruitment" routerLinkActive="active">
+              <span>🎯</span> Offres & candidatures
+            </a>
+            <a routerLink="/admin/skills" routerLinkActive="active">
+              <span>🎓</span> Compétences
+            </a>
+          </div>
+        </ng-container>
 
         <!-- Bouton déconnexion -->
         <div class="nav-section logout-section">

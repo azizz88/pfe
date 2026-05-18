@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Entité représentant un employé de l'entreprise.
@@ -63,4 +65,9 @@ public class Employee {
 
     /** Nom d'utilisateur Keycloak associé */
     private String keycloakUsername;
+
+    /** Compétences de l'employé avec niveau de maîtrise (1-5) */
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @Builder.Default
+    private Set<EmployeeSkill> skills = new HashSet<>();
 }

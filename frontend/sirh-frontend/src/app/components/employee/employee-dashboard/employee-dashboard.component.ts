@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { KeycloakService } from '../../../services/keycloak.service';
 import { EmployeeApiService } from '../../../services/employee-api.service';
 
@@ -10,12 +11,45 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
 @Component({
   selector: 'app-employee-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="dashboard">
       <h1>🏠 Mon Dashboard</h1>
       <p class="welcome">Bienvenue, <strong>{{ keycloakService.getFullName() }}</strong></p>
 
+      <!-- ══════════════ Navigation Rapide (miroir de la sidebar) ══════════════ -->
+      <h2 class="section-heading">⚡ Accès Rapide</h2>
+      <div class="quick-nav">
+        <a class="nav-tile tile-profile" routerLink="/employee/profile">
+          <div class="tile-icon">👤</div>
+          <div class="tile-body">
+            <h4>Mon Profil</h4>
+            <p>Voir et gérer mes informations</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+        <a class="nav-tile tile-directory" routerLink="/employee/directory">
+          <div class="tile-icon">📖</div>
+          <div class="tile-body">
+            <h4>Annuaire</h4>
+            <p>Rechercher mes collègues</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+        <a class="nav-tile tile-jobs" routerLink="/employee/applications">
+          <div class="tile-icon">💼</div>
+          <div class="tile-body">
+            <h4>Offres d'emploi</h4>
+            <p>Postuler en interne</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+      </div>
+
+      <!-- ══════════════ Mes Informations ══════════════ -->
+      <h2 class="section-heading">📋 Mes Informations</h2>
       <div class="cards">
         <!-- Carte Profil cliquable -->
         <div class="card card-profile clickable" (click)="openProfile()" title="Cliquer pour voir mon profil complet">
@@ -188,7 +222,87 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
   styles: [`
     /* ── Dashboard ── */
     .dashboard h1 { margin: 0 0 4px 0; color: #1e3a5f; }
-    .welcome { color: #64748b; margin-bottom: 24px; }
+    .welcome { color: #64748b; margin-bottom: 28px; }
+
+    .section-heading {
+      margin: 28px 0 16px 0;
+      font-size: 1.05rem;
+      color: #1e3a5f;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .section-heading:first-of-type { margin-top: 8px; }
+
+    /* ── Quick Nav Tiles (miroir sidebar) ── */
+    .quick-nav {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .nav-tile {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 20px;
+      background: white;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .nav-tile::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, #60a5fa, #a78bfa);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .nav-tile:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(59,130,246,0.15);
+      border-color: #93c5fd;
+    }
+    .nav-tile:hover::before { opacity: 1; }
+    .nav-tile:hover .tile-arrow { transform: translateX(4px); color: #2563eb; }
+
+    .tile-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .tile-profile .tile-icon { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
+    .tile-directory .tile-icon { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    .tile-jobs .tile-icon { background: linear-gradient(135deg, #ede9fe, #ddd6fe); }
+
+    .tile-body { flex: 1; min-width: 0; }
+    .tile-body h4 {
+      margin: 0 0 4px 0;
+      color: #1e293b;
+      font-size: 0.98rem;
+      font-weight: 700;
+    }
+    .tile-body p {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.8rem;
+    }
+    .tile-arrow {
+      color: #94a3b8;
+      font-size: 1.2rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
     .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
 
     .card {
