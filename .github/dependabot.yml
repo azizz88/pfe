@@ -1,0 +1,92 @@
+version: 2
+
+# =====================================================================
+# Mises à jour automatiques hebdomadaires (lundi 06:00 UTC).
+# Limite raisonnable de PR ouvertes simultanément pour ne pas noyer le repo.
+# =====================================================================
+
+updates:
+
+  # --- Maven : 3 services Spring Boot ---
+  - package-ecosystem: maven
+    directory: /backend/api-gateway
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies, backend, gateway]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+
+  - package-ecosystem: maven
+    directory: /backend/employee-service
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies, backend, employee]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+
+  - package-ecosystem: maven
+    directory: /backend/recruitment-service
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies, backend, recruitment]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+
+  # --- npm : Angular ---
+  - package-ecosystem: npm
+    directory: /frontend/sirh-frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies, frontend]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+    # Garder Angular en groupe pour les MAJ cohérentes
+    groups:
+      angular:
+        patterns: ["@angular/*", "@angular-devkit/*"]
+
+  # --- GitHub Actions ---
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies, ci]
+    commit-message:
+      prefix: "ci(deps)"
+      include: scope
+
+  # --- Dockerfiles ---
+  - package-ecosystem: docker
+    directories:
+      - /backend/api-gateway
+      - /backend/employee-service
+      - /backend/recruitment-service
+      - /frontend/sirh-frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies, docker]
+    commit-message:
+      prefix: "chore(docker)"
+      include: scope

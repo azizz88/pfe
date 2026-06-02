@@ -1,0 +1,117 @@
+name: Deploy
+
+# =====================================================================
+# Déploie les images GHCR sur un serveur cible (SSH).
+# Structure de démo : si SSH_* secrets absents, le job exit 0 avec un
+# warning (utile pour valider le pipeline avant d'avoir une cible).
+#
+# - staging : déclenché automatiquement après un build-images vert sur develop
+# - production : déclenché manuellement OU sur tag v*.*.*, avec approval requis
+#                via GitHub Environments (Settings → Environments → production
+#                → required reviewers).
+# =====================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Cible
+        type: choice
+        required: true
+        options: [staging, production]
+        default: staging
+      image_tag:
+        description: Tag GHCR à déployer (ex. sha-abc1234, develop, v1.2.0)
+        type: string
+        required: true
+        default: develop
+  workflow_run:
+    workflows: [Build & push Docker images]
+    types: [completed]
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  packages: read   # pour pull GHCR si pull-secret nécessaire
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: ${{ github.repository_owner }}/sirh
+
+jobs:
+
+  # =========================================================
+  # STAGING — auto après un build vert sur develop
+  # =========================================================
+  staging:
+    name: deploy → staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      # url: https://staging.sirh.example.com   # à renseigner quand une URL existe
+    if: >
+      github.event_name == 'workflow_dispatch' && inputs.environment == 'staging'
+      || github.event_name == 'workflow_run'
+         && github.event.workflow_run.conclusion == 'success'
+         && github.event.workflow_run.head_branch == 'develop'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=develop" >> $GITHUB_OUTPUT
+          fi
+
+      - name: SSH deploy (gracieux si secrets absents)
+        env:
+          SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ]; then
+            echo "::warning::Secrets STAGING_SSH_* absents → deploy skipé (structure de démo)."
+            echo "Pour activer le déploiement réel, ajouter STAGING_SSH_HOST / _USER / _KEY"
+            echo "dans Settings → Secrets and variables → Actions → Environment 'staging'."
+            exit 0
+          fi
+          mkdir -p ~/.ssh && echo "$SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          ssh "$SSH_USER@$SSH_HOST" \
+            "cd /opt/sirh && IMAGE_TAG=$IMAGE_TAG docker compose pull && docker compose up -d --no-build"
+
+  # =========================================================
+  # PRODUCTION — manuel + approval requis (GitHub Environments)
+  # =========================================================
+  production:
+    name: deploy → production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      # url: https://sirh.example.com
+    if: >
+      github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH deploy (gracieux si secrets absents)
+        env:
+          SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ]; then
+            echo "::warning::Secrets PROD_SSH_* absents → deploy skipé (structure de démo)."
+            echo "Pour activer le déploiement réel, ajouter PROD_SSH_HOST / _USER / _KEY"
+            echo "dans Settings → Secrets and variables → Actions → Environment 'production'."
+            exit 0
+          fi
+          mkdir -p ~/.ssh && echo "$SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          ssh "$SSH_USER@$SSH_HOST" \
+            "cd /opt/sirh && IMAGE_TAG=$IMAGE_TAG docker compose pull && docker compose up -d --no-build"

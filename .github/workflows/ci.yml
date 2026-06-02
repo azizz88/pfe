@@ -1,0 +1,134 @@
+name: CI
+
+# =====================================================================
+# Lint + test + build sur PR et push develop/main.
+# Bloque le merge si un job échoue (branch protection requise).
+# =====================================================================
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+# Annule les runs en cours sur la même PR si on push à nouveau
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Permissions minimales (principe du moindre privilège)
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+
+  # =========================================================
+  # Build + tests des 3 services Spring Boot (matrix parallèle)
+  # =========================================================
+  backend:
+    name: backend (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api-gateway, employee-service, recruitment-service]
+    defaults:
+      run:
+        working-directory: backend/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Maven verify (compile + tests)
+        run: mvn -B -ntp -e verify
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-${{ matrix.service }}
+          path: backend/${{ matrix.service }}/target/surefire-reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # =========================================================
+  # Build Angular (production)
+  # =========================================================
+  frontend:
+    name: frontend (Angular 21)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/sirh-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/sirh-frontend/package-lock.json
+
+      # npm install (et pas `npm ci`) car le lockfile a été généré sur Windows et
+      # ne contient pas les optional deps Linux (@emnapi/*). Cf. décision #2 CLAUDE.md.
+      # À basculer sur `npm ci` une fois le lockfile régénéré sur runner Linux.
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Build production
+        run: npm run build -- --configuration=production
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sirh-frontend-dist
+          path: frontend/sirh-frontend/dist/
+          retention-days: 7
+
+  # =========================================================
+  # SonarCloud quality scan
+  # Désactivable en supprimant le secret SONAR_TOKEN.
+  # =========================================================
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    # Skip si secret absent (fork PR par ex) pour ne pas faire échouer le CI
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Sonar a besoin de tout l'historique pour le blame
+
+      - name: Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: SonarCloud scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::warning::SONAR_TOKEN absent → étape Sonar skipée. Voir CLAUDE.md pour la configuration."
+            exit 0
+          fi
+          # Scan multi-modules : un appel root qui pointe sur les 3 modules backend
+          for svc in api-gateway employee-service recruitment-service; do
+            (cd backend/$svc && mvn -B -ntp -e verify sonar:sonar \
+              -Dsonar.host.url=https://sonarcloud.io \
+              -Dsonar.organization=${{ vars.SONAR_ORG }} \
+              -Dsonar.projectKey=${{ vars.SONAR_ORG }}_pfe-$svc \
+              -Dsonar.token=$SONAR_TOKEN) || exit 1
+          done
