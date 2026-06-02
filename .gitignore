@@ -41,3 +41,10 @@ dist/
 
 ### Logs ###
 *.log
+
+### Docker / runtime ###
+.env
+.env.local
+.env.*.local
+backend/employee-service/uploads/
+**/uploads/

@@ -100,3 +100,32 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+---
+# ===================================================
+# Profil DOCKER (orchestration docker-compose)
+# ===================================================
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/sirh_recruitment
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8180/realms/aziz}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://keycloak:8080/realms/aziz/protocol/openid-connect/certs}
+
+  mail:
+    host: mailhog
+    port: 1025
+
+services:
+  employee-service:
+    url: http://employee-service:8081

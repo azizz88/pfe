@@ -40,13 +40,20 @@
 - [x] **Étape 3** — Stratégie CI/CD **GitHub Actions** (GitFlow simplifié, 3 workflows réutilisables, matrix sur 3 backends, environments staging/prod avec approval)
 - [x] **Étape 4** — Choix outils définitif (GitHub Actions + GHCR + Docker + SonarQube/SonarCloud + Trivy + OWASP DC + Dependabot)
 
-#### Phase 1.2 — Conteneurisation 🟡 EN COURS
+#### Phase 1.2 — Conteneurisation ✅ TERMINÉE
 - [x] **Étape 5** — Dockerfile Angular ✅ (image **74.8 Mo**, healthy, SPA fallback OK)
-- [ ] **Étape 6** — Dockerfile Spring Boot générique (multi-stage + layered JAR + JVM tuning)
-- [ ] **Étape 7** — Dockerfile API Gateway
-- [ ] **Étape 8** — Docker Compose complet + profils `docker` + `.env.example`
-- [ ] **Étape 9** — Optimisation images (tableau avant/après)
-- [ ] **Étape 10** — Tests locaux archi conteneurisée
+- [x] **Étape 6** — Dockerfiles Spring Boot ✅ (employee **423 Mo**, recruitment **368 Mo**, healthy en ~60-90s)
+- [x] **Étape 7** — Dockerfile API Gateway ✅ (image **337 Mo**, healthy ~60s, `/actuator/health/liveness` = UP)
+- [x] **Étape 8** — Docker Compose complet ✅ (profil `docker` ajouté aux 3 services, JWT issuer/jwk split, `.env.example`, `.gitignore` étendu, 8 conteneurs `up`, 5 `(healthy)`, full stack démarre en ~2 min)
+- [x] **Étape 9** — Optimisation images ✅ (naive 1.16 Go → optimisé 423 Mo = **-63 %**, HIGH+CRIT 75 → 29 = **-61 %**, Trivy scan sur 4 images)
+- [x] **Étape 10** — Tests locaux archi conteneurisée ✅ (20 tests T1-T20 : JWT flow gateway→backend OK, CORS OK, cross-service OK, **cold start 54s**, persistance Keycloak+Postgres intacte après `down/up`, 0 WARN bloquant)
+
+#### Phase 2 — CI/CD GitHub Actions 🟡 EN COURS
+- [x] **Étape 11** — Workflows + Dependabot écrits ✅ (`.github/workflows/ci.yml`, `build-images.yml`, `deploy.yml`, `.github/dependabot.yml`, branche `develop` créée + poussée)
+- [ ] **Étape 12** — Setup repo GitHub (secrets, GitHub Environments, branch protection rules, SonarCloud)
+- [ ] **Étape 13** — Premier run CI réel + ajustements (push + monitoring)
+- [ ] **Étape 14** — Premier build & push image vers GHCR + Trivy
+- [ ] **Étape 15** — Test deploy en mode démo (gracieux sans serveur cible)
 
 ### Modifications déjà appliquées au code
 
@@ -60,6 +67,17 @@
 | `frontend/sirh-frontend/Dockerfile` | **CRÉÉ** — multi-stage Node 22 → Nginx 1.27 | Étape 5 |
 | `frontend/sirh-frontend/nginx.conf` | **CRÉÉ** — SPA fallback + gzip + cache + sécu | Étape 5 |
 | `frontend/sirh-frontend/.dockerignore` | **CRÉÉ** | Exclut node_modules/dist du context |
+| `backend/employee-service/Dockerfile` | **CRÉÉ** — multi-stage Maven → JRE alpine + PDFBox fonts + uploads/ | Étape 6 |
+| `backend/employee-service/.dockerignore` | **CRÉÉ** | Exclut target/, .idea/, uploads/ |
+| `backend/recruitment-service/Dockerfile` | **CRÉÉ** — multi-stage Maven → JRE alpine (pas de native deps) | Étape 6 |
+| `backend/recruitment-service/.dockerignore` | **CRÉÉ** | Exclut target/, .idea/ |
+| `backend/api-gateway/Dockerfile` | **CRÉÉ** — multi-stage Maven → JRE alpine, port 8888, WebFlux/Netty | Étape 7 |
+| `backend/api-gateway/.dockerignore` | **CRÉÉ** | Exclut target/, .idea/ |
+| `backend/*/application.yml` (×3) | +bloc profil `docker` (Postgres/Keycloak/Mail en noms de services + JWT split iss/jwks) | Étape 8 |
+| `backend/api-gateway/.../application.yml` | Routes URI refactorées en `${EMPLOYEE_SERVICE_URL:default}` + `${RECRUITMENT_SERVICE_URL:default}` | Étape 8 |
+| `docker-compose.yml` | Étendu : +4 apps (gateway, employee, recruitment, frontend), réseau `sirh-net`, depends_on conditionnels, volume `employee_uploads` | Étape 8 |
+| `.env.example` | **CRÉÉ** racine projet (POSTGRES_*, KEYCLOAK_ADMIN_*, JWT_*, EMPLOYEE_SERVICE_URL, RECRUITMENT_SERVICE_URL, GEMINI_API_KEY) | Étape 8 |
+| `.gitignore` | +`.env`, `**/uploads/`, `backend/employee-service/uploads/` | Étape 8 |
 
 ### Choix techniques validés (rappel)
 
@@ -71,6 +89,93 @@
 - **Branches** : `main` (prod) + `develop` (staging) + `feature/*` + `hotfix/*`
 - **Conventional Commits** : feat/fix/chore/docs/ci/test/refactor
 - **Protection** : branch protection rules sur `main` + `develop` (required checks : CI vert + 1 review)
+
+### Étape 9 — Optimisation & sécurité des images Docker
+
+**Comparatif naïf vs optimisé** (mesuré sur `employee-service`, le service le plus chargé en dépendances) :
+
+| Caractéristique | Image naïve | Image optimisée | Gain |
+|---|---|---|---|
+| Taille | **1.16 Go** | **423 Mo** | **-63 %** |
+| CVE HIGH+CRITICAL | **75** | **29** | **-61 %** |
+| Stages Docker | 1 (Maven runtime) | 3 (build → extract → runtime) | — |
+| Base runtime | `maven:3.9-eclipse-temurin-17` (JDK + Maven + Debian) | `eclipse-temurin:17-jre-alpine` (JRE seul) | — |
+| User | root | `app` (non-root, UID/GID dédiés) | — |
+| Format JAR | fat-jar (`mvn package`) | layered JAR (`-Djarmode=layertools extract`) | cache friendly |
+| HEALTHCHECK | absent | `/actuator/health/liveness` | observable |
+
+> Le Dockerfile naïf est conservé en `backend/employee-service/Dockerfile.naive` à des fins de comparaison pour le livrable PFE. À supprimer une fois le chapitre rédigé.
+
+**Récap des 4 images finales** (Trivy scan, base de données du 2026-06-02) :
+
+| Image | Taille | HIGH+CRITICAL | Total CVE |
+|---|---|---|---|
+| `sirh-frontend:local` | **74.8 Mo** | 32 | 91 |
+| `sirh-api-gateway:local` | **337 Mo** | 21 | 56 |
+| `sirh-employee-service:local` | **423 Mo** | 29 | 67 |
+| `sirh-recruitment-service:local` | **368 Mo** | 28 | 58 |
+
+> Les CVE résiduels viennent essentiellement des images de base (`musl`, `openssl`, `libxml2`, `zlib`, `nghttp2` sur alpine ; `tomcat-embed-core` côté Spring Boot 3.2.5). La mitigation se fait en upgradant les bases (`alpine 3.20 → 3.21`, Spring Boot 3.2.5 → 3.3.x). À traiter en CI via Dependabot et un job Trivy avec exit code != 0 sur HIGH+CRIT.
+
+**Techniques d'optimisation appliquées** :
+1. **Multi-stage** : compile dans une image lourde (Maven + JDK), copie le résultat dans une image légère (JRE seul). Gain principal sur la taille.
+2. **Layered JAR** : Spring Boot extrait le jar en 4 couches (deps, loader, snapshot-deps, application). Au rebuild, seule la couche `application` change → push registry beaucoup plus rapide.
+3. **JRE alpine** : `eclipse-temurin:17-jre-alpine` (≈180 Mo) vs `:17-jdk-alpine` (≈340 Mo) vs `:17-jre-jammy` (Debian, ≈260 Mo). Alpine moins lourd mais musl libc → ajouter `fontconfig`/`ttf-dejavu` pour PDFBox (cf. décision 7).
+4. **User non-root** : `addgroup -S app && adduser -S app` → conformité OWASP top 10 (A05:2021 – Security Misconfiguration).
+5. **Tini PID 1** : reaper de signaux pour stopper proprement la JVM sur SIGTERM.
+6. **Cache Maven persistant** : `RUN --mount=type=cache,target=/root/.m2` (BuildKit) → rebuild d'une feature = 15-20 s au lieu de 3-4 min.
+7. **HEALTHCHECK liveness** : pointer sur `/actuator/health/liveness` (état JVM) et non `/actuator/health` (état JVM + dépendances) → indépendance container.
+8. **`.dockerignore`** : exclut `target/`, `.idea/`, `uploads/`, `.git/` → réduit le context envoyé au daemon de plusieurs centaines de Mo.
+
+**Commande de scan reproductible** :
+
+```bash
+docker pull aquasec/trivy:latest
+MSYS_NO_PATHCONV=1 docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy:latest image \
+  --severity HIGH,CRITICAL --format table \
+  --scanners vuln \
+  sirh-employee-service:local
+```
+
+### Étape 10 — Tests bout-en-bout de l'architecture conteneurisée
+
+**Suite automatisée exécutée le 2026-06-02 — 20 tests** :
+
+| # | Test | Méthode | Résultat |
+|---|---|---|---|
+| T1 | Token admin Keycloak (master / admin-cli) | direct grant | ✅ token 973 chars |
+| T2-T3 | Realm `aziz` + client `angular-client` | admin API | ✅ publicClient + directAccessGrants + standardFlow + redirectUris `localhost:4200/*` |
+| T4 | Users existants dans realm `aziz` | admin API | ✅ 10 users |
+| T5 | Création user temporaire `e2e-test` | admin POST | ✅ HTTP 201 |
+| T6 | Direct-grant token pour `e2e-test` via `angular-client` | OIDC token endpoint | ✅ JWT 1413 chars |
+| T7 | `GET /api/skills` via gateway **sans** token | curl | ✅ HTTP 401 (gateway protège la route) |
+| T8 | `GET /api/skills` via gateway **avec** JWT | curl | ✅ HTTP 403 ≠ 401 → **prouve que le JWT est validé et le bearer forwardé au backend, qui rejette par rôle** |
+| T9 | Préflight CORS `Origin: http://localhost:4200` | OPTIONS | ✅ HTTP 200 + ACAO + ACAM corrects |
+| T10 | API MailHog `/api/v2/messages` | curl | ✅ accessible, 0 messages |
+| T11 | Décodage payload JWT (iss/aud/azp) | base64 | ✅ `iss=http://localhost:8180/realms/aziz` (matche le iss attendu côté backend) |
+| T12 | Routage cross-service `/api/matching/*` via gateway | curl + JWT | ✅ HTTP 404 (endpoint inexistant) → routage atteint bien recruitment-service |
+| T13 | `/actuator/health/readiness` depuis l'intérieur du réseau Docker | `docker compose exec` | ✅ employee + recruitment = UP |
+| T14 | Logs WARN/ERROR récents (300 dernières lignes par service) | `docker compose logs` | ✅ 2 WARN bruit Hibernate/Spring (deprecation `hibernate.dialect`, `open-in-view`), 0 ERROR |
+| T15 | Cleanup user `e2e-test` | admin DELETE | ✅ HTTP 204 |
+| T16 | `docker compose down` (volumes préservés) | — | ✅ 5s |
+| T17-T18 | Cold start `docker compose up -d` jusqu'à 5 services `(healthy)` | timer | ✅ **54 s** |
+| T19 | Persistance Keycloak (realm + users après down/up) | admin API | ✅ realm `aziz` + 10 users intacts |
+| T20 | Persistance Postgres (tables après down/up) | `psql` | ✅ 7 tables dans `sirh_employees` |
+
+**Tests manuels à compléter par la suite** (non automatisables sans navigateur) :
+
+- [ ] Login complet via Angular sur `http://localhost:4200` → redirection Keycloak → retour avec session → requête authentifiée routée à travers la gateway
+- [ ] Création d'un employé via l'UI RH → vérifier que MailHog (`http://localhost:8025`) capture l'email d'activation
+- [ ] Upload d'un CV PDF → vérifier que PDFBox extrait les skills (fontconfig + ttf-dejavu validés sur alpine)
+- [ ] Génération de fichier `.ics` (convocation entretien) → vérifier l'attachement dans MailHog
+- [ ] Stop puis re-démarrage de la stack après une session avec données utilisateurs → toutes les données métier doivent survivre (`uploads/`, employés créés, candidatures, etc.)
+
+**À faire avant le rendu final** :
+- Supprimer `backend/employee-service/Dockerfile.naive` (gardé pour la rédaction du chapitre Étape 9)
+- Décider du sort du volume `mysql_data` dans `docker-compose.yml` (commenté "rollback éventuel", inutilisé)
+- `docker compose down -v` puis `docker compose up -d` sur poste vierge → confirmer que tout se reconstruit sans données pré-existantes (i.e. fournir un `realm-export.json` ou documenter la création manuelle du realm)
 
 ### Architecture pipeline GitHub Actions (Étape 3 refondue)
 
@@ -115,6 +220,11 @@
 3. **Healthcheck Nginx** utilise `127.0.0.1` explicite (pas `localhost`) car Nginx n'écoute pas IPv6 `::1`
 4. **TokenRelay gateway** : client OAuth2 secret pas encore configuré côté gateway → à vérifier Étape 10
 5. **Switch Jenkins → GitHub Actions** (2026-06-02) : pas de serveur CI à maintenir, runners gratuits, intégration native PR/checks/environments, GHCR inclus. Étapes 3 + 4 refaites. Tout le reste (Docker, profils Spring, Trivy, Sonar, OWASP DC) reste identique.
+6. **HEALTHCHECK Spring → `/actuator/health/liveness`** (pas `/actuator/health`) car en isolation le composant `mail` peut être DOWN et faire passer le container en `unhealthy` même si la JVM est saine. Liveness ne dépend que de la JVM.
+7. **PDFBox sur alpine** : `apk add fontconfig ttf-dejavu` requis sinon `Fontconfig head is null` à la première manipulation PDF (extraction CV).
+8. **Layered JAR** : Spring Boot 3.2.5 active le mode layered par défaut. Extraction via `java -Djarmode=layertools -jar app.jar extract` (jarmode `tools` introduit en 3.3+, on garde `layertools` pour 3.2.5). Lancement runtime via `org.springframework.boot.loader.launch.JarLauncher` (package `loader.launch` introduit en 3.2).
+9. **JWT issuer/jwk-set split** (Étape 8) : en Docker, `issuer-uri` reste `http://localhost:8180/realms/aziz` (= ce que le navigateur voit, donc le `iss` du JWT), mais `jwk-set-uri` pointe explicitement sur `http://keycloak:8080/realms/aziz/protocol/openid-connect/certs` (= chemin interne réseau Docker). Spring valide l'`iss` par comparaison de string ET télécharge les clés de signature séparément → pas besoin de toucher au fichier hosts du poste pour aligner les noms.
+10. **Pas de healthcheck Keycloak** : l'image `quay.io/keycloak/keycloak:24.0.0` est basée sur UBI Micro et n'embarque ni `curl`/`wget`/`bash` ni l'endpoint `/health` par défaut en `start-dev`. On utilise `depends_on: keycloak: service_started` (les backends lazy-fetchent la JWKS à la première requête JWT, donc pas de coupling startup-time).
 
 ### Risques identifiés à traiter plus tard
 
@@ -143,8 +253,11 @@ keycloak/
 ├── docker-compose.yml      (Postgres + Keycloak + MailHog + pgAdmin uniquement pour l'instant)
 ├── init-db.sql             (crée sirh_employees + sirh_recruitment)
 ├── .github/
-│   ├── workflows/          (à créer phase CI/CD : ci.yml, build-images.yml, deploy.yml)
-│   └── dependabot.yml      (à créer)
+│   ├── workflows/
+│   │   ├── ci.yml              ✅ Étape 11 (lint + tests + build + Sonar)
+│   │   ├── build-images.yml    ✅ Étape 11 (Docker + Trivy + push GHCR)
+│   │   └── deploy.yml          ✅ Étape 11 (staging auto + prod manuel, mode démo)
+│   └── dependabot.yml          ✅ Étape 11 (Maven ×3 + npm + actions + docker, hebdo)
 └── CLAUDE.md               (ce fichier)
 ```
 
@@ -152,30 +265,92 @@ keycloak/
 
 ## 🚀 Reprise de la session
 
-**Prochaine étape : Étape 6 — Dockerfile générique Spring Boot**
+**Stack complète opérationnelle** — `docker compose up -d` démarre 8 conteneurs en ~2 min, 5 d'entre eux reportent `(healthy)` :
 
-Contenu prévu :
-- Multi-stage build : `maven:3.9-eclipse-temurin-17` → `eclipse-temurin:17-jre-alpine`
-- Spring Boot Layered JAR (4 couches : dependencies, spring-boot-loader, snapshot-deps, application)
-- JVM tuning : `-XX:MaxRAMPercentage=75 -XX:+UseG1GC`
-- User non-root (`useradd appuser`)
-- HEALTHCHECK sur `/actuator/health` (déjà préparé Étape 4.5)
-- `.dockerignore` (target/, *.iml)
-- À créer : `backend/employee-service/Dockerfile` et `backend/recruitment-service/Dockerfile`
+| Service | Image | Port | Healthcheck |
+|---|---|---|---|
+| `frontend` | `sirh-frontend:local` (74.8 Mo) | 4200 | `/health` (Nginx) |
+| `api-gateway` | `sirh-api-gateway:local` (337 Mo) | 8888 | `/actuator/health/liveness` |
+| `employee-service` | `sirh-employee-service:local` (423 Mo) | 8081 | `/actuator/health/liveness` |
+| `recruitment-service` | `sirh-recruitment-service:local` (368 Mo) | 8082 | `/actuator/health/liveness` |
+| `postgres` | `postgres:16-alpine` | 5432 | `pg_isready` |
+| `keycloak` | `quay.io/keycloak/keycloak:24.0.0` | 8180 | (pas de HC — image minimale) |
+| `mailhog` | `mailhog/mailhog:latest` | 1025 / 8025 | — |
+| `pgadmin` | `dpage/pgadmin4:latest` | 5050 | — |
 
-Étape 7 fera le cas spécifique gateway (pas de DB, dépend de tous les downstream).
+**Prochaine étape : Étape 12 — Setup repo GitHub**
+
+Les fichiers sont là (Étape 11), il reste à provisionner GitHub côté UI/CLI :
+
+### 12.a — Créer les **GitHub Secrets** (Settings → Secrets and variables → Actions)
+
+| Niveau | Nom | Quand | Comment générer |
+|---|---|---|---|
+| Repo | `SONAR_TOKEN` | dès qu'on veut activer Sonar | SonarCloud → Account → Security → Generate Tokens |
+| Env `staging` | `STAGING_SSH_HOST` | quand une VM staging existe | DNS ou IP publique |
+| Env `staging` | `STAGING_SSH_USER` | idem | utilisateur Unix sur la VM |
+| Env `staging` | `STAGING_SSH_KEY` | idem | `ssh-keygen -t ed25519`, coller la clé **privée** |
+| Env `production` | `PROD_SSH_HOST` / `_USER` / `_KEY` | quand une VM prod existe | idem |
+
+> Pour un PFE, on peut laisser les SSH_* vides : `deploy.yml` exit 0 avec un warning, suffisant pour démontrer la structure du pipeline.
+
+### 12.b — Créer les **GitHub Variables** (idem menu, onglet « Variables »)
+
+| Nom | Valeur | Usage |
+|---|---|---|
+| `SONAR_ORG` | ex. `azizz88` | utilisé par `ci.yml` job `sonar` pour construire la projectKey |
+
+### 12.c — Créer les **Environments** (Settings → Environments)
+
+1. `staging` — pas de protection
+2. `production` — required reviewers : **toi** (azizz88) → garantit l'approval gate manuel
+
+### 12.d — **Branch protection rules** (Settings → Branches)
+
+Pour `main` :
+- ✅ Require pull request before merging (1 review approval recommandé)
+- ✅ Require status checks to pass : `backend (api-gateway)`, `backend (employee-service)`, `backend (recruitment-service)`, `frontend (Angular 21)`
+- ✅ Require branches to be up to date
+
+Idem pour `develop`, plus light (require PR mais pas de review obligatoire).
+
+### 12.e — **SonarCloud** (sonarcloud.io)
+
+1. Login GitHub → autoriser l'org `azizz88`
+2. Import du repo `azizz88/pfe`
+3. Choisir **GitHub Actions** comme méthode d'analyse
+4. Récupérer le token → l'ajouter en `SONAR_TOKEN` (cf. 12.a)
+5. La variable `SONAR_ORG` doit valoir l'organisation Sonar (souvent = username GitHub si solo)
+
+### 12.f — Permettre à GHCR de pousser depuis le repo
+
+1. Settings → Actions → General → Workflow permissions → cocher **Read and write permissions**  
+   *(ou laisser Read-only et accorder explicitement `packages: write` au job — déjà fait dans `build-images.yml`)*
+2. Au premier push, le package GHCR sera créé automatiquement comme **privé** ; le rendre public si tu veux le démontrer en soutenance : Profile → Packages → `sirh-*` → Package settings → Change visibility
 
 ### Pour reprendre rapidement
 
 ```bash
-# Vérifier que les builds passent toujours
-cd backend/api-gateway && mvn -q compile
-cd backend/employee-service && mvn -q compile
-cd backend/recruitment-service && mvn -q compile
+# Smoke complet
+docker compose down              # arrêter
+docker compose up -d --build     # rebuild + lancer
+docker compose ps                # toutes les apps doivent être "(healthy)"
 
-# Vérifier que l'image Angular se rebuild
-cd frontend/sirh-frontend && docker build -t sirh-frontend:test .
+# Endpoints exposés
+curl http://localhost:4200/                                    # Angular
+curl http://localhost:8888/actuator/health/liveness            # Gateway
+curl http://localhost:8081/actuator/health/liveness            # Employee
+curl http://localhost:8082/actuator/health/liveness            # Recruitment
+curl http://localhost:8180/realms/aziz                         # Keycloak realm
+http://localhost:8025                                          # MailHog UI
+http://localhost:5050                                          # pgAdmin
 ```
+
+### Limitations connues (à valider Étape 10)
+
+- **CORS gateway** : `SecurityConfig.java` autorise uniquement `http://localhost:4200`. En Docker le frontend est bien sur `localhost:4200` donc OK pour la démo locale ; en cloud il faudra paramétrer.
+- **TokenRelay** : pas de config OAuth2 client (`registration.*`) dans `application.yml` du gateway. En Spring Cloud Gateway 2023.0.1, le filter `TokenRelay=` peut s'appuyer sur le `JwtAuthenticationToken` du Resource Server, mais le comportement réel sera à valider par un appel authentifié end-to-end Étape 10.
+- **Keycloak realm `aziz`** : pas d'import automatique. Si on part d'un volume vide, il faudra recréer le realm via l'UI admin ou fournir un fichier `realm-export.json` monté en `/opt/keycloak/data/import/` + `start-dev --import-realm`. Tracker pour Étape 10.
 
 ---
 

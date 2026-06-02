@@ -133,3 +133,47 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+---
+# ===================================================
+# Profil DOCKER (orchestration docker-compose)
+# Lancer via : SPRING_PROFILES_ACTIVE=docker
+# URLs internes = noms de services Docker.
+# `issuer-uri` reste localhost:8180 (= ce que voit le navigateur, qui sera dans le iss du JWT)
+# `jwk-set-uri` pointe sur keycloak:8080 (chemin interne Docker pour récupérer les clés)
+# ===================================================
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/sirh_employees
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8180/realms/aziz}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://keycloak:8080/realms/aziz/protocol/openid-connect/certs}
+
+  mail:
+    host: mailhog
+    port: 1025
+
+services:
+  recruitment-service:
+    url: http://recruitment-service:8082
+
+keycloak:
+  admin:
+    server-url: http://keycloak:8080
+    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+
+app:
+  # /app/uploads est créé + chown app dans le Dockerfile, monté en volume depuis le compose
+  upload:
+    dir: /app/uploads
