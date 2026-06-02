@@ -21,6 +21,23 @@ export class EmployeeApiService {
     return this.http.get(`${this.baseUrl}/employees/me`);
   }
 
+  /**
+   * Historique de carrière de l'employé connecté (timeline "Mon parcours").
+   * Le poste actuel (endDate=null) est en tête de la liste.
+   */
+  getMyPositionHistory(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/employees/me/position-history`);
+  }
+
+  /**
+   * Contexte "Mon équipe" du manager connecté.
+   * Renvoie { manager, departments[], team[], teamSize }.
+   * Chaque membre de team porte un flag `recentPromotion` si promotion < 30 jours.
+   */
+  getMyTeam(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/employees/manager/my-team`);
+  }
+
   /** Annuaire : liste tous les employés */
   getDirectory(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/employees/directory`);
@@ -53,6 +70,11 @@ export class EmployeeApiService {
     return this.http.delete<void>(`${this.baseUrl}/employees/${id}`);
   }
 
+  /** Liste les utilisateurs ayant le rôle Keycloak MANAGER (pour la planification d'entretiens). */
+  getManagers(): Observable<{ username: string; firstName: string; lastName: string; email: string }[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/employees/managers`);
+  }
+
   // ── Organigramme ──
 
   getOrganigramme(): Observable<any[]> {
@@ -75,6 +97,16 @@ export class EmployeeApiService {
 
   deleteDepartment(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/departments/${id}`);
+  }
+
+  /** Assigne un employé existant comme manager d'un département. */
+  assignDepartmentManager(deptId: number, employeeId: number): Observable<any> {
+    return this.http.put(`${this.baseUrl}/departments/${deptId}/manager/${employeeId}`, {});
+  }
+
+  /** Retire le manager actuel d'un département. */
+  removeDepartmentManager(deptId: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/departments/${deptId}/manager`);
   }
 
   // ── Services ──

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RecruitmentApiService } from '../../../services/recruitment-api.service';
+import { EmployeeApiService } from '../../../services/employee-api.service';
 
 /**
  * Gestion du recrutement pour le RH Admin.
@@ -19,6 +20,9 @@ export class RecruitmentManagementComponent implements OnInit {
   offers: any[] = [];
   applications: any[] = [];
   statuses = ['EN_ATTENTE', 'ENTRETIEN', 'RETENU', 'REFUSE'];
+  /** Statuts que le RH peut positionner lui-même.
+   *  RETENU / REFUSE sont réservés au manager (résultat d'entretien). */
+  adminAllowedStatuses = ['EN_ATTENTE', 'ENTRETIEN'];
 
   showOfferForm = false;
   isEditingOffer = false;
@@ -51,10 +55,16 @@ export class RecruitmentManagementComponent implements OnInit {
   // Pipeline workflow (vue post-matching)
   pipelineApplications: any[] = [];
   pipelineOfferFilter = '';
-  showTrainingModal = false;
-  trainingApp: any = null;
 
-  constructor(private recruitmentApi: RecruitmentApiService) {}
+  // Planification d'entretien (assignation à un manager)
+  showScheduleModal = false;
+  scheduleApp: any = null;
+  scheduleForm: any = {};
+  managers: { username: string; firstName: string; lastName: string; email: string }[] = [];
+  scheduleSaving = false;
+
+  constructor(private recruitmentApi: RecruitmentApiService,
+              private employeeApi: EmployeeApiService) {}
 
   ngOnInit(): void {
     this.loadOffers();
@@ -215,9 +225,11 @@ export class RecruitmentManagementComponent implements OnInit {
         // Nouveau format : { results, diagnostic }
         this.matchingResults = data?.results || [];
         this.matchingDiagnostic = data?.diagnostic || null;
-        // Pré-remplit les décisions avec la proposition IA
+        // Pré-remplit les décisions avec la proposition IA — uniquement si le RH
+        // est habilité à appliquer ce statut (ENTRETIEN). Les propositions REFUSE
+        // pour les candidats EXTERNAL sont ignorées : c'est au manager d'arbitrer.
         this.matchingResults.forEach(r => {
-          if (r.applicationId && r.proposedStatus) {
+          if (r.applicationId && r.proposedStatus && this.adminAllowedStatuses.includes(r.proposedStatus)) {
             this.decisions[r.applicationId] = r.proposedStatus;
           }
         });
@@ -385,9 +397,49 @@ export class RecruitmentManagementComponent implements OnInit {
   // ─── Vue Pipeline (post-matching) ─────────────────────
 
   loadPipeline(): void {
+    // On charge en parallèle applications et entretiens pour enrichir chaque card
+    // avec l'état du dernier entretien (manager affecté, statut, résultat).
     this.recruitmentApi.getAllApplications().subscribe({
-      next: (data) => this.pipelineApplications = data || []
+      next: (apps) => {
+        this.recruitmentApi.getAllInterviews().subscribe({
+          next: (interviews) => {
+            const latestByApp = new Map<number, any>();
+            for (const it of (interviews || [])) {
+              if (it.applicationId == null) continue;
+              const existing = latestByApp.get(it.applicationId);
+              if (!existing || (it.id || 0) > (existing.id || 0)) {
+                latestByApp.set(it.applicationId, it);
+              }
+            }
+            this.pipelineApplications = (apps || []).map(a => ({
+              ...a,
+              latestInterview: latestByApp.get(a.id) || null
+            }));
+          },
+          error: () => this.pipelineApplications = apps || []
+        });
+      }
     });
+  }
+
+  /** Libellé du statut d'entretien dans le pipeline RH. */
+  interviewStatusLabel(s: string): string {
+    switch (s) {
+      case 'PENDING_SCHEDULING': return 'À planifier';
+      case 'SCHEDULED': return 'Planifié';
+      case 'COMPLETED': return 'Réalisé';
+      case 'CANCELLED': return 'Annulé';
+      case 'REJECTED_BY_MANAGER': return 'Refusé par manager';
+      default: return s || '—';
+    }
+  }
+
+  /** Libellé du résultat d'entretien. */
+  interviewResultLabel(r: string): string {
+    if (r === 'POSITIF') return '✅ Positif';
+    if (r === 'NEGATIF' || r === 'NÉGATIF') return '❌ Négatif';
+    if (r === 'EN_COURS') return '⏳ En cours';
+    return r;
   }
 
   pipelineByStatus(status: string): any[] {
@@ -408,27 +460,69 @@ export class RecruitmentManagementComponent implements OnInit {
     };
   }
 
-  /** Ouvre la modal de recommandation de formation pour un candidat */
-  openTrainingModal(app: any): void {
-    this.trainingApp = app;
-    this.showTrainingModal = true;
+  // ─── Affectation à un manager (phase 1 du workflow entretien) ─────
+
+  /**
+   * Ouvre la modal pour affecter un manager à un entretien.
+   * Le manager planifiera ensuite la date/heure depuis son propre dashboard.
+   */
+  openScheduleInterview(app: any): void {
+    this.scheduleApp = app;
+    this.scheduleForm = {
+      managerUsername: '',
+      candidateType: 'INTERNAL',
+      candidateEmail: '',
+      rhNote: ''
+    };
+    this.showScheduleModal = true;
+    if (this.managers.length === 0) this.loadManagers();
   }
 
-  closeTrainingModal(): void {
-    this.showTrainingModal = false;
-    this.trainingApp = null;
+  closeScheduleModal(): void {
+    this.showScheduleModal = false;
+    this.scheduleApp = null;
+    this.scheduleForm = {};
   }
 
-  confirmTraining(): void {
-    if (!this.trainingApp) return;
-    this.recruitmentApi.recommendTraining(this.trainingApp.id).subscribe({
+  loadManagers(): void {
+    this.employeeApi.getManagers().subscribe({
+      next: (data) => this.managers = data || [],
+      error: () => this.managers = []
+    });
+  }
+
+  submitInterview(): void {
+    if (!this.scheduleApp) return;
+    if (!this.scheduleForm.managerUsername) {
+      alert('Veuillez sélectionner un manager.');
+      return;
+    }
+    const manager = this.managers.find(m => m.username === this.scheduleForm.managerUsername);
+    const managerName = manager ? `${manager.firstName || ''} ${manager.lastName || ''}`.trim() : this.scheduleForm.managerUsername;
+    // EXTERNAL requiert un email candidat (interne : auto-résolu côté backend)
+    if (this.scheduleForm.candidateType === 'EXTERNAL' && !this.scheduleForm.candidateEmail) {
+      alert('Email du candidat externe obligatoire pour la notification "pre-shortlist".');
+      return;
+    }
+    const payload = {
+      applicationId: this.scheduleApp.id,
+      managerUsername: this.scheduleForm.managerUsername,
+      managerName,
+      candidateType: this.scheduleForm.candidateType,
+      candidateEmail: this.scheduleForm.candidateEmail || null,
+      rhNote: this.scheduleForm.rhNote || null
+    };
+    this.scheduleSaving = true;
+    this.recruitmentApi.assignInterview(payload).subscribe({
       next: () => {
-        this.trainingApp.trainingRecommended = true;
-        this.trainingApp.trainingRecommendedAt = new Date().toISOString();
-        this.closeTrainingModal();
-        alert('✅ Formation recommandée pour ' + this.trainingApp.applicantName);
+        this.scheduleSaving = false;
+        alert(`✅ Entretien affecté à ${managerName}. Le manager recevra un email et fixera la date.`);
+        this.closeScheduleModal();
       },
-      error: (err) => alert('Erreur : ' + (err.error?.message || err.message))
+      error: (err) => {
+        this.scheduleSaving = false;
+        alert('Erreur : ' + (err.error?.message || err.message));
+      }
     });
   }
 }

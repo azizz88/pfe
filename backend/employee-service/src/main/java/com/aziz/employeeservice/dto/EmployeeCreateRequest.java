@@ -33,8 +33,14 @@ public class EmployeeCreateRequest {
     private Contract contract;
 
     // ── Keycloak (non persistés dans la BDD) ──
-    /** Rôle Keycloak à assigner : "EMPLOYEE" ou "HR_ADMIN" */
+    /** Rôle Keycloak à assigner : "EMPLOYEE", "MANAGER" ou "HR_ADMIN" */
     private String keycloakRole = "EMPLOYEE";
+
+    /**
+     * Département dont le manager prend la responsabilité.
+     * Obligatoire si keycloakRole == "MANAGER", ignoré sinon.
+     */
+    private Long managedDepartmentId;
 
     /**
      * Si true, un email d'activation est envoyé à l'employé pour qu'il définisse son mot de passe.

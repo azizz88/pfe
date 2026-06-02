@@ -208,6 +208,16 @@
 }
 .workflow-label { font-size:0.78rem; font-weight:700; color:#64748b; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px; }
 .workflow-steps { display:flex; gap:8px; flex-wrap:wrap; }
+.workflow-hint {
+  margin: 10px 0 0 0; padding: 8px 12px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border-radius: 8px; font-size: 0.78rem; color: #78350f;
+  border-left: 3px solid #f59e0b;
+}
+.dec-hint {
+  display: block; margin-top: 6px; font-size: 0.72rem;
+  color: #78350f; font-weight: 500; font-style: italic;
+}
 .workflow-btn {
   display:inline-flex; align-items:center; gap:5px;
   padding:7px 14px; border-radius:20px; font-size:0.78rem; font-weight:600;
@@ -1021,6 +1031,117 @@
 }
 .diag-action-list li { margin-bottom: 6px; }
 .diag-action-list strong { color: #0f172a; font-weight: 700; }
+
+/* ── Bouton planifier entretien sur kcard ── */
+.kcard-schedule-btn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: 100%;
+  transition: all 0.2s;
+}
+.kcard-schedule-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+/* ── État de l'entretien affiché sur la card pipeline (remplace le bouton d'affectation) ── */
+.kcard-interview-state {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #94a3b8;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kcard-interview-state[data-status="PENDING_SCHEDULING"] { border-left-color: #f59e0b; background: #fffbeb; }
+.kcard-interview-state[data-status="SCHEDULED"] { border-left-color: #3b82f6; background: #eff6ff; }
+.kcard-interview-state[data-status="COMPLETED"] { border-left-color: #10b981; background: #ecfdf5; }
+.kcard-interview-state[data-status="CANCELLED"] { border-left-color: #94a3b8; }
+
+.kis-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kis-icon { font-size: 0.95rem; }
+.kis-mgr { font-size: 0.78rem; font-weight: 600; color: #1e293b; }
+.kis-status-pill {
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #475569;
+}
+.kis-status-pill[data-status="PENDING_SCHEDULING"] { background: #fef3c7; color: #92400e; }
+.kis-status-pill[data-status="SCHEDULED"] { background: #dbeafe; color: #1e40af; }
+.kis-status-pill[data-status="COMPLETED"] { background: #dcfce7; color: #166534; }
+.kis-status-pill[data-status="CANCELLED"] { background: #f1f5f9; color: #475569; }
+
+.kis-result { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.kis-result.pos { background: #dcfce7; color: #166534; }
+.kis-result.neg { background: #fee2e2; color: #991b1b; }
+.kis-result.mid { background: #fef3c7; color: #92400e; }
+
+.kis-locked {
+  font-size: 0.68rem;
+  color: #475569;
+  font-style: italic;
+  letter-spacing: 0.2px;
+}
+
+/* ── Modal de planification d'entretien ── */
+.schedule-modal { max-width: 620px; }
+.schedule-modal .field.full { grid-column: span 2; }
+.schedule-modal .hint {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: #b45309;
+}
+.schedule-modal .field label .req { color: #dc2626; font-weight: 700; margin-left: 4px; }
+.schedule-modal .field label .opt { color: #94a3b8; font-weight: 400; margin-left: 6px; font-size: 0.72rem; text-transform: none; letter-spacing: 0; }
+.email-notice {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: #065f46;
+  grid-column: span 2;
+  margin-top: 6px;
+}
+.email-notice code {
+  background: white;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
+/* Banner d'information dans le modal d'affectation */
+.assign-info-banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; margin-bottom: 16px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1px solid #bfdbfe; border-radius: 10px;
+  font-size: 0.84rem; color: #1e40af; line-height: 1.5;
+}
+.assign-info-banner .aib-icon { font-size: 1rem; flex-shrink: 0; }
+
+/* Textarea du modal d'affectation */
+.schedule-modal .field textarea {
+  padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+  font-size: 0.9rem; outline: none; font-family: inherit;
+  resize: vertical; min-height: 64px; background: white; color: #1e293b;
+  transition: all 0.2s;
+}
+.schedule-modal .field textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
 
 /* ── Responsive ── */
 @media (max-width:768px) {

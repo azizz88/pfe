@@ -1,0 +1,317 @@
+<div class="management">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">🌐</div>
+      <div>
+        <h1>Candidats externes</h1>
+        <p class="header-sub">Pool de candidats LinkedIn / cooptation — évalué par le même modèle IA que les internes</p>
+      </div>
+    </div>
+    <button class="add-btn" (click)="openCreate()">
+      <span>+</span> Nouveau candidat
+    </button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button [class.active]="activeTab === 'pool'" (click)="activeTab = 'pool'">
+      <span class="tab-icon">👥</span> Pool ({{ candidates.length }})
+    </button>
+    <button [class.active]="activeTab === 'matching'" (click)="activeTab = 'matching'">
+      <span class="tab-icon">🤖</span> Matching IA
+    </button>
+  </div>
+
+  <!-- ════════════════ Onglet POOL ════════════════ -->
+  <div *ngIf="activeTab === 'pool'" class="content-area">
+    <div class="error-banner" *ngIf="loadError">
+      <span class="error-icon">⚠️</span>{{ loadError }}
+    </div>
+
+    <div class="empty-state" *ngIf="!loadError && candidates.length === 0">
+      <div class="empty-icon">🌐</div>
+      <p>Aucun candidat externe pour l'instant.</p>
+      <p class="empty-sub">Ajoute des profils LinkedIn/CV pour les inclure dans le matching IA.</p>
+    </div>
+
+    <div class="candidates-grid" *ngIf="candidates.length > 0">
+      <div class="candidate-card" *ngFor="let c of candidates">
+        <div class="cc-head">
+          <div class="cc-avatar">{{ (c.firstName?.[0] || '?') + (c.lastName?.[0] || '') }}</div>
+          <div class="cc-id">
+            <div class="cc-name">{{ c.firstName }} {{ c.lastName }}</div>
+            <div class="cc-pos">{{ c.currentPosition || 'Poste non précisé' }}</div>
+          </div>
+          <span class="src-badge" [attr.data-src]="c.source">
+            {{ c.source === 'LINKEDIN' ? '💼 LinkedIn' : c.source === 'MANUAL' ? '✍️ Manuel' : '📥 Autre' }}
+          </span>
+        </div>
+        <div class="cc-body">
+          <div class="cc-row"><span>📧</span><a [href]="'mailto:' + c.email">{{ c.email }}</a></div>
+          <div class="cc-row" *ngIf="c.phone"><span>📞</span>{{ c.phone }}</div>
+          <div class="cc-row" *ngIf="c.linkedinUrl">
+            <span>🔗</span><a [href]="c.linkedinUrl" target="_blank" rel="noopener">Profil LinkedIn</a>
+          </div>
+          <div class="cc-row" *ngIf="c.yearsOfExperience"><span>⏱️</span>{{ c.yearsOfExperience }} ans d'expérience</div>
+        </div>
+        <div class="cc-skills">
+          <span class="cc-skill-count">🎓 {{ (c.skills || []).length }} compétence(s)</span>
+          <span class="skill-chip" *ngFor="let s of (c.skills || []).slice(0, 4)">
+            {{ s.skillName }} <span class="lvl">{{ s.level }}</span>
+          </span>
+          <span class="more-chip" *ngIf="(c.skills || []).length > 4">+{{ c.skills.length - 4 }}</span>
+        </div>
+        <div class="cc-actions">
+          <button class="btn-edit" (click)="openEdit(c)">✏️ Modifier</button>
+          <button class="btn-delete" (click)="deleteCandidate(c.id)">🗑️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ Onglet MATCHING IA ════════════════ -->
+  <div *ngIf="activeTab === 'matching'" class="content-area">
+    <div class="matching-bar">
+      <div class="field">
+        <label>Offre à pourvoir</label>
+        <select [(ngModel)]="selectedOfferId">
+          <option [ngValue]="null">-- Sélectionner --</option>
+          <option *ngFor="let o of offers" [ngValue]="o.id">{{ o.title }}{{ o.department ? ' (' + o.department + ')' : '' }}</option>
+        </select>
+      </div>
+      <button class="btn-run" [disabled]="!selectedOfferId || matchingLoading" (click)="runMatching()">
+        {{ matchingLoading ? '⏳ Analyse…' : '🤖 Lancer le matching IA' }}
+      </button>
+    </div>
+
+    <div class="info-banner">
+      ℹ️ Le matching utilise <strong>exactement</strong> le même algorithme que pour les candidats internes :
+      score = 75% compétences (vs niveau requis sur l'offre) + 25% séniorité (années d'expérience).
+    </div>
+
+    <div class="error-banner" *ngIf="matchingError">
+      <span class="error-icon">⚠️</span>{{ matchingError }}
+    </div>
+
+    <div class="diag" *ngIf="matchingDiagnostic && matchingResults.length === 0 && !matchingLoading">
+      <p>
+        Aucun résultat —
+        <ng-container [ngSwitch]="matchingDiagnostic.reason">
+          <span *ngSwitchCase="'NO_SKILLS_ON_OFFER'">L'offre n'a aucune compétence requise. Édite-la d'abord.</span>
+          <span *ngSwitchCase="'NO_APPLICATIONS'">Aucun candidat externe dans le pool. Ajoute des profils d'abord.</span>
+          <span *ngSwitchDefault>Aucun candidat n'a pu être scoré.</span>
+        </ng-container>
+      </p>
+    </div>
+
+    <div class="results" *ngIf="matchingResults.length > 0">
+      <div class="result-card" *ngFor="let r of matchingResults" [class]="r.category">
+        <div class="rc-head">
+          <div class="rc-rank">
+            <div class="score-badge">{{ r.score }}<span>/100</span></div>
+            <span class="cat-pill" [ngClass]="r.category">
+              {{ getCategoryIcon(r.category) }} {{ getCategoryLabel(r.category) }}
+            </span>
+          </div>
+          <div class="rc-name">
+            <div class="name">{{ r.applicantName }}</div>
+            <div class="email">{{ r.candidateEmail }}</div>
+          </div>
+          <button class="btn-schedule"
+                  [disabled]="r.category === 'EXTERNAL'"
+                  (click)="openSchedule(r)"
+                  [title]="r.category === 'EXTERNAL' ? 'Score trop faible — recommandé de ne pas convoquer' : 'Affecter à un manager pour entretien'">
+            📨 Affecter
+          </button>
+        </div>
+        <div class="rc-scores">
+          <div class="sub-score"><span class="lbl">Compétences</span><span class="val">{{ r.skillsScore }}/100</span></div>
+          <div class="sub-score"><span class="lbl">Séniorité</span><span class="val">{{ r.seniorityScore }}/100</span></div>
+        </div>
+        <div class="rc-gaps" *ngIf="r.gaps?.length > 0">
+          <strong>Compétences manquantes :</strong>
+          <span class="gap-chip" *ngFor="let g of r.gaps">
+            {{ g.skillName }}
+            <span class="gap-detail">requis {{ g.requiredLevel }}{{ g.actualLevel != null ? ' / acquis ' + g.actualLevel : ' / absent' }}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ Modal Create/Edit ════════════════ -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+    <div class="modal-form" (click)="$event.stopPropagation()">
+      <div class="mf-header">
+        <div class="mf-icon">{{ isEditing ? '✏️' : '🌐' }}</div>
+        <h3>{{ isEditing ? 'Modifier' : 'Ajouter' }} un candidat externe</h3>
+        <p class="mf-sub">{{ isEditing ? 'Mets à jour les informations' : 'Profil + compétences pour le matching IA' }}</p>
+      </div>
+
+      <div class="mf-body">
+        <!-- Informations -->
+        <div class="section">
+          <div class="section-title"><span class="st-icon">👤</span> Informations</div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Prénom *</label>
+              <input [(ngModel)]="form.firstName" />
+            </div>
+            <div class="field">
+              <label>Nom *</label>
+              <input [(ngModel)]="form.lastName" />
+            </div>
+            <div class="field">
+              <label>Email *</label>
+              <input type="email" [(ngModel)]="form.email" />
+            </div>
+            <div class="field">
+              <label>Téléphone</label>
+              <input [(ngModel)]="form.phone" />
+            </div>
+            <div class="field full">
+              <label>URL LinkedIn (optionnel)</label>
+              <input [(ngModel)]="form.linkedinUrl" placeholder="https://linkedin.com/in/…" />
+            </div>
+            <div class="field">
+              <label>Source</label>
+              <select [(ngModel)]="form.source">
+                <option value="LINKEDIN">💼 LinkedIn</option>
+                <option value="MANUAL">✍️ Manuel</option>
+                <option value="OTHER">📥 Autre</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Années d'expérience</label>
+              <input type="number" min="0" max="40" [(ngModel)]="form.yearsOfExperience" />
+            </div>
+            <div class="field full">
+              <label>Poste recherché / titre</label>
+              <input [(ngModel)]="form.currentPosition" placeholder="Ex: Senior Backend Engineer" />
+            </div>
+            <div class="field full">
+              <label>Notes</label>
+              <textarea [(ngModel)]="form.notes" rows="2" placeholder="Disponibilité, prétentions, contexte…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- CV extraction (création uniquement) -->
+        <div class="section" *ngIf="!isEditing">
+          <div class="section-title"><span class="st-icon">🤖</span> Extraction IA depuis CV (optionnel)</div>
+          <div class="cv-zone">
+            <div class="cv-upload-row">
+              <label class="cv-file-label">
+                <input type="file" accept=".pdf,.docx,.txt" (change)="onCvSelected($event)" class="cv-file-input" />
+                <span class="cv-file-btn">📎 Choisir un CV (PDF / DOCX / TXT)</span>
+                <span class="cv-file-name" *ngIf="cvFile">{{ cvFile.name }}</span>
+              </label>
+              <button type="button" class="cv-extract-btn" [disabled]="!cvFile || cvExtracting" (click)="extractCv()">
+                {{ cvExtracting ? '⏳' : '🤖 Extraire' }}
+              </button>
+            </div>
+            <p class="cv-error" *ngIf="cvError">⚠️ {{ cvError }}</p>
+            <div class="cv-result" *ngIf="cvExtractResult">
+              <div class="cv-summary">
+                <strong>{{ cvExtractResult.skills.length }}</strong> compétence(s) détectée(s) —
+                <strong>{{ selectedExtractedCount() }}</strong> sélectionnée(s).
+                <span *ngIf="cvExtractResult.estimatedYearsOfExperience">
+                  • {{ cvExtractResult.estimatedYearsOfExperience }} ans d'expérience
+                </span>
+              </div>
+              <div class="cv-skill-line" *ngFor="let sk of cvExtractResult.skills">
+                <input type="checkbox" [(ngModel)]="sk.preselected" [ngModelOptions]="{standalone: true}" />
+                <span class="csl-name">{{ sk.skillName }}</span>
+                <span class="csl-cat" *ngIf="sk.category">{{ sk.category }}</span>
+                <div class="csl-levels">
+                  <button type="button" *ngFor="let lvl of [1,2,3,4,5]"
+                          class="lvl-btn" [class.active]="sk.level === lvl" (click)="sk.level = lvl">{{ lvl }}</button>
+                </div>
+              </div>
+              <button class="cv-import" *ngIf="cvExtractResult.skills.length > 0" (click)="importExtractedSkills()">
+                ⬇️ Importer les compétences sélectionnées dans la liste ci-dessous
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compétences (manuelles + importées) -->
+        <div class="section">
+          <div class="section-title">
+            <span class="st-icon">🎓</span> Compétences ({{ form.skillRows.length }})
+            <button class="add-row" (click)="addSkillRow()">+ Ajouter</button>
+          </div>
+          <p class="hint" *ngIf="form.skillRows.length === 0">Aucune compétence — le matching ne pourra pas scorer ce candidat.</p>
+          <div class="skill-row" *ngFor="let row of form.skillRows; let i = index">
+            <select [(ngModel)]="row.skillId" (change)="onSkillChange(row)">
+              <option [ngValue]="null">-- Compétence --</option>
+              <option *ngFor="let s of availableSkillsForRow(row)" [ngValue]="s.id">
+                {{ s.name }}{{ s.category ? ' (' + s.category + ')' : '' }}
+              </option>
+            </select>
+            <div class="lvl-picker">
+              <button type="button" *ngFor="let lvl of [1,2,3,4,5]"
+                      class="lvl-btn" [class.active]="row.level === lvl" (click)="row.level = lvl">{{ lvl }}</button>
+            </div>
+            <span class="lvl-label">{{ getLevelLabel(row.level) }}</span>
+            <button class="rm-row" (click)="removeSkillRow(i)">×</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mf-footer">
+        <button class="btn-cancel" (click)="closeForm()">✕ Annuler</button>
+        <button class="btn-submit" (click)="saveCandidate()">{{ isEditing ? '💾 Enregistrer' : '✅ Créer' }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ Modal Affectation au manager (externe) ════════════════ -->
+  <div class="modal-overlay" *ngIf="showScheduleModal" (click)="closeSchedule()">
+    <div class="modal-form schedule-modal" (click)="$event.stopPropagation()">
+      <div class="mf-header">
+        <div class="mf-icon">📨</div>
+        <h3>Affecter à un manager</h3>
+        <p class="mf-sub" *ngIf="scheduleCandidate">
+          {{ scheduleCandidate.applicantName }} — Score : <strong>{{ scheduleCandidate.score }}/100</strong>
+        </p>
+      </div>
+      <div class="mf-body">
+        <div class="assign-info-banner">
+          <span>ℹ️</span>
+          <span>
+            Vous affectez ce candidat externe à un manager. Le manager recevra un email et fixera lui-même
+            la date, l'heure et le lieu. Le candidat sera notifié immédiatement (pre-shortlist) puis à la
+            planification définitive (convocation + <code>.ics</code>).
+          </span>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Manager assigné <span class="req">*</span></label>
+            <select [(ngModel)]="scheduleForm.managerUsername">
+              <option value="">-- Sélectionner --</option>
+              <option *ngFor="let m of managers" [value]="m.username">
+                {{ m.firstName }} {{ m.lastName }} ({{ m.username }})
+              </option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Email candidat <span class="req">*</span></label>
+            <input type="email" [(ngModel)]="scheduleForm.candidateEmail" placeholder="candidat@exemple.com" />
+          </div>
+          <div class="field full">
+            <label>Note pour le manager <span class="opt">(optionnel)</span></label>
+            <textarea [(ngModel)]="scheduleForm.rhNote" rows="3"
+                      placeholder="Ex: Profil senior à valider sur stack X, score IA: {{ scheduleCandidate?.score }}/100"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="mf-footer">
+        <button class="btn-cancel" (click)="closeSchedule()">Annuler</button>
+        <button class="btn-submit" [disabled]="scheduleSaving" (click)="submitSchedule()">
+          {{ scheduleSaving ? '⏳ Affectation…' : '📨 Affecter au manager' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

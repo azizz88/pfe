@@ -34,9 +34,10 @@ public class SecurityConfig {
             // CORS géré par l'API Gateway — désactivé ici pour éviter le double header
             .cors(cors -> cors.disable())
 
-            // Routes publiques (reset password) + reste authentifie
+            // Routes publiques (reset password + actuator healthchecks) + reste authentifie
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+                .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                 .anyRequest().authenticated()
             )
 

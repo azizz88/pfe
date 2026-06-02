@@ -65,6 +65,21 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
                   <div class="dept-icon-box">🏗️</div>
                   <div class="dept-details">
                     <h3>{{ dept.name }}</h3>
+
+                    <!-- Manager actuel + actions -->
+                    <div class="mgr-strip" *ngIf="dept.manager" (click)="$event.stopPropagation()">
+                      <span class="mgr-strip-icon">👔</span>
+                      <span class="mgr-strip-label">Managé par</span>
+                      <span class="mgr-strip-name">{{ dept.manager.firstName }} {{ dept.manager.lastName }}</span>
+                      <button class="mgr-strip-action" (click)="openAssignManager(dept)" title="Changer">↻</button>
+                      <button class="mgr-strip-action mgr-strip-remove" (click)="removeManager(dept)" title="Retirer">×</button>
+                    </div>
+                    <div class="mgr-strip mgr-strip-vacant" *ngIf="!dept.manager" (click)="$event.stopPropagation()">
+                      <span class="mgr-strip-icon">👔</span>
+                      <span class="mgr-strip-vacant-label">Aucun manager</span>
+                      <button class="mgr-assign-btn" (click)="openAssignManager(dept)">+ Assigner</button>
+                    </div>
+
                     <div class="dept-badges">
                       <span class="badge svc-badge">📂 {{ getServicesForDept(dept.id).length }} service(s)</span>
                       <span class="badge desc-badge" *ngIf="dept.description">{{ dept.description }}</span>
@@ -137,6 +152,40 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
             <button class="m-cancel" (click)="showDeptForm = false">Annuler</button>
             <button class="m-submit" (click)="saveDepartment()">
               {{ isEditingDept ? '💾 Modifier' : '✅ Créer' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Assigner un manager au département -->
+      <div class="modal-overlay" *ngIf="showManagerForm" (click)="showManagerForm = false">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-head">
+            <div class="modal-icon">👔</div>
+            <h3>Assigner un manager</h3>
+            <p class="modal-sub">Département : <strong>{{ selectedDeptForManager?.name }}</strong></p>
+          </div>
+          <div class="modal-body">
+            <div class="mgr-hint">
+              Sélectionnez un employé existant. S'il manage déjà un autre département, l'ancien sera libéré automatiquement.
+            </div>
+            <label>Employé</label>
+            <select [(ngModel)]="managerForm.employeeId">
+              <option [ngValue]="null">-- Choisir un employé --</option>
+              <option *ngFor="let emp of candidateManagers()" [ngValue]="emp.id">
+                {{ emp.firstName }} {{ emp.lastName }}
+                <ng-container *ngIf="emp.position"> — {{ emp.position }}</ng-container>
+                <ng-container *ngIf="getCurrentDeptOfEmployee(emp.id) as cd"> (manage actuellement : {{ cd }})</ng-container>
+              </option>
+            </select>
+            <p class="mgr-empty" *ngIf="candidateManagers().length === 0">
+              ⚠️ Aucun employé avec le rôle MANAGER. Attribuez d'abord le rôle MANAGER à un employé depuis Keycloak.
+            </p>
+          </div>
+          <div class="modal-foot">
+            <button class="m-cancel" (click)="showManagerForm = false">Annuler</button>
+            <button class="m-submit" [disabled]="!managerForm.employeeId" (click)="saveManagerAssignment()">
+              ✅ Assigner
             </button>
           </div>
         </div>
@@ -351,11 +400,58 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
       transition:all 0.2s;
     }
     .m-submit:hover { box-shadow:0 6px 16px rgba(37,99,235,0.35); }
+    .m-submit:disabled { opacity:0.45; cursor:not-allowed; box-shadow:none; }
+
+    /* ══════════════ Manager strip ══════════════ */
+    .mgr-strip {
+      display:flex; align-items:center; gap:6px;
+      margin-top:6px; padding:4px 10px;
+      background:linear-gradient(135deg,#fefce8,#fef9c3);
+      border:1px solid #fde68a; border-radius:8px;
+      width:fit-content; max-width:100%;
+    }
+    .mgr-strip-icon { font-size:0.95rem; }
+    .mgr-strip-label { font-size:0.72rem; color:#854d0e; font-weight:500; }
+    .mgr-strip-name { font-size:0.82rem; color:#713f12; font-weight:700; }
+    .mgr-strip-action {
+      width:22px; height:22px; padding:0;
+      border:none; border-radius:6px; cursor:pointer;
+      background:rgba(255,255,255,0.6); color:#713f12;
+      font-size:0.9rem; font-weight:700;
+      transition:all 0.15s;
+    }
+    .mgr-strip-action:hover { background:white; transform:scale(1.05); }
+    .mgr-strip-remove { color:#b91c1c; }
+    .mgr-strip-remove:hover { background:#fee2e2; }
+    .mgr-strip-vacant { background:#f8fafc; border-color:#e2e8f0; }
+    .mgr-strip-vacant-label { font-size:0.78rem; color:#94a3b8; font-style:italic; }
+    .mgr-assign-btn {
+      margin-left:4px; padding:3px 10px;
+      background:linear-gradient(135deg,#10b981,#059669);
+      color:white; border:none; border-radius:6px;
+      cursor:pointer; font-size:0.72rem; font-weight:700;
+    }
+    .mgr-assign-btn:hover { box-shadow:0 2px 6px rgba(16,185,129,0.4); }
+
+    /* Modal manager */
+    .modal-sub { margin:6px 0 0; font-size:0.85rem; color:#64748b; }
+    .modal-sub strong { color:#1e293b; }
+    .mgr-hint {
+      padding:10px 12px; margin-bottom:14px;
+      background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
+      font-size:0.82rem; color:#1e40af; line-height:1.4;
+    }
+    .mgr-empty {
+      padding:14px; background:#fef2f2; border:1px solid #fecaca;
+      border-radius:8px; color:#991b1b; font-size:0.85rem; margin-top:10px;
+    }
   `]
 })
 export class DepartmentManagementComponent implements OnInit {
   departments: any[] = [];
   allServices: any[] = [];
+  allEmployees: any[] = [];
+  managerUsernames: Set<string> = new Set();
   expandedDepts: { [key: number]: boolean } = {};
 
   // Département form
@@ -371,11 +467,32 @@ export class DepartmentManagementComponent implements OnInit {
   serviceForm: any = {};
   selectedDeptForService: any = null;
 
+  // Assignation de manager
+  showManagerForm = false;
+  selectedDeptForManager: any = null;
+  managerForm: { employeeId: number | null } = { employeeId: null };
+
   constructor(private employeeApi: EmployeeApiService) {}
 
   ngOnInit(): void {
     this.loadDepartments();
     this.loadAllServices();
+    this.loadAllEmployees();
+    this.loadManagerUsernames();
+  }
+
+  loadAllEmployees(): void {
+    this.employeeApi.getAllEmployees().subscribe({
+      next: (data) => this.allEmployees = data,
+      error: () => this.allEmployees = []
+    });
+  }
+
+  loadManagerUsernames(): void {
+    this.employeeApi.getManagers().subscribe({
+      next: (mgrs) => this.managerUsernames = new Set(mgrs.map(m => m.username)),
+      error: () => this.managerUsernames = new Set()
+    });
   }
 
   loadDepartments(): void {
@@ -463,5 +580,44 @@ export class DepartmentManagementComponent implements OnInit {
     if (confirm('Supprimer ce service ?')) {
       this.employeeApi.deleteService(id).subscribe({ next: () => this.loadAllServices() });
     }
+  }
+
+  // ── Gestion du manager du département ──
+
+  openAssignManager(dept: any): void {
+    this.selectedDeptForManager = dept;
+    this.managerForm = { employeeId: dept.manager?.id || null };
+    this.showManagerForm = true;
+  }
+
+  /** Employés candidats : uniquement ceux ayant le rôle Keycloak MANAGER. */
+  candidateManagers(): any[] {
+    if (this.managerUsernames.size === 0) return [];
+    return this.allEmployees.filter(emp => emp.keycloakUsername && this.managerUsernames.has(emp.keycloakUsername));
+  }
+
+  /** Si l'employé manage déjà un département, renvoyer le nom de ce département (pour affichage). */
+  getCurrentDeptOfEmployee(employeeId: number): string | null {
+    const dept = this.departments.find(d => d.manager?.id === employeeId);
+    return dept ? dept.name : null;
+  }
+
+  saveManagerAssignment(): void {
+    if (!this.selectedDeptForManager || !this.managerForm.employeeId) return;
+    this.employeeApi.assignDepartmentManager(this.selectedDeptForManager.id, this.managerForm.employeeId).subscribe({
+      next: () => {
+        this.showManagerForm = false;
+        this.loadDepartments();
+      },
+      error: (err: any) => alert('Erreur assignation : ' + (err.error?.message || err.message))
+    });
+  }
+
+  removeManager(dept: any): void {
+    if (!confirm(`Retirer ${dept.manager?.firstName} ${dept.manager?.lastName} comme manager du département "${dept.name}" ?`)) return;
+    this.employeeApi.removeDepartmentManager(dept.id).subscribe({
+      next: () => this.loadDepartments(),
+      error: (err: any) => alert('Erreur : ' + (err.error?.message || err.message))
+    });
   }
 }

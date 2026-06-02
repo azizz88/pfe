@@ -6,10 +6,13 @@ import com.aziz.employeeservice.entities.Department;
 import com.aziz.employeeservice.entities.Employee;
 import com.aziz.employeeservice.entities.EmployeeSkill;
 import com.aziz.employeeservice.entities.ContractType;
+import com.aziz.employeeservice.entities.PositionHistory;
+import com.aziz.employeeservice.entities.PositionHistoryReason;
 import com.aziz.employeeservice.entities.ServiceEntity;
 import com.aziz.employeeservice.repositories.ContractRepository;
 import com.aziz.employeeservice.repositories.DepartmentRepository;
 import com.aziz.employeeservice.repositories.EmployeeRepository;
+import com.aziz.employeeservice.repositories.PositionHistoryRepository;
 import com.aziz.employeeservice.repositories.ServiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -37,19 +40,22 @@ public class EmployeeService {
     private final ServiceRepository serviceRepository;
     private final KeycloakUserService keycloakUserService;
     private final WelcomeEmailService welcomeEmailService;
+    private final PositionHistoryRepository positionHistoryRepository;
 
     public EmployeeService(EmployeeRepository employeeRepository,
                            DepartmentRepository departmentRepository,
                            ContractRepository contractRepository,
                            ServiceRepository serviceRepository,
                            KeycloakUserService keycloakUserService,
-                           WelcomeEmailService welcomeEmailService) {
+                           WelcomeEmailService welcomeEmailService,
+                           PositionHistoryRepository positionHistoryRepository) {
         this.employeeRepository = employeeRepository;
         this.departmentRepository = departmentRepository;
         this.contractRepository = contractRepository;
         this.serviceRepository = serviceRepository;
         this.keycloakUserService = keycloakUserService;
         this.welcomeEmailService = welcomeEmailService;
+        this.positionHistoryRepository = positionHistoryRepository;
     }
 
 
@@ -112,9 +118,26 @@ public class EmployeeService {
      *    -> L'employé clique sur le lien et définit son propre mot de passe
      */
     public Employee createEmployee(EmployeeCreateRequest request) {
+        String role = request.getKeycloakRole() != null ? request.getKeycloakRole() : "EMPLOYEE";
+
+        // Validation préalable pour le rôle MANAGER : éviter de créer un compte Keycloak orphelin
+        // si le département managé est invalide ou déjà attribué à un autre manager.
+        Department managedDepartment = null;
+        if ("MANAGER".equals(role)) {
+            if (request.getManagedDepartmentId() == null) {
+                throw new RuntimeException("Un département managé est requis pour le rôle Manager.");
+            }
+            managedDepartment = departmentRepository.findById(request.getManagedDepartmentId())
+                    .orElseThrow(() -> new RuntimeException("Département introuvable : " + request.getManagedDepartmentId()));
+            if (managedDepartment.getManager() != null) {
+                Employee current = managedDepartment.getManager();
+                throw new RuntimeException("Le département '" + managedDepartment.getName()
+                        + "' a déjà un manager : " + current.getFirstName() + " " + current.getLastName());
+            }
+        }
+
         // Génère un mot de passe temporaire et crée le user Keycloak (qui forcera le changement à la 1ère connexion)
         String tempPassword = keycloakUserService.generateTempPassword();
-        String role = request.getKeycloakRole() != null ? request.getKeycloakRole() : "EMPLOYEE";
         String username = keycloakUserService.createKeycloakUserWithTempPassword(
                 request.getFirstName(),
                 request.getLastName(),
@@ -181,6 +204,32 @@ public class EmployeeService {
             // Génère le matricule final à partir de l'ID auto-incrémenté
             savedEmployee.setMatricule(String.format("EMP-%03d", savedEmployee.getId()));
             savedEmployee = employeeRepository.save(savedEmployee);
+
+            // Ligne d'historique initiale : HIRE — fondation du parcours de l'employé.
+            if (savedEmployee.getPosition() != null && !savedEmployee.getPosition().isBlank()) {
+                PositionHistory hire = PositionHistory.builder()
+                        .employee(savedEmployee)
+                        .position(savedEmployee.getPosition())
+                        .departmentName(savedEmployee.getDepartment() != null
+                                ? savedEmployee.getDepartment().getName() : null)
+                        .serviceName(savedEmployee.getService() != null
+                                ? savedEmployee.getService().getName() : null)
+                        .startDate(savedEmployee.getHireDate() != null
+                                ? savedEmployee.getHireDate() : LocalDate.now())
+                        .endDate(null)
+                        .reason(PositionHistoryReason.HIRE)
+                        .notes("Embauche initiale")
+                        .build();
+                positionHistoryRepository.save(hire);
+            }
+
+            // Si rôle MANAGER : assigner ce nouvel employé comme manager du département choisi
+            if (managedDepartment != null) {
+                managedDepartment.setManager(savedEmployee);
+                departmentRepository.save(managedDepartment);
+                log.info("Manager assigné : {} {} -> département '{}'",
+                        savedEmployee.getFirstName(), savedEmployee.getLastName(), managedDepartment.getName());
+            }
         } catch (RuntimeException e) {
             // Compensation : éviter un utilisateur Keycloak orphelin si la persistance échoue
             log.error("Échec persistance employé {} — suppression de l'utilisateur Keycloak {}", request.getEmail(), username, e);
@@ -212,6 +261,146 @@ public class EmployeeService {
     }
 
     /** Met à jour un employé existant */
+    /**
+     * Met à jour le poste d'un employé (recherche par matricule, ou keycloakUsername en fallback)
+     * <b>et enregistre l'historique de carrière</b> :
+     * <ol>
+     *   <li>ferme la ligne actuelle (endDate = aujourd'hui)</li>
+     *   <li>crée une nouvelle ligne PositionHistory pour le nouveau poste</li>
+     *   <li>met à jour le champ dénormalisé {@code Employee.position}</li>
+     * </ol>
+     *
+     * Si {@code newPosition} est identique au poste actuel, aucun changement n'est effectué.
+     * Tous les paramètres de contexte sont optionnels et sont copiés dans l'historique pour audit.
+     */
+    public Employee updatePosition(String matricule, String newPosition, PositionHistoryReason reason,
+                                   Long sourceApplicationId, String validatedByManagerName, String notes) {
+        Employee employee = employeeRepository.findByMatricule(matricule)
+                .or(() -> employeeRepository.findByKeycloakUsername(matricule))
+                .orElseThrow(() -> new RuntimeException("Employé non trouvé : " + matricule));
+
+        // No-op si le poste ne change pas réellement
+        if (newPosition != null && newPosition.equals(employee.getPosition())) {
+            return employee;
+        }
+
+        LocalDate today = LocalDate.now();
+
+        // 1) Fermer la ligne courante (s'il y en a une)
+        positionHistoryRepository.findCurrentByEmployeeId(employee.getId()).ifPresent(current -> {
+            current.setEndDate(today);
+            positionHistoryRepository.save(current);
+        });
+
+        // 2) Nouvelle ligne "poste actuel"
+        PositionHistory entry = PositionHistory.builder()
+                .employee(employee)
+                .position(newPosition)
+                .departmentName(employee.getDepartment() != null ? employee.getDepartment().getName() : null)
+                .serviceName(employee.getService() != null ? employee.getService().getName() : null)
+                .startDate(today)
+                .endDate(null)
+                .reason(reason != null ? reason : PositionHistoryReason.REASSIGNMENT)
+                .sourceApplicationId(sourceApplicationId)
+                .validatedByManagerName(validatedByManagerName)
+                .notes(notes)
+                .build();
+        positionHistoryRepository.save(entry);
+
+        // 3) Dénormalisation
+        employee.setPosition(newPosition);
+        log.info("Poste de {} mis à jour → « {} » (raison: {})", matricule, newPosition, entry.getReason());
+        return employeeRepository.save(employee);
+    }
+
+    /** Surcharge legacy gardée pour compatibilité interne (équivaut à REASSIGNMENT). */
+    public Employee updatePosition(String matricule, String position) {
+        return updatePosition(matricule, position, PositionHistoryReason.REASSIGNMENT, null, null, null);
+    }
+
+    /** Historique de carrière d'un employé (le plus récent en premier). */
+    @Transactional(readOnly = true)
+    public List<PositionHistory> getPositionHistory(String matriculeOrUsername) {
+        Employee employee = employeeRepository.findByMatricule(matriculeOrUsername)
+                .or(() -> employeeRepository.findByKeycloakUsername(matriculeOrUsername))
+                .orElseThrow(() -> new RuntimeException("Employé non trouvé : " + matriculeOrUsername));
+        return positionHistoryRepository.findByEmployeeIdOrdered(employee.getId());
+    }
+
+    /**
+     * Récupère le contexte "Mon équipe" du manager connecté :
+     * <ul>
+     *   <li>la liste des départements qu'il gère (un manager peut en gérer plusieurs)</li>
+     *   <li>la liste des employés rattachés à ces départements (hors lui-même)</li>
+     * </ul>
+     * Retourne des structures simples (Map) pour découpler la sérialisation des entités JPA lazy.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getManagerTeamContext(String managerKeycloakUsername) {
+        Employee manager = employeeRepository.findByKeycloakUsername(managerKeycloakUsername).orElse(null);
+        Map<String, Object> result = new HashMap<>();
+        if (manager == null) {
+            result.put("departments", List.of());
+            result.put("team", List.of());
+            result.put("teamSize", 0);
+            return result;
+        }
+
+        List<Department> managed = departmentRepository.findAllByManagerId(manager.getId());
+
+        List<Map<String, Object>> departmentsOut = new ArrayList<>();
+        List<Map<String, Object>> teamOut = new ArrayList<>();
+        Set<Long> seenEmployeeIds = new HashSet<>();
+
+        for (Department dept : managed) {
+            Map<String, Object> d = new HashMap<>();
+            d.put("id", dept.getId());
+            d.put("name", dept.getName());
+            d.put("description", dept.getDescription());
+            List<Employee> members = employeeRepository.findByDepartmentId(dept.getId());
+            d.put("employeeCount", members.size());
+            departmentsOut.add(d);
+
+            for (Employee e : members) {
+                if (e.getId().equals(manager.getId())) continue;        // skip self
+                if (!seenEmployeeIds.add(e.getId())) continue;          // dedup si présent dans 2 départements
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", e.getId());
+                m.put("matricule", e.getMatricule());
+                m.put("firstName", e.getFirstName());
+                m.put("lastName", e.getLastName());
+                m.put("email", e.getEmail());
+                m.put("position", e.getPosition());
+                m.put("hireDate", e.getHireDate());
+                m.put("departmentName", dept.getName());
+                m.put("serviceName", e.getService() != null ? e.getService().getName() : null);
+                // Détecte une promotion récente (<30 jours) pour le badge "🚀 Promu récemment".
+                positionHistoryRepository.findCurrentByEmployeeId(e.getId()).ifPresent(cur -> {
+                    if (cur.getReason() == PositionHistoryReason.PROMOTION
+                            && cur.getStartDate() != null
+                            && ChronoUnit.DAYS.between(cur.getStartDate(), LocalDate.now()) < 30) {
+                        m.put("recentPromotion", true);
+                        m.put("promotionDate", cur.getStartDate());
+                    }
+                });
+                teamOut.add(m);
+            }
+        }
+
+        // Tri équipe par nom pour un rendu stable
+        teamOut.sort(Comparator.comparing(
+                (Map<String, Object> m) -> ((String) m.getOrDefault("lastName", "")).toLowerCase()));
+
+        result.put("manager", Map.of(
+                "id", manager.getId(),
+                "matricule", manager.getMatricule() != null ? manager.getMatricule() : "",
+                "fullName", (manager.getFirstName() + " " + manager.getLastName()).trim()));
+        result.put("departments", departmentsOut);
+        result.put("team", teamOut);
+        result.put("teamSize", teamOut.size());
+        return result;
+    }
+
     public Employee updateEmployee(Long id, Employee employeeDetails) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Employé non trouvé avec l'ID: " + id));
@@ -267,6 +456,13 @@ public class EmployeeService {
     /** Supprime un employé et son compte Keycloak associé */
     public void deleteEmployee(Long id) {
         employeeRepository.findById(id).ifPresent(emp -> {
+            // Si l'employé est manager d'un département, libérer ce département (sinon contrainte FK)
+            departmentRepository.findByManagerId(emp.getId()).ifPresent(dept -> {
+                log.info("Libération du département '{}' avant suppression du manager {} {}",
+                        dept.getName(), emp.getFirstName(), emp.getLastName());
+                dept.setManager(null);
+                departmentRepository.save(dept);
+            });
             keycloakUserService.deleteKeycloakUser(emp.getKeycloakUsername());
             employeeRepository.delete(emp);
         });
@@ -364,6 +560,20 @@ public class EmployeeService {
             deptInfo.put("id", dept.getId());
             deptInfo.put("name", dept.getName());
             deptInfo.put("description", dept.getDescription());
+            // Manager responsable (peut être null)
+            if (dept.getManager() != null) {
+                Employee mgr = dept.getManager();
+                Map<String, Object> mgrInfo = new HashMap<>();
+                mgrInfo.put("id", mgr.getId());
+                mgrInfo.put("matricule", mgr.getMatricule());
+                mgrInfo.put("firstName", mgr.getFirstName());
+                mgrInfo.put("lastName", mgr.getLastName());
+                mgrInfo.put("email", mgr.getEmail());
+                mgrInfo.put("position", mgr.getPosition());
+                deptInfo.put("manager", mgrInfo);
+            } else {
+                deptInfo.put("manager", null);
+            }
             node.put("department", deptInfo);
 
             List<Employee> allDeptEmployees = employeeRepository.findByDepartmentId(dept.getId());

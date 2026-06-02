@@ -61,4 +61,22 @@ public class DepartmentController {
         departmentService.deleteDepartment(id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Assigne (ou réassigne) un employé existant comme manager du département.
+     * Si l'employé manageait déjà un autre département, l'ancien est libéré automatiquement.
+     */
+    @PutMapping("/{deptId}/manager/{employeeId}")
+    @PreAuthorize("hasRole('HR_ADMIN')")
+    public ResponseEntity<Department> assignManager(@PathVariable Long deptId,
+                                                    @PathVariable Long employeeId) {
+        return ResponseEntity.ok(departmentService.assignManager(deptId, employeeId));
+    }
+
+    /** Retire le manager actuel d'un département. */
+    @DeleteMapping("/{deptId}/manager")
+    @PreAuthorize("hasRole('HR_ADMIN')")
+    public ResponseEntity<Department> removeManager(@PathVariable Long deptId) {
+        return ResponseEntity.ok(departmentService.removeManager(deptId));
+    }
 }

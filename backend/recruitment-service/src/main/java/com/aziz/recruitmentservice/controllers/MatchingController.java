@@ -40,6 +40,31 @@ public class MatchingController {
     }
 
     /**
+     * Retourne le contexte de formation pour une candidature : infos employé
+     * + compétences manquantes vs l'offre. Accessible aux managers pour pré-remplir
+     * et auto-déclencher la suggestion IA d'organismes.
+     */
+    @GetMapping("/application/{applicationId}/training-context")
+    @PreAuthorize("hasAnyRole('MANAGER', 'HR_ADMIN')")
+    public ResponseEntity<Map<String, Object>> getTrainingContext(
+            @PathVariable Long applicationId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String token = jwt != null ? jwt.getTokenValue() : null;
+        return ResponseEntity.ok(matchingService.getTrainingContext(applicationId, token));
+    }
+
+    /**
+     * Lance le matching IA sur le pool de candidats externes (LinkedIn / cooptation).
+     * Utilise le même algorithme que pour les internes — la seule différence est la source
+     * des profils (table ExternalCandidate au lieu d'employee-service).
+     */
+    @PostMapping("/external/job-offer/{offerId}")
+    @PreAuthorize("hasRole('HR_ADMIN')")
+    public ResponseEntity<MatchingResponse> runExternalMatching(@PathVariable Long offerId) {
+        return ResponseEntity.ok(matchingService.matchExternalCandidatesForOffer(offerId));
+    }
+
+    /**
      * Applique en bulk les statuts validés par le RH après matching.
      * Body : { updates: [ { applicationId, status }, ... ] }
      */

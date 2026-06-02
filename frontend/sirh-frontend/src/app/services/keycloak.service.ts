@@ -75,6 +75,11 @@ export class KeycloakService {
     return this.hasRole('EMPLOYEE');
   }
 
+  /** Vérifie si l'utilisateur est MANAGER (conduit les entretiens). */
+  isManager(): boolean {
+    return this.hasRole('MANAGER');
+  }
+
   /** Récupère le token JWT */
   getToken(): string | undefined {
     return this.keycloak.token;

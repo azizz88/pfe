@@ -29,9 +29,10 @@ public class SecurityConfig {
             // Configuration CORS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            // Routes publiques (reset password) + reste authentifie
+            // Routes publiques (reset password + actuator healthchecks) + reste authentifie
             .authorizeExchange(exchange -> exchange
                 .pathMatchers("/api/auth/**").permitAll()
+                .pathMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                 .anyExchange().authenticated()
             )
 

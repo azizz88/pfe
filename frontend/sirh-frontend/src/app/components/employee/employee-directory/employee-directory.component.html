@@ -27,6 +27,9 @@
             <rect x="0" y="12" width="16" height="3" rx="1"/>
           </svg>
         </button>
+        <button [class.active]="viewMode === 'grouped'" (click)="viewMode = 'grouped'" title="Regroupé par manager">
+          👔
+        </button>
       </div>
     </div>
   </div>
@@ -78,6 +81,12 @@
       <option value="">Tous les services</option>
       <option *ngFor="let svc of filteredServices" [value]="svc.id">{{ svc.name }}</option>
     </select>
+    <select [(ngModel)]="selectedManagerId" (change)="applyFilters()" class="filter-select">
+      <option value="">Tous les managers</option>
+      <option *ngFor="let mgr of managers" [value]="mgr.id">
+        👔 {{ mgr.firstName }} {{ mgr.lastName }}
+      </option>
+    </select>
     <button class="reset-btn" (click)="resetFilters()" *ngIf="hasActiveFilters()">
       ✕ Réinitialiser
     </button>
@@ -120,6 +129,12 @@
             <span class="detail-label">Matricule</span>
             <span class="detail-value mono">{{ emp.matricule }}</span>
           </div>
+          <div class="detail-row" *ngIf="getManagerOf(emp)">
+            <span class="detail-label">Manager</span>
+            <span class="detail-value mgr-pill">
+              👔 {{ getManagerOf(emp).firstName }} {{ getManagerOf(emp).lastName }}
+            </span>
+          </div>
         </div>
       </div>
       <div class="card-footer">
@@ -131,14 +146,15 @@
 
   <!-- ═══ LIST VIEW ═══ -->
   <div class="employee-list" *ngIf="viewMode === 'list'">
-    <div class="list-header">
+    <div class="list-header list-header-6">
       <span class="lh-name">Collaborateur</span>
       <span class="lh-position">Poste</span>
       <span class="lh-dept">Département</span>
+      <span class="lh-manager">Manager</span>
       <span class="lh-email">Email</span>
       <span class="lh-action"></span>
     </div>
-    <div class="list-row" *ngFor="let emp of filteredEmployees; let i = index"
+    <div class="list-row list-row-6" *ngFor="let emp of filteredEmployees; let i = index"
          (click)="openEmployeeDetail(emp)" [style.animation-delay.ms]="i * 30">
       <div class="lr-name">
         <div class="list-avatar" [style.background]="getAvatarColor(emp)">
@@ -158,13 +174,60 @@
         </span>
         <span *ngIf="!emp.department">—</span>
       </span>
+      <span class="lr-manager">
+        <span class="mgr-pill sm" *ngIf="getManagerOf(emp); else noMgr">
+          👔 {{ getManagerOf(emp).lastName }}
+        </span>
+        <ng-template #noMgr><span class="muted">—</span></ng-template>
+      </span>
       <span class="lr-email">{{ emp.email }}</span>
       <span class="lr-action">→</span>
     </div>
   </div>
 
+  <!-- ═══ GROUPED-BY-MANAGER VIEW ═══ -->
+  <div class="grouped-view" *ngIf="viewMode === 'grouped'">
+    <div class="mgr-group" *ngFor="let group of groupedByManager()">
+      <div class="mgr-group-header">
+        <ng-container *ngIf="group.manager; else orphanHeader">
+          <div class="mgr-avatar" [style.background]="getAvatarColor(group.manager)">
+            {{ group.manager.firstName?.charAt(0) }}{{ group.manager.lastName?.charAt(0) }}
+          </div>
+          <div class="mgr-info">
+            <div class="mgr-title">👔 {{ group.manager.firstName }} {{ group.manager.lastName }}</div>
+            <div class="mgr-sub">{{ group.manager.position || 'Manager' }} • {{ group.employees.length }} collaborateur(s)</div>
+          </div>
+        </ng-container>
+        <ng-template #orphanHeader>
+          <div class="mgr-avatar orphan-avatar">?</div>
+          <div class="mgr-info">
+            <div class="mgr-title">Sans manager assigné</div>
+            <div class="mgr-sub">{{ group.employees.length }} collaborateur(s)</div>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="mgr-group-members">
+        <div class="member-card" *ngFor="let emp of group.employees" (click)="openEmployeeDetail(emp)">
+          <div class="member-avatar" [style.background]="getAvatarColor(emp)">
+            {{ emp.firstName?.charAt(0) }}{{ emp.lastName?.charAt(0) }}
+          </div>
+          <div class="member-info">
+            <div class="member-name">{{ emp.lastName?.toUpperCase() }} {{ emp.firstName }}</div>
+            <div class="member-meta">
+              <span *ngIf="emp.position">{{ emp.position }}</span>
+              <span class="dot" *ngIf="emp.position && emp.department">•</span>
+              <span *ngIf="emp.department">{{ emp.department.name }}</span>
+            </div>
+          </div>
+          <span class="member-arrow">→</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Empty state -->
-  <div class="empty-state" *ngIf="filteredEmployees.length === 0">
+  <div class="empty-state" *ngIf="filteredEmployees.length === 0 && viewMode !== 'grouped'">
     <div class="empty-icon">🔍</div>
     <p class="empty-title">Aucun collaborateur trouvé</p>
     <p class="empty-sub">{{ hasActiveFilters() ? 'Essayez avec d\'autres critères de recherche' : 'L\'annuaire est vide pour le moment' }}</p>
@@ -226,6 +289,12 @@
             <div class="field">
               <label>Service</label>
               <div class="field-value">{{ selectedEmployee?.service?.name || '—' }}</div>
+            </div>
+            <div class="field" *ngIf="getManagerOf(selectedEmployee)">
+              <label>Manager</label>
+              <div class="field-value highlight">
+                👔 {{ getManagerOf(selectedEmployee).firstName }} {{ getManagerOf(selectedEmployee).lastName }}
+              </div>
             </div>
           </div>
         </div>

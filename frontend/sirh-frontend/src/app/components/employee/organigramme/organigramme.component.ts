@@ -60,6 +60,18 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
               <div class="dept-icon-wrap">🏗️</div>
               <div class="dept-info">
                 <div class="dept-name">{{ node.department.name }}</div>
+
+                <!-- Manager responsable du département -->
+                <div class="dept-manager" *ngIf="node.department.manager">
+                  <span class="mgr-icon">👔</span>
+                  <span class="mgr-label">Managé par</span>
+                  <span class="mgr-name">{{ node.department.manager.firstName }} {{ node.department.manager.lastName }}</span>
+                </div>
+                <div class="dept-manager dept-manager-vacant" *ngIf="!node.department.manager">
+                  <span class="mgr-icon">👔</span>
+                  <span class="mgr-vacant">Aucun manager désigné</span>
+                </div>
+
                 <div class="dept-meta">
                   <span class="meta-tag services-tag">
                     📂 {{ node.services?.length || 0 }} service(s)
@@ -191,6 +203,26 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
     }
     .dept-info { flex: 1; min-width: 0; }
     .dept-name { font-weight: 700; color: #1e293b; font-size: 1.05rem; }
+
+    /* Manager responsable du département */
+    .dept-manager {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 6px; padding: 4px 10px;
+      background: linear-gradient(135deg, #fefce8, #fef9c3);
+      border: 1px solid #fde68a; border-radius: 8px;
+      width: fit-content; max-width: 100%;
+    }
+    .mgr-icon { font-size: 0.95rem; flex-shrink: 0; }
+    .mgr-label { font-size: 0.72rem; color: #854d0e; font-weight: 500; }
+    .mgr-name {
+      font-size: 0.82rem; color: #713f12; font-weight: 700;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dept-manager-vacant {
+      background: #f8fafc; border-color: #e2e8f0;
+    }
+    .mgr-vacant { font-size: 0.78rem; color: #94a3b8; font-style: italic; }
+
     .dept-meta { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
     .meta-tag {
       font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 500;

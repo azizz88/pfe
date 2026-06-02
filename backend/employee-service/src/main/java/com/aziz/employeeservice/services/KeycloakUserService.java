@@ -246,6 +246,37 @@ public class KeycloakUserService {
         }
     }
 
+    /**
+     * Liste les utilisateurs ayant un rôle realm donné.
+     * Utilisé notamment pour proposer la liste des managers lors de la planification d'un entretien.
+     *
+     * @param roleName Nom du rôle realm (ex: "MANAGER")
+     * @return Liste légère { username, firstName, lastName, email } — vide si rôle absent ou aucun user.
+     */
+    public List<java.util.Map<String, String>> listUsersByRole(String roleName) {
+        try {
+            List<UserRepresentation> users = keycloakAdminClient.realm(realm)
+                    .roles().get(roleName).getUserMembers(0, 1000);
+            return users.stream()
+                    .filter(u -> Boolean.TRUE.equals(u.isEnabled()))
+                    .map(u -> {
+                        java.util.Map<String, String> m = new java.util.HashMap<>();
+                        m.put("username", u.getUsername());
+                        m.put("firstName", u.getFirstName());
+                        m.put("lastName", u.getLastName());
+                        m.put("email", u.getEmail());
+                        return m;
+                    })
+                    .toList();
+        } catch (jakarta.ws.rs.NotFoundException nf) {
+            log.warn("Rôle realm '{}' absent du realm '{}' — retour liste vide.", roleName, realm);
+            return List.of();
+        } catch (Exception e) {
+            log.error("Erreur listage utilisateurs avec rôle '{}': {}", roleName, e.getMessage());
+            return List.of();
+        }
+    }
+
     // ── Privé ──
 
     private void assignRealmRole(String userId, String roleName) {

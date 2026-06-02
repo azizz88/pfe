@@ -48,23 +48,43 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
         </a>
       </div>
 
+      <!-- ══════════════ Bandeau identité ══════════════ -->
+      <div class="identity-banner" *ngIf="profile">
+        <div class="identity-avatar">
+          {{ (profile.firstName || '?')[0]?.toUpperCase() }}{{ (profile.lastName || '')[0]?.toUpperCase() }}
+        </div>
+        <div class="identity-info">
+          <h2>{{ profile.firstName }} {{ profile.lastName }}</h2>
+          <div class="identity-meta">
+            <span class="meta-chip" *ngIf="profile.position">💼 {{ profile.position }}</span>
+            <span class="meta-chip" *ngIf="profile.department?.name">🏗️ {{ profile.department.name }}</span>
+            <span class="meta-chip matricule-chip" *ngIf="profile.matricule">🔖 {{ profile.matricule }}</span>
+          </div>
+        </div>
+        <div class="readonly-tag">🔒 Lecture seule</div>
+      </div>
+
       <!-- ══════════════ Mes Informations ══════════════ -->
       <h2 class="section-heading">📋 Mes Informations</h2>
-      <div class="cards">
-        <!-- Carte Profil cliquable -->
-        <div class="card card-profile clickable" (click)="openProfile()" title="Cliquer pour voir mon profil complet">
-          <div class="card-header">
-            <h3>👤 Mon Profil</h3>
-            <span class="view-badge">👁️ Voir tout</span>
-          </div>
-          <div *ngIf="profile; else loading">
-            <div class="info-row"><span>Matricule</span><strong>{{ profile.matricule }}</strong></div>
-            <div class="info-row"><span>Nom</span><strong>{{ profile.firstName }} {{ profile.lastName }}</strong></div>
-            <div class="info-row"><span>Email</span><strong>{{ profile.email }}</strong></div>
-            <div class="info-row"><span>Poste</span><strong>{{ profile.position || '—' }}</strong></div>
-          </div>
-          <ng-template #loading><p class="loading">Chargement...</p></ng-template>
-          <div class="click-hint">🔍 Cliquez pour afficher toutes vos informations</div>
+
+      <div class="readonly-notice">
+        <span class="notice-icon">ℹ️</span>
+        <span>Ces informations sont en <strong>lecture seule</strong>. Pour toute correction, veuillez contacter votre administrateur RH.</span>
+      </div>
+
+      <div class="cards" *ngIf="profile; else loading">
+
+        <!-- Carte Informations personnelles -->
+        <div class="card">
+          <h3>👤 Informations personnelles</h3>
+          <div class="info-row"><span>Matricule</span><strong>{{ profile.matricule || '—' }}</strong></div>
+          <div class="info-row"><span>Prénom</span><strong>{{ profile.firstName || '—' }}</strong></div>
+          <div class="info-row"><span>Nom</span><strong>{{ profile.lastName || '—' }}</strong></div>
+          <div class="info-row"><span>Email</span><strong>{{ profile.email || '—' }}</strong></div>
+          <div class="info-row"><span>Téléphone</span><strong>{{ profile.phone || '—' }}</strong></div>
+          <div class="info-row"><span>Poste</span><strong>{{ profile.position || '—' }}</strong></div>
+          <div class="info-row"><span>Username</span><strong>{{ profile.keycloakUsername || '—' }}</strong></div>
+          <div class="info-row"><span>Date d'embauche</span><strong>{{ profile.hireDate || '—' }}</strong></div>
         </div>
 
         <!-- Carte Département -->
@@ -72,6 +92,17 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
           <h3>🏗️ Mon Département</h3>
           <div class="info-row"><span>Nom</span><strong>{{ profile.department.name }}</strong></div>
           <div class="info-row"><span>Description</span><strong>{{ profile.department.description || '—' }}</strong></div>
+          <div class="info-row" *ngIf="profile.department.manager">
+            <span>Manager</span>
+            <strong>{{ profile.department.manager.firstName }} {{ profile.department.manager.lastName }}</strong>
+          </div>
+        </div>
+
+        <!-- Carte Service -->
+        <div class="card" *ngIf="profile?.service">
+          <h3>📂 Mon Service</h3>
+          <div class="info-row"><span>Nom</span><strong>{{ profile.service.name }}</strong></div>
+          <div class="info-row"><span>Description</span><strong>{{ profile.service.description || '—' }}</strong></div>
         </div>
 
         <!-- Carte Contrat -->
@@ -80,9 +111,28 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
           <div class="info-row"><span>Type</span>
             <strong class="badge" [class]="profile.contract.type">{{ profile.contract.type }}</strong>
           </div>
-          <div class="info-row"><span>Début</span><strong>{{ profile.contract.startDate }}</strong></div>
+          <div class="info-row"><span>Début</span><strong>{{ profile.contract.startDate || '—' }}</strong></div>
           <div class="info-row"><span>Fin</span><strong>{{ profile.contract.endDate || 'Indéterminé' }}</strong></div>
-          <div class="info-row"><span>Salaire</span><strong>{{ profile.contract.salary | number:'1.2-2' }} DT</strong></div>
+          <div class="info-row"><span>Salaire</span><strong class="salary-val">{{ profile.contract.salary | number:'1.2-2' }} DT</strong></div>
+        </div>
+
+        <!-- Carte Compétences -->
+        <div class="card card-skills">
+          <h3>🎓 Mes Compétences</h3>
+          <div class="skills-list" *ngIf="skills.length > 0">
+            <div class="skill-item" *ngFor="let s of skills">
+              <div class="skill-head">
+                <span class="skill-name">{{ s.skillName || s.skill?.name }}</span>
+                <span class="skill-cat" *ngIf="s.category || s.skill?.category">{{ s.category || s.skill?.category }}</span>
+              </div>
+              <div class="skill-stars">
+                <span class="star" *ngFor="let _ of [1,2,3,4,5]; let i = index"
+                      [class.filled]="i < (s.level || 0)">★</span>
+                <span class="level-num">{{ s.level || 0 }}/5</span>
+              </div>
+            </div>
+          </div>
+          <p *ngIf="skills.length === 0" class="no-docs">Aucune compétence enregistrée.</p>
         </div>
 
         <!-- Carte Documents -->
@@ -102,122 +152,9 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
           <p *ngIf="documents.length === 0" class="no-docs">Aucun document disponible.</p>
         </div>
       </div>
+      <ng-template #loading><p class="loading">Chargement de vos informations...</p></ng-template>
     </div>
 
-    <!-- ══════════════ Modale Profil Complet (Lecture seule) ══════════════ -->
-    <div class="modal-overlay" *ngIf="showProfileModal" (click)="closeProfile()">
-      <div class="modal-box" (click)="$event.stopPropagation()">
-        <!-- En-tête -->
-        <div class="modal-header">
-          <div class="modal-avatar">
-            {{ (profile?.firstName || '?')[0]?.toUpperCase() }}{{ (profile?.lastName || '')[0]?.toUpperCase() }}
-          </div>
-          <div class="modal-title">
-            <h2>{{ profile?.firstName }} {{ profile?.lastName }}</h2>
-            <span class="modal-subtitle">{{ profile?.position || 'Employé' }}</span>
-          </div>
-          <button class="close-btn" (click)="closeProfile()">✕</button>
-        </div>
-
-        <!-- Alerte lecture seule -->
-        <div class="readonly-notice">
-          <span class="notice-icon">ℹ️</span>
-          <span>Ces informations sont en <strong>lecture seule</strong>. Pour toute correction, veuillez contacter votre administrateur RH.</span>
-        </div>
-
-        <!-- Sections -->
-        <div class="modal-sections">
-
-          <!-- Section Informations Personnelles -->
-          <div class="section">
-            <div class="section-title">📋 Informations Personnelles</div>
-            <div class="field-grid">
-              <div class="field">
-                <label>Matricule</label>
-                <div class="field-value">{{ profile?.matricule || '—' }}</div>
-              </div>
-              <div class="field">
-                <label>Prénom</label>
-                <div class="field-value">{{ profile?.firstName || '—' }}</div>
-              </div>
-              <div class="field">
-                <label>Nom</label>
-                <div class="field-value">{{ profile?.lastName || '—' }}</div>
-              </div>
-              <div class="field">
-                <label>Email</label>
-                <div class="field-value">{{ profile?.email || '—' }}</div>
-              </div>
-              <div class="field">
-                <label>Téléphone</label>
-                <div class="field-value">{{ profile?.phone || '—' }}</div>
-              </div>
-              <div class="field">
-                <label>Poste</label>
-                <div class="field-value">{{ profile?.position || '—' }}</div>
-              </div>
-              <div class="field">
-                <label>Username Keycloak</label>
-                <div class="field-value">{{ profile?.keycloakUsername || '—' }}</div>
-              </div>
-              <div class="field">
-                <label>Date d'embauche</label>
-                <div class="field-value">{{ profile?.hireDate || '—' }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section Département -->
-          <div class="section" *ngIf="profile?.department">
-            <div class="section-title">🏗️ Département</div>
-            <div class="field-grid">
-              <div class="field">
-                <label>Nom du département</label>
-                <div class="field-value">{{ profile?.department?.name || '—' }}</div>
-              </div>
-              <div class="field">
-                <label>Description</label>
-                <div class="field-value">{{ profile?.department?.description || '—' }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section Contrat -->
-          <div class="section" *ngIf="profile?.contract">
-            <div class="section-title">📄 Contrat</div>
-            <div class="field-grid">
-              <div class="field">
-                <label>Type de contrat</label>
-                <div class="field-value">
-                  <span class="badge" [class]="profile?.contract?.type">{{ profile?.contract?.type || '—' }}</span>
-                </div>
-              </div>
-              <div class="field">
-                <label>Date début</label>
-                <div class="field-value">{{ profile?.contract?.startDate || '—' }}</div>
-              </div>
-              <div class="field">
-                <label>Date fin</label>
-                <div class="field-value">{{ profile?.contract?.endDate || 'Indéterminé' }}</div>
-              </div>
-              <div class="field">
-                <label>Salaire mensuel</label>
-                <div class="field-value salary">{{ profile?.contract?.salary | number:'1.2-2' }} DT</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="modal-footer">
-          <div class="contact-admin">
-            <span class="contact-icon">📧</span>
-            <span>Une erreur dans vos informations ? Contactez votre <strong>administrateur RH</strong> pour les corriger.</span>
-          </div>
-          <button class="close-modal-btn" (click)="closeProfile()">Fermer</button>
-        </div>
-      </div>
-    </div>
   `,
   styles: [`
     /* ── Dashboard ── */
@@ -364,107 +301,81 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
     .download-btn:hover { background: #2563eb; }
     .no-docs { color: #94a3b8; font-style: italic; text-align: center; margin: 12px 0 0 0; }
 
-    /* ── Modale Profil Complet ── */
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(15,23,42,0.55);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 2000; padding: 16px;
-      backdrop-filter: blur(3px);
-      animation: fadeIn 0.2s ease;
-    }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-    .modal-box {
-      background: #ffffff; border-radius: 20px; width: 100%; max-width: 680px;
-      max-height: 90vh; overflow-y: auto;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.25);
-      animation: slideUp 0.25s ease;
-    }
-    @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-    /* En-tête modale */
-    .modal-header {
-      display: flex; align-items: center; gap: 16px;
-      padding: 24px 28px; border-bottom: 1px solid #f1f5f9;
+    /* ── Bandeau identité ── */
+    .identity-banner {
+      display: flex; align-items: center; gap: 18px;
+      padding: 20px 24px;
       background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
-      border-radius: 20px 20px 0 0;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      color: white;
+      box-shadow: 0 8px 24px rgba(30,58,95,0.18);
     }
-    .modal-avatar {
-      width: 56px; height: 56px; border-radius: 50%;
-      background: rgba(255,255,255,0.2); color: white;
+    .identity-avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(255,255,255,0.18); color: white;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem; font-weight: 700; flex-shrink: 0;
-      border: 2px solid rgba(255,255,255,0.4);
+      font-size: 1.5rem; font-weight: 800; flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.35);
     }
-    .modal-title { flex: 1; }
-    .modal-title h2 { margin: 0; color: white; font-size: 1.3rem; }
-    .modal-subtitle { color: rgba(255,255,255,0.75); font-size: 0.9rem; }
-    .close-btn {
-      background: rgba(255,255,255,0.15); border: none; color: white;
-      width: 36px; height: 36px; border-radius: 50%;
-      font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: background 0.2s;
+    .identity-info { flex: 1; min-width: 0; }
+    .identity-info h2 { margin: 0 0 8px 0; color: white; font-size: 1.35rem; font-weight: 700; }
+    .identity-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+    .meta-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 12px; border-radius: 20px;
+      background: rgba(255,255,255,0.15);
+      font-size: 0.78rem; font-weight: 500;
+      border: 1px solid rgba(255,255,255,0.2);
     }
-    .close-btn:hover { background: rgba(255,255,255,0.3); }
+    .matricule-chip { background: rgba(96,165,250,0.3); }
+    .readonly-tag {
+      padding: 6px 14px; background: rgba(245,158,11,0.25);
+      border: 1px solid rgba(252,211,77,0.5);
+      border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+      color: #fef3c7; white-space: nowrap;
+    }
 
-    /* Notice lecture seule */
+    /* ── Notice lecture seule ── */
     .readonly-notice {
-      display: flex; align-items: flex-start; gap: 10px;
-      margin: 16px 28px 0 28px; padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; margin-bottom: 16px;
       background: #fffbeb; border: 1px solid #fde68a;
       border-radius: 10px; color: #78350f; font-size: 0.85rem;
     }
     .notice-icon { font-size: 1rem; flex-shrink: 0; }
 
-    /* Sections */
-    .modal-sections { padding: 20px 28px; display: flex; flex-direction: column; gap: 24px; }
+    .salary-val { color: #166534; font-weight: 700; }
 
-    .section {}
-    .section-title {
-      font-weight: 700; color: #1e3a5f; font-size: 0.95rem;
-      margin-bottom: 12px; padding-bottom: 8px;
-      border-bottom: 2px solid #e2e8f0;
-    }
-    .field-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-    }
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label {
-      font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;
-      letter-spacing: 0.5px; font-weight: 600;
-    }
-    .field-value {
-      padding: 10px 14px;
+    /* ── Compétences ── */
+    .card-skills { grid-column: span 1; }
+    .skills-list { display: flex; flex-direction: column; gap: 10px; }
+    .skill-item {
+      padding: 10px 12px;
       background: #f8fafc; border: 1px solid #e2e8f0;
-      border-radius: 8px; color: #1e293b; font-size: 0.9rem;
-      min-height: 40px; display: flex; align-items: center;
+      border-radius: 10px;
     }
-    .salary { color: #166534; font-weight: 700; background: #f0fdf4; border-color: #bbf7d0; }
-
-    /* Footer modale */
-    .modal-footer {
+    .skill-head {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 16px 28px 24px 28px; border-top: 1px solid #f1f5f9;
-      background: #f8fafc; border-radius: 0 0 20px 20px; gap: 16px;
+      margin-bottom: 6px; gap: 8px;
     }
-    .contact-admin {
-      display: flex; align-items: flex-start; gap: 8px;
-      color: #475569; font-size: 0.82rem; flex: 1;
+    .skill-name { font-weight: 600; color: #1e293b; font-size: 0.9rem; }
+    .skill-cat {
+      font-size: 0.7rem; padding: 2px 8px; border-radius: 12px;
+      background: #ede9fe; color: #6d28d9; font-weight: 500;
     }
-    .contact-icon { font-size: 1rem; flex-shrink: 0; }
-    .close-modal-btn {
-      padding: 10px 24px; background: #1e3a5f; color: white;
-      border: none; border-radius: 8px; cursor: pointer;
-      font-size: 0.9rem; font-weight: 600; white-space: nowrap;
-      transition: background 0.2s;
+    .skill-stars { display: flex; align-items: center; gap: 2px; }
+    .star { color: #e2e8f0; font-size: 1rem; }
+    .star.filled { color: #f59e0b; }
+    .level-num {
+      margin-left: 8px; font-size: 0.78rem; color: #64748b; font-weight: 600;
     }
-    .close-modal-btn:hover { background: #1e40af; }
   `]
 })
 export class EmployeeDashboardComponent implements OnInit {
   profile: any = null;
   documents: any[] = [];
-  showProfileModal = false;
+  skills: any[] = [];
 
   constructor(
     public keycloakService: KeycloakService,
@@ -473,9 +384,13 @@ export class EmployeeDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.employeeApi.getMyProfile().subscribe({
-      next: (data) => this.profile = data,
+      next: (data) => {
+        this.profile = data;
+        if (data?.matricule) {
+          this.loadSkills(data.matricule);
+        }
+      },
       error: () => {
-        // Fallback : afficher les infos Keycloak si pas de fiche employé
         this.profile = {
           firstName: this.keycloakService.keycloak.tokenParsed?.['given_name'] || '',
           lastName: this.keycloakService.keycloak.tokenParsed?.['family_name'] || '',
@@ -493,12 +408,11 @@ export class EmployeeDashboardComponent implements OnInit {
     });
   }
 
-  openProfile(): void {
-    this.showProfileModal = true;
-  }
-
-  closeProfile(): void {
-    this.showProfileModal = false;
+  loadSkills(matricule: string): void {
+    this.employeeApi.getEmployeeSkills(matricule).subscribe({
+      next: (data) => this.skills = data || [],
+      error: () => this.skills = []
+    });
   }
 
   downloadDocument(doc: any): void {

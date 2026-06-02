@@ -80,11 +80,11 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
       <!-- Formulaire ajout/modification -->
       <div class="modal-overlay" *ngIf="showForm" (click)="showForm = false">
         <div class="modal-form" (click)="$event.stopPropagation()">
-          <!-- Modal header -->
-          <div class="mf-header">
-            <div class="mf-icon">{{ isEditing ? '✏️' : '👤' }}</div>
-            <h3>{{ isEditing ? 'Modifier' : 'Ajouter' }} un employé</h3>
-            <p class="mf-sub">{{ isEditing ? 'Modifiez les informations ci-dessous' : 'Remplissez les informations du nouvel employé' }}</p>
+          <!-- Modal header (icône / titre / sous-titre s'adaptent au rôle sélectionné) -->
+          <div class="mf-header" [ngClass]="!isEditing ? ('header-' + (form.keycloakRole || 'EMPLOYEE').toLowerCase()) : ''">
+            <div class="mf-icon">{{ isEditing ? '✏️' : getRoleIcon() }}</div>
+            <h3>{{ isEditing ? 'Modifier un employé' : ('Ajouter un ' + getRoleLabelShort()) }}</h3>
+            <p class="mf-sub">{{ isEditing ? 'Modifiez les informations ci-dessous' : getRoleSubtitle() }}</p>
           </div>
 
           <div class="mf-body">
@@ -115,16 +115,47 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
               </div>
             </div>
 
-            <!-- Section: Affectation -->
-            <div class="section">
-              <div class="section-title"><span class="st-icon">🏗️</span> Affectation</div>
+            <!-- Section: Compte Keycloak / Rôle (création uniquement)
+                 Placée tôt car le rôle conditionne les sections suivantes. -->
+            <div class="section" *ngIf="!isEditing">
+              <div class="section-title"><span class="st-icon">🔐</span> Compte d'accès &amp; Rôle</div>
+              <div class="kc-info-banner">
+                <span class="kc-info-icon">ℹ️</span>
+                <span>Un email d'activation sera envoyé. Nom d'utilisateur généré automatiquement : <strong>prénom.nom</strong></span>
+              </div>
+              <div class="grid-2">
+                <div class="field">
+                  <label>Rôle Keycloak</label>
+                  <select [(ngModel)]="form.keycloakRole" (change)="onRoleChange()">
+                    <option value="EMPLOYEE">👤 Employé</option>
+                    <option value="MANAGER">👔 Manager (entretiens)</option>
+                    <option value="HR_ADMIN">🛡️ Administrateur RH</option>
+                  </select>
+                </div>
+              </div>
+              <!-- Description visuelle du rôle sélectionné -->
+              <div class="role-preview" [ngClass]="'role-' + (form.keycloakRole || 'EMPLOYEE').toLowerCase()">
+                <span class="rp-icon">{{ getRoleIcon() }}</span>
+                <div class="rp-body">
+                  <strong>{{ getRoleLabelLong() }}</strong>
+                  <p>{{ getRoleDescription() }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section: Affectation (libellé adapté au rôle) -->
+            <div class="section" *ngIf="form.keycloakRole !== 'HR_ADMIN' || isEditing">
+              <div class="section-title">
+                <span class="st-icon">🏗️</span>
+                {{ form.keycloakRole === 'MANAGER' ? 'Rattachement hiérarchique' : 'Affectation' }}
+              </div>
               <div class="grid-2">
                 <div class="field">
                   <label>Date d'embauche</label>
                   <input [(ngModel)]="form.hireDate" type="date" />
                 </div>
                 <div class="field">
-                  <label>Département</label>
+                  <label>Département {{ form.keycloakRole === 'MANAGER' ? 'de rattachement' : '' }}</label>
                   <select [(ngModel)]="form.departmentId" (change)="onDepartmentChange()">
                     <option value="">-- Sélectionner --</option>
                     <option *ngFor="let dept of departments" [value]="dept.id">{{ dept.name }}</option>
@@ -140,26 +171,46 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
               </div>
             </div>
 
-            <!-- Section: Compte Keycloak (création uniquement) -->
-            <div class="section" *ngIf="!isEditing">
-              <div class="section-title"><span class="st-icon">🔐</span> Compte d'accès</div>
-              <div class="kc-info-banner">
+            <!-- Section: Périmètre managérial (création + rôle MANAGER uniquement) -->
+            <div class="section mgr-section" *ngIf="!isEditing && form.keycloakRole === 'MANAGER'">
+              <div class="section-title"><span class="st-icon">👔</span> Périmètre managérial</div>
+              <div class="mgr-info-banner">
                 <span class="kc-info-icon">ℹ️</span>
-                <span>Un email d'activation sera envoyé à l'employé. Le nom d'utilisateur sera généré automatiquement : <strong>prénom.nom</strong></span>
+                <span>Le manager validera les candidatures et planifiera les entretiens pour ce département. Un département ne peut avoir qu'un seul manager actif.</span>
               </div>
-              <div class="grid-2">
+              <div class="grid-1">
                 <div class="field">
-                  <label>Rôle</label>
-                  <select [(ngModel)]="form.keycloakRole">
-                    <option value="EMPLOYEE">Employé</option>
-                    <option value="HR_ADMIN">Administrateur RH</option>
+                  <label>Département managé <span class="required-star">*</span></label>
+                  <select [(ngModel)]="form.managedDepartmentId">
+                    <option [ngValue]="null">-- Sélectionner le département à manager --</option>
+                    <option *ngFor="let dept of availableManagedDepartments()" [ngValue]="dept.id">
+                      {{ dept.name }}
+                    </option>
                   </select>
+                  <small class="field-hint warn" *ngIf="availableManagedDepartments().length === 0">
+                    ⚠️ Tous les départements ont déjà un manager. Libérez-en un avant de créer un nouveau manager.
+                  </small>
+                  <small class="field-hint" *ngIf="form.managedDepartmentId && departmentHasManager(form.managedDepartmentId)">
+                    ℹ️ Ce département est actuellement managé par <strong>{{ getCurrentManagerName(form.managedDepartmentId) }}</strong>.
+                  </small>
                 </div>
               </div>
             </div>
 
-            <!-- Section: Extraction IA depuis CV (création uniquement) -->
-            <div class="section" *ngIf="!isEditing">
+            <!-- Section: HR_ADMIN banner (création + rôle HR_ADMIN) -->
+            <div class="section admin-section" *ngIf="!isEditing && form.keycloakRole === 'HR_ADMIN'">
+              <div class="admin-info-banner">
+                <span class="kc-info-icon">🛡️</span>
+                <div>
+                  <strong>Administrateur RH</strong>
+                  <p>L'affectation département/service est optionnelle : ce rôle est transverse à l'organisation.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section: Extraction IA depuis CV (création + rôle EMPLOYEE uniquement)
+                 Inutile pour Manager/Admin : ces rôles ne participent pas au matching skills. -->
+            <div class="section" *ngIf="!isEditing && form.keycloakRole === 'EMPLOYEE'">
               <div class="section-title"><span class="st-icon">🤖</span> Extraction IA des compétences</div>
               <div class="cv-zone">
                 <div class="cv-upload-row">
@@ -613,6 +664,48 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
       color: #6d28d9; font-size: 0.85rem;
     }
 
+    /* ══════════════ Rôle preview ══════════════ */
+    .role-preview {
+      display:flex; align-items:center; gap:12px;
+      padding:12px 14px; margin-top:12px;
+      border-radius:10px;
+      border:1px solid #e2e8f0;
+      transition:all 0.25s ease;
+    }
+    .role-preview .rp-icon { font-size:1.7rem; line-height:1; flex-shrink:0; }
+    .role-preview .rp-body strong { display:block; color:#1e293b; font-size:0.9rem; }
+    .role-preview .rp-body p { margin:2px 0 0; color:#475569; font-size:0.8rem; line-height:1.4; }
+    .role-employee  { background:linear-gradient(135deg,#eff6ff,#dbeafe); border-color:#bfdbfe; }
+    .role-manager   { background:linear-gradient(135deg,#fefce8,#fef9c3); border-color:#fde68a; }
+    .role-hr_admin  { background:linear-gradient(135deg,#fdf4ff,#fae8ff); border-color:#f5d0fe; }
+
+    /* ══════════════ Sections conditionnelles par rôle ══════════════ */
+    .mgr-section .section-title { color:#854d0e; border-bottom-color:#fef3c7; }
+    .mgr-info-banner {
+      display:flex; align-items:flex-start; gap:8px;
+      background:#fefce8; border:1px solid #fde68a;
+      border-radius:10px; padding:10px 14px;
+      margin-bottom:14px; font-size:0.83rem; color:#854d0e; line-height:1.45;
+    }
+    .admin-section .admin-info-banner {
+      display:flex; align-items:flex-start; gap:10px;
+      background:#fdf4ff; border:1px solid #f5d0fe;
+      border-radius:12px; padding:12px 14px;
+      color:#7c3aed; font-size:0.85rem;
+    }
+    .admin-info-banner strong { display:block; color:#581c87; font-size:0.92rem; margin-bottom:2px; }
+    .admin-info-banner p { margin:0; color:#7c3aed; line-height:1.4; }
+
+    .grid-1 { display:grid; grid-template-columns:1fr; gap:14px; }
+
+    .required-star { color:#dc2626; font-weight:700; margin-left:2px; }
+    .field-hint { margin-top:6px; font-size:0.76rem; color:#64748b; line-height:1.4; }
+    .field-hint.warn { color:#b45309; }
+
+    /* Headers colorés par rôle (création seulement) */
+    .header-manager  { background:linear-gradient(135deg,#fefce8,#fef9c3) !important; }
+    .header-hr_admin { background:linear-gradient(135deg,#fdf4ff,#fae8ff) !important; }
+
     /* Modal overlay */
     .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:1000; animation:fadeIn 0.2s ease; }
 
@@ -775,13 +868,92 @@ export class EmployeeManagementComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.form = { contractType: '', departmentId: '', serviceId: '', keycloakRole: 'EMPLOYEE' };
+    this.form = {
+      contractType: '',
+      departmentId: '',
+      serviceId: '',
+      keycloakRole: 'EMPLOYEE',
+      managedDepartmentId: null
+    };
     this.filteredServices = [];
     this.isEditing = false;
     this.editId = null;
     this.createdUsername = null;
     this.createdEmail = null;
     this.resetCvExtraction();
+  }
+
+  // ─── Helpers liés au rôle ────────────────────────────
+
+  /** Quand le rôle change : nettoyer les champs inutiles dans le nouveau contexte. */
+  onRoleChange(): void {
+    if (this.form.keycloakRole !== 'MANAGER') {
+      this.form.managedDepartmentId = null;
+    }
+    if (this.form.keycloakRole !== 'EMPLOYEE') {
+      // L'extraction CV n'a plus de sens pour Manager / HR_Admin
+      this.resetCvExtraction();
+    }
+  }
+
+  getRoleIcon(): string {
+    switch (this.form.keycloakRole) {
+      case 'MANAGER': return '👔';
+      case 'HR_ADMIN': return '🛡️';
+      default: return '👤';
+    }
+  }
+
+  getRoleLabelShort(): string {
+    switch (this.form.keycloakRole) {
+      case 'MANAGER': return 'manager';
+      case 'HR_ADMIN': return 'administrateur RH';
+      default: return 'employé';
+    }
+  }
+
+  getRoleLabelLong(): string {
+    switch (this.form.keycloakRole) {
+      case 'MANAGER': return 'Manager — Responsable d\'un département';
+      case 'HR_ADMIN': return 'Administrateur RH — Accès complet';
+      default: return 'Employé — Collaborateur standard';
+    }
+  }
+
+  getRoleDescription(): string {
+    switch (this.form.keycloakRole) {
+      case 'MANAGER':
+        return 'Valide les candidatures, planifie les entretiens et supervise un département. Doit être rattaché à un département managé.';
+      case 'HR_ADMIN':
+        return 'Accès complet à la gestion RH : employés, recrutement, congés, paie. Rôle transverse (sans affectation obligatoire).';
+      default:
+        return 'Accès à son profil, son équipe et ses outils RH. Apparaît dans le matching IA selon ses compétences.';
+    }
+  }
+
+  getRoleSubtitle(): string {
+    switch (this.form.keycloakRole) {
+      case 'MANAGER': return 'Renseignez les informations du nouveau manager et son département';
+      case 'HR_ADMIN': return 'Renseignez les informations du nouvel administrateur RH';
+      default: return 'Remplissez les informations du nouvel employé';
+    }
+  }
+
+  /** Départements disponibles pour un nouveau manager : ceux sans manager actuel. */
+  availableManagedDepartments(): any[] {
+    return this.departments.filter(d => !d.manager);
+  }
+
+  /** Affiche le manager actuel d'un département (rare : appelé seulement en mode défensif). */
+  departmentHasManager(deptId: any): boolean {
+    const dept = this.departments.find(d => d.id === +deptId);
+    return !!(dept && dept.manager);
+  }
+
+  getCurrentManagerName(deptId: any): string {
+    const dept = this.departments.find(d => d.id === +deptId);
+    if (!dept || !dept.manager) return '—';
+    return `${dept.manager.firstName} ${dept.manager.lastName}`;
   }
 
   // ─── Extraction CV par IA ────────────────────────────
@@ -873,8 +1045,14 @@ export class EmployeeManagementComponent implements OnInit {
         error: (err: any) => alert('Erreur mise à jour : ' + (err.error?.message || err.message))
       });
     } else {
-      // Compétences validées par le RH après extraction CV (le cas échéant)
-      const initialSkills = this.cvExtractResult?.skills
+      // Validation spécifique au rôle Manager : département managé obligatoire
+      if (this.form.keycloakRole === 'MANAGER' && !this.form.managedDepartmentId) {
+        alert('Veuillez sélectionner le département dont ce manager sera responsable.');
+        return;
+      }
+
+      // Compétences validées par le RH après extraction CV (uniquement pour le rôle EMPLOYEE)
+      const initialSkills = (this.form.keycloakRole === 'EMPLOYEE' && this.cvExtractResult?.skills)
         ? this.cvExtractResult.skills
             .filter((s: any) => s.preselected && s.skillId && s.level)
             .map((s: any) => ({
@@ -898,6 +1076,9 @@ export class EmployeeManagementComponent implements OnInit {
         service: this.form.serviceId ? { id: +this.form.serviceId } : null,
         contract,
         keycloakRole: this.form.keycloakRole || 'EMPLOYEE',
+        managedDepartmentId: this.form.keycloakRole === 'MANAGER' && this.form.managedDepartmentId
+          ? +this.form.managedDepartmentId
+          : null,
         initialSkills
       };
       this.employeeApi.createEmployee(payload).subscribe({
@@ -906,6 +1087,8 @@ export class EmployeeManagementComponent implements OnInit {
           this.createdUsername = emp.keycloakUsername;
           this.createdEmail = emp.email;
           this.loadEmployees();
+          // Recharger les départements pour rafraîchir l'état des managers
+          this.loadDepartments();
           // Effacer la bannière après 12 secondes
           setTimeout(() => { this.createdUsername = null; this.createdEmail = null; }, 12000);
         },
@@ -917,7 +1100,11 @@ export class EmployeeManagementComponent implements OnInit {
   deleteEmployee(id: number): void {
     if (confirm('Supprimer cet employé ?')) {
       this.employeeApi.deleteEmployee(id).subscribe({
-        next: () => this.loadEmployees()
+        next: () => {
+          this.loadEmployees();
+          // Si l'employé supprimé était manager, son département redevient disponible
+          this.loadDepartments();
+        }
       });
     }
   }

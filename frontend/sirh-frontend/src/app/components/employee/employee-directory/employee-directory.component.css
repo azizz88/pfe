@@ -299,6 +299,73 @@
 }
 .close-modal-btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(30,58,95,0.35); }
 
+/* ── Manager pill (sur cartes & lignes) ── */
+.mgr-pill {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 10px; border-radius:14px;
+  background:linear-gradient(135deg,#fefce8,#fef9c3);
+  border:1px solid #fde68a; color:#854d0e;
+  font-size:0.8rem; font-weight:600;
+}
+.mgr-pill.sm { padding:2px 8px; font-size:0.75rem; }
+.muted { color:#cbd5e1; }
+
+/* ── List layout 6 colonnes (avec Manager) ── */
+.list-header-6,.list-row-6 {
+  display:grid !important;
+  grid-template-columns:2fr 1.4fr 1.1fr 1.2fr 1.5fr 40px;
+}
+
+/* ── Vue groupée par manager ── */
+.grouped-view { display:flex; flex-direction:column; gap:20px; }
+.mgr-group {
+  background:white; border:1px solid #e2e8f0; border-radius:14px;
+  overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04);
+  animation:cardSlideIn 0.4s ease both;
+}
+.mgr-group-header {
+  display:flex; align-items:center; gap:14px;
+  padding:16px 20px;
+  background:linear-gradient(135deg,#fffbeb,#fef9c3);
+  border-bottom:1px solid #fde68a;
+}
+.mgr-avatar {
+  width:44px; height:44px; border-radius:50%;
+  color:white; display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:0.95rem; flex-shrink:0;
+  border:2px solid rgba(255,255,255,0.6);
+  box-shadow:0 2px 6px rgba(0,0,0,0.08);
+}
+.orphan-avatar { background:#94a3b8 !important; }
+.mgr-info { flex:1; min-width:0; }
+.mgr-title { font-weight:700; color:#713f12; font-size:1rem; }
+.mgr-sub { color:#92400e; font-size:0.78rem; margin-top:2px; }
+
+.mgr-group-members {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:10px; padding:16px 20px;
+}
+.member-card {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; background:#f8fafc; border-radius:10px;
+  border:1px solid #e2e8f0; cursor:pointer; transition:all 0.2s;
+}
+.member-card:hover {
+  background:white; border-color:#93c5fd;
+  box-shadow:0 4px 12px rgba(59,130,246,0.1); transform:translateY(-1px);
+}
+.member-avatar {
+  width:36px; height:36px; border-radius:50%;
+  color:white; display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:0.8rem; flex-shrink:0;
+}
+.member-info { flex:1; min-width:0; }
+.member-name { font-weight:600; color:#1e293b; font-size:0.88rem; }
+.member-meta { color:#64748b; font-size:0.75rem; margin-top:2px; display:flex; gap:5px; flex-wrap:wrap; }
+.member-meta .dot { color:#cbd5e1; }
+.member-arrow { color:#cbd5e1; font-size:1rem; transition:color 0.2s; }
+.member-card:hover .member-arrow { color:#3b82f6; }
+
 /* ── Responsive ── */
 @media (max-width:768px) {
   .page-header { flex-direction:column; align-items:flex-start; }
@@ -306,6 +373,8 @@
   .toolbar { flex-direction:column; align-items:stretch; }
   .employee-grid { grid-template-columns:1fr; }
   .list-header,.list-row { grid-template-columns:2fr 1fr 40px; }
-  .lh-position,.lh-email,.lr-position,.lr-email { display:none; }
+  .list-header-6,.list-row-6 { grid-template-columns:2fr 1fr 40px !important; }
+  .lh-position,.lh-email,.lh-manager,.lr-position,.lr-email,.lr-manager { display:none; }
   .field-grid { grid-template-columns:1fr; }
+  .mgr-group-members { grid-template-columns:1fr; }
 }

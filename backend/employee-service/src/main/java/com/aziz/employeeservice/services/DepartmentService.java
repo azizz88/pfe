@@ -1,7 +1,9 @@
 package com.aziz.employeeservice.services;
 
 import com.aziz.employeeservice.entities.Department;
+import com.aziz.employeeservice.entities.Employee;
 import com.aziz.employeeservice.repositories.DepartmentRepository;
+import com.aziz.employeeservice.repositories.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,9 +20,12 @@ import java.util.Optional;
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
+    private final EmployeeRepository employeeRepository;
 
-    public DepartmentService(DepartmentRepository departmentRepository) {
+    public DepartmentService(DepartmentRepository departmentRepository,
+                             EmployeeRepository employeeRepository) {
         this.departmentRepository = departmentRepository;
+        this.employeeRepository = employeeRepository;
     }
 
 
@@ -54,5 +59,35 @@ public class DepartmentService {
     /** Supprime un département */
     public void deleteDepartment(Long id) {
         departmentRepository.deleteById(id);
+    }
+
+    /**
+     * Assigne un employé existant comme manager du département.
+     * Si l'employé est déjà manager d'un autre département, on libère l'ancien automatiquement.
+     */
+    public Department assignManager(Long deptId, Long employeeId) {
+        Department dept = departmentRepository.findById(deptId)
+                .orElseThrow(() -> new RuntimeException("Département non trouvé : " + deptId));
+        Employee emp = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employé non trouvé : " + employeeId));
+
+        // Si cet employé manage déjà un autre département, le libérer pour respecter 1 manager = 1 département
+        departmentRepository.findByManagerId(employeeId).ifPresent(previous -> {
+            if (!previous.getId().equals(deptId)) {
+                previous.setManager(null);
+                departmentRepository.save(previous);
+            }
+        });
+
+        dept.setManager(emp);
+        return departmentRepository.save(dept);
+    }
+
+    /** Retire le manager actuel du département (le département devient vacant). */
+    public Department removeManager(Long deptId) {
+        Department dept = departmentRepository.findById(deptId)
+                .orElseThrow(() -> new RuntimeException("Département non trouvé : " + deptId));
+        dept.setManager(null);
+        return departmentRepository.save(dept);
     }
 }

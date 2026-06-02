@@ -22,13 +22,37 @@ const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
         <div class="sidebar-header">
           <h2>🏢 SIRH</h2>
           <p class="user-info">{{ keycloakService.getFullName() }}</p>
-          <span class="user-role">{{ keycloakService.isHrAdmin() ? 'RH Admin' : 'Employé' }}</span>
+          <span class="user-role">{{ roleLabel }}</span>
         </div>
 
         <!-- ============================================ -->
-        <!-- SIDEBAR EMPLOYÉ (visible uniquement pour EMPLOYEE) -->
+        <!-- SIDEBAR MANAGER (visible si MANAGER, non-admin) -->
         <!-- ============================================ -->
-        <ng-container *ngIf="!keycloakService.isHrAdmin()">
+        <ng-container *ngIf="keycloakService.isManager() && !keycloakService.isHrAdmin()">
+          <div class="nav-section">
+            <h3>🎙️ Espace Manager</h3>
+            <a routerLink="/manager/dashboard" routerLinkActive="active">
+              <span>🏠</span> Mon Dashboard
+            </a>
+            <a routerLink="/manager/profile" routerLinkActive="active">
+              <span>👤</span> Mon Profil
+            </a>
+            <a routerLink="/manager/interviews" routerLinkActive="active">
+              <span>📅</span> Mes Entretiens
+            </a>
+            <a routerLink="/manager/formation" routerLinkActive="active">
+              <span>🎓</span> Formations
+            </a>
+            <a routerLink="/manager/organigramme" routerLinkActive="active">
+              <span>🌳</span> Organigramme
+            </a>
+          </div>
+        </ng-container>
+
+        <!-- ============================================ -->
+        <!-- SIDEBAR EMPLOYÉ (visible uniquement pour EMPLOYEE non-manager) -->
+        <!-- ============================================ -->
+        <ng-container *ngIf="!keycloakService.isHrAdmin() && !keycloakService.isManager()">
           <div class="nav-section">
             <h3>📋 Espace Employé</h3>
             <a routerLink="/employee/dashboard" routerLinkActive="active">
@@ -42,6 +66,9 @@ const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
             </a>
             <a routerLink="/employee/applications" routerLinkActive="active">
               <span>💼</span> Offres d'emploi
+            </a>
+            <a routerLink="/employee/formation" routerLinkActive="active">
+              <span>🎓</span> Ma Formation
             </a>
           </div>
         </ng-container>
@@ -74,8 +101,14 @@ const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
             <a routerLink="/admin/recruitment" routerLinkActive="active">
               <span>🎯</span> Offres & candidatures
             </a>
+            <a routerLink="/admin/external-candidates" routerLinkActive="active">
+              <span>🌐</span> Candidats externes
+            </a>
             <a routerLink="/admin/skills" routerLinkActive="active">
               <span>🎓</span> Compétences
+            </a>
+            <a routerLink="/admin/training-providers" routerLinkActive="active">
+              <span>🏫</span> Organismes de formation
             </a>
           </div>
         </ng-container>
@@ -246,5 +279,11 @@ export class AppComponent {
 
   get isPublicRoute(): boolean {
     return PUBLIC_ROUTE_PREFIXES.some(prefix => this.router.url.startsWith(prefix));
+  }
+
+  get roleLabel(): string {
+    if (this.keycloakService.isHrAdmin()) return 'RH Admin';
+    if (this.keycloakService.isManager()) return 'Manager';
+    return 'Employé';
   }
 }

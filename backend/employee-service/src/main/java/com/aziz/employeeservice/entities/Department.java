@@ -39,4 +39,14 @@ public class Department {
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<ServiceEntity> services = new ArrayList<>();
+
+    /**
+     * Manager responsable du département (rôle Keycloak MANAGER).
+     * Nullable : un département peut temporairement ne pas avoir de manager.
+     * Le manager est lui-même un Employee (un manager EST un employé avec une responsabilité supplémentaire).
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "manager_id")
+    @JsonIgnoreProperties({"department", "service", "contract", "skills", "hibernateLazyInitializer", "handler"})
+    private Employee manager;
 }

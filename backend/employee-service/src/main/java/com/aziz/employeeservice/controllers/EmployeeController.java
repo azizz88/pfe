@@ -5,8 +5,11 @@ import com.aziz.employeeservice.dto.EmployeeSkillRequest;
 import com.aziz.employeeservice.entities.Employee;
 import com.aziz.employeeservice.entities.EmployeeSkill;
 import com.aziz.employeeservice.entities.ContractType;
+import com.aziz.employeeservice.entities.PositionHistory;
+import com.aziz.employeeservice.entities.PositionHistoryReason;
 import com.aziz.employeeservice.services.EmployeeService;
 import com.aziz.employeeservice.services.EmployeeSkillService;
+import com.aziz.employeeservice.services.KeycloakUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,10 +30,24 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
     private final EmployeeSkillService skillService;
+    private final KeycloakUserService keycloakUserService;
 
-    public EmployeeController(EmployeeService employeeService, EmployeeSkillService skillService) {
+    public EmployeeController(EmployeeService employeeService,
+                              EmployeeSkillService skillService,
+                              KeycloakUserService keycloakUserService) {
         this.employeeService = employeeService;
         this.skillService = skillService;
+        this.keycloakUserService = keycloakUserService;
+    }
+
+    /**
+     * Liste les utilisateurs ayant le rôle Keycloak MANAGER.
+     * Utilisé par le RH lors de la planification d'un entretien pour choisir le manager assigné.
+     */
+    @GetMapping("/managers")
+    @PreAuthorize("hasRole('HR_ADMIN')")
+    public ResponseEntity<List<Map<String, String>>> getManagers() {
+        return ResponseEntity.ok(keycloakUserService.listUsersByRole("MANAGER"));
     }
 
 
@@ -43,7 +60,7 @@ public class EmployeeController {
      * Utilise le token JWT pour identifier l'utilisateur.
      */
     @GetMapping("/me")
-    @PreAuthorize("hasAnyRole('HR_ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('HR_ADMIN', 'EMPLOYEE', 'MANAGER')")
     public ResponseEntity<Employee> getMyProfile(@AuthenticationPrincipal Jwt jwt) {
         String username = jwt.getClaim("preferred_username");
         return employeeService.getMyProfile(username)
@@ -138,6 +155,83 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.updateEmployee(id, employee));
     }
 
+    /**
+     * Met à jour le poste d'un employé (par matricule) <b>et enregistre l'historique de carrière</b>.
+     * Utilisé par recruitment-service quand le manager valide un entretien (POSITIF) :
+     * le candidat retenu est promu au titre de l'offre.
+     *
+     * <p>Body :
+     * <pre>{
+     *   "position": "Nouveau poste",            // requis
+     *   "reason": "PROMOTION|MOBILITY|...",     // optionnel (défaut REASSIGNMENT)
+     *   "sourceApplicationId": 42,              // optionnel — lien vers candidature
+     *   "validatedByManagerName": "F. Dupont",  // optionnel — manager validateur
+     *   "notes": "..."                          // optionnel — contexte libre
+     * }</pre>
+     */
+    @PutMapping("/matricule/{matricule}/position")
+    @PreAuthorize("hasAnyRole('HR_ADMIN', 'MANAGER')")
+    public ResponseEntity<Employee> updatePosition(@PathVariable String matricule,
+                                                   @RequestBody Map<String, Object> body) {
+        Object positionRaw = body.get("position");
+        if (!(positionRaw instanceof String) || ((String) positionRaw).isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        String position = ((String) positionRaw).trim();
+
+        PositionHistoryReason reason = PositionHistoryReason.REASSIGNMENT;
+        Object reasonRaw = body.get("reason");
+        if (reasonRaw instanceof String && !((String) reasonRaw).isBlank()) {
+            try { reason = PositionHistoryReason.valueOf(((String) reasonRaw).toUpperCase()); }
+            catch (IllegalArgumentException ignored) { /* fallback REASSIGNMENT */ }
+        }
+
+        Long sourceApplicationId = null;
+        Object sa = body.get("sourceApplicationId");
+        if (sa instanceof Number) sourceApplicationId = ((Number) sa).longValue();
+        else if (sa instanceof String && !((String) sa).isBlank()) {
+            try { sourceApplicationId = Long.parseLong((String) sa); } catch (NumberFormatException ignored) {}
+        }
+
+        String validatedBy = body.get("validatedByManagerName") instanceof String
+                ? (String) body.get("validatedByManagerName") : null;
+        String notes = body.get("notes") instanceof String ? (String) body.get("notes") : null;
+
+        return ResponseEntity.ok(employeeService.updatePosition(
+                matricule, position, reason, sourceApplicationId, validatedBy, notes));
+    }
+
+    /**
+     * Historique de carrière de l'employé connecté (timeline "Mon parcours").
+     * Le plus récent (poste actuel) est en tête de liste.
+     */
+    @GetMapping("/me/position-history")
+    @PreAuthorize("hasAnyRole('HR_ADMIN', 'EMPLOYEE', 'MANAGER')")
+    public ResponseEntity<List<PositionHistory>> getMyPositionHistory(@AuthenticationPrincipal Jwt jwt) {
+        String username = jwt.getClaim("preferred_username");
+        return ResponseEntity.ok(employeeService.getPositionHistory(username));
+    }
+
+    /** Historique de carrière d'un employé donné (vue RH/Manager). */
+    @GetMapping("/matricule/{matricule}/position-history")
+    @PreAuthorize("hasAnyRole('HR_ADMIN', 'MANAGER')")
+    public ResponseEntity<List<PositionHistory>> getPositionHistory(@PathVariable String matricule) {
+        return ResponseEntity.ok(employeeService.getPositionHistory(matricule));
+    }
+
+    /**
+     * Contexte "Mon équipe" du manager connecté.
+     * Renvoie : departments (gérés), team (employés rattachés hors lui-même), teamSize.
+     * Chaque membre porte un flag {@code recentPromotion=true} si sa dernière ligne d'historique
+     * est une PROMOTION datant de moins de 30 jours (badge visuel côté UI).
+     */
+    @GetMapping("/manager/my-team")
+    @PreAuthorize("hasAnyRole('HR_ADMIN', 'MANAGER')")
+    public ResponseEntity<Map<String, Object>> getMyTeam(@AuthenticationPrincipal Jwt jwt) {
+        String username = jwt.getClaim("preferred_username");
+        return ResponseEntity.ok(employeeService.getManagerTeamContext(username));
+    }
+
     /** Supprime un employé */
     @DeleteMapping("/{id:\\d+}")
     @PreAuthorize("hasRole('HR_ADMIN')")
@@ -173,7 +267,7 @@ public class EmployeeController {
 
     /** Retourne l'organigramme de l'entreprise (départements + employés) */
     @GetMapping("/organigramme")
-    @PreAuthorize("hasAnyRole('HR_ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('HR_ADMIN', 'EMPLOYEE', 'MANAGER')")
     public ResponseEntity<List<Map<String, Object>>> getOrganigramme() {
         return ResponseEntity.ok(employeeService.getOrganigramme());
     }
@@ -189,17 +283,22 @@ public class EmployeeController {
         return ResponseEntity.ok(skillService.getSkillsByMatricule(matricule));
     }
 
-    /** Ajoute ou met à jour (upsert) une compétence pour l'employé */
+    /**
+     * Ajoute ou met à jour (upsert) une compétence pour l'employé.
+     * Ouvert au MANAGER pour permettre le suivi des compétences pendant une formation
+     * (page /manager/formation). L'authz fine "ce manager pilote-t-il bien cet employé"
+     * est laissée à la v2 — le manager n'utilise cette route que via son écran formation.
+     */
     @PostMapping("/matricule/{matricule}/skills")
-    @PreAuthorize("hasRole('HR_ADMIN')")
+    @PreAuthorize("hasAnyRole('HR_ADMIN', 'MANAGER')")
     public ResponseEntity<EmployeeSkill> addSkill(@PathVariable String matricule,
                                                   @RequestBody EmployeeSkillRequest req) {
         return ResponseEntity.ok(skillService.addOrUpdateSkill(matricule, req));
     }
 
-    /** Modifie le niveau d'une compétence existante */
+    /** Modifie le niveau d'une compétence existante. Ouvert au MANAGER (suivi formation). */
     @PutMapping("/matricule/{matricule}/skills/{skillId}")
-    @PreAuthorize("hasRole('HR_ADMIN')")
+    @PreAuthorize("hasAnyRole('HR_ADMIN', 'MANAGER')")
     public ResponseEntity<EmployeeSkill> updateSkillLevel(@PathVariable String matricule,
                                                           @PathVariable Long skillId,
                                                           @RequestBody EmployeeSkillRequest req) {

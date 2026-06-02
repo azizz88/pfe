@@ -167,7 +167,7 @@
       <div class="workflow-section">
         <div class="workflow-label">Changer le statut :</div>
         <div class="workflow-steps">
-          <button *ngFor="let s of statuses"
+          <button *ngFor="let s of adminAllowedStatuses"
                   class="workflow-btn"
                   [ngClass]="s"
                   [class.current]="app.status === s"
@@ -177,6 +177,7 @@
             <span class="wf-text">{{ getStatusLabel(s) }}</span>
           </button>
         </div>
+        <p class="workflow-hint">🔒 Retenu / Refusé sont décidés par le manager à l'issue de l'entretien.</p>
       </div>
     </div>
 
@@ -275,12 +276,42 @@
             <div class="kcard-meta">
               <span class="km-matricule">{{ app.employeeMatricule }}</span>
             </div>
-            <!-- Action : envoyer en formation pour les TRAINING -->
-            <button *ngIf="app.matchingCategory === 'TRAINING' && !app.trainingRecommended"
-                    class="kcard-train-btn"
-                    (click)="openTrainingModal(app)">
-              📚 Envoyer en formation
+            <!-- Pas encore d'entretien → bouton d'affectation -->
+            <!-- Dès qu'un entretien existe (même REJECTED_BY_MANAGER), on n'affiche plus le bouton :
+                 le manager a déjà donné son avis (acceptation, refus d'affectation, résultat d'entretien). -->
+            <button class="kcard-schedule-btn"
+                    *ngIf="!app.latestInterview"
+                    (click)="openScheduleInterview(app)">
+              📨 Affecter au manager
             </button>
+
+            <!-- Entretien déjà affecté / refusé / réalisé → on affiche l'état (et plus jamais le bouton) -->
+            <div class="kcard-interview-state"
+                 *ngIf="app.latestInterview"
+                 [attr.data-status]="app.latestInterview.status">
+              <div class="kis-row">
+                <span class="kis-icon">👤</span>
+                <span class="kis-mgr">{{ app.latestInterview.managerName || app.latestInterview.managerUsername }}</span>
+              </div>
+              <div class="kis-row">
+                <span class="kis-status-pill" [attr.data-status]="app.latestInterview.status">
+                  {{ interviewStatusLabel(app.latestInterview.status) }}
+                </span>
+                <span class="kis-result"
+                      *ngIf="app.latestInterview.result"
+                      [class.pos]="app.latestInterview.result === 'POSITIF'"
+                      [class.neg]="app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF'"
+                      [class.mid]="app.latestInterview.result === 'EN_COURS'">
+                  {{ interviewResultLabel(app.latestInterview.result) }}
+                </span>
+              </div>
+              <div class="kis-locked" *ngIf="app.latestInterview.status === 'COMPLETED'">
+                🔒 Entretien finalisé
+              </div>
+              <div class="kis-locked" *ngIf="app.latestInterview.status === 'REJECTED_BY_MANAGER'">
+                🚫 Affectation refusée par le manager
+              </div>
+            </div>
           </div>
           <p class="kempty" *ngIf="pipelineByStatus('ENTRETIEN').length === 0">Aucun entretien</p>
         </div>
@@ -310,6 +341,22 @@
             </div>
             <div class="kcard-meta">
               <span class="km-matricule">{{ app.employeeMatricule }}</span>
+            </div>
+            <!-- Détail entretien validant -->
+            <div class="kcard-interview-state" *ngIf="app.latestInterview"
+                 [attr.data-status]="app.latestInterview.status">
+              <div class="kis-row">
+                <span class="kis-icon">👤</span>
+                <span class="kis-mgr">{{ app.latestInterview.managerName || app.latestInterview.managerUsername }}</span>
+                <span class="kis-result"
+                      *ngIf="app.latestInterview.result"
+                      [class.pos]="app.latestInterview.result === 'POSITIF'"
+                      [class.neg]="app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF'"
+                      [class.mid]="app.latestInterview.result === 'EN_COURS'">
+                  {{ interviewResultLabel(app.latestInterview.result) }}
+                </span>
+              </div>
+              <div class="kis-locked">🎯 Affecté au poste « {{ app.jobOfferTitle }} »</div>
             </div>
           </div>
           <p class="kempty" *ngIf="pipelineByStatus('RETENU').length === 0">Aucun candidat retenu</p>
@@ -347,48 +394,6 @@
           </div>
           <p class="kempty" *ngIf="pipelineByStatus('REFUSE').length === 0">Aucun refus</p>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ MODAL FORMATION ═══ -->
-  <div class="modal-overlay" *ngIf="showTrainingModal" (click)="closeTrainingModal()">
-    <div class="train-modal" (click)="$event.stopPropagation()">
-      <div class="train-header">
-        <div class="train-icon">📚</div>
-        <div>
-          <h3>Recommander une formation</h3>
-          <p class="train-sub">{{ trainingApp?.applicantName }} · {{ trainingApp?.jobOfferTitle }}</p>
-        </div>
-        <button class="match-close" (click)="closeTrainingModal()">✕</button>
-      </div>
-      <div class="train-body">
-        <p class="train-intro">
-          Le candidat sera marqué comme <strong>"à former"</strong> dans le pipeline.
-          Le module formation pourra utiliser cette information pour proposer un plan de montée en compétences.
-        </p>
-        <div class="train-info">
-          <div class="train-row">
-            <span class="train-lbl">Score matching</span>
-            <strong>{{ trainingApp?.matchingScore }}/100</strong>
-          </div>
-          <div class="train-row">
-            <span class="train-lbl">Catégorie</span>
-            <span class="cat-pill" [ngClass]="trainingApp?.matchingCategory">
-              🎓 À Former
-            </span>
-          </div>
-          <div class="train-row">
-            <span class="train-lbl">Matricule</span>
-            <strong>{{ trainingApp?.employeeMatricule }}</strong>
-          </div>
-        </div>
-      </div>
-      <div class="train-footer">
-        <button class="btn-cancel" (click)="closeTrainingModal()">Annuler</button>
-        <button class="train-confirm" (click)="confirmTraining()">
-          📚 Confirmer & envoyer en formation
-        </button>
       </div>
     </div>
   </div>
@@ -620,10 +625,11 @@
                       [ngModel]="decisions[r.applicationId] || 'SKIP'"
                       (ngModelChange)="setDecision(r.applicationId, $event)">
                 <option value="SKIP">— Ne rien changer —</option>
-                <option *ngFor="let s of statuses" [value]="s">
+                <option *ngFor="let s of adminAllowedStatuses" [value]="s">
                   {{ getStatusIcon(s) }} {{ getStatusLabel(s) }}
                 </option>
               </select>
+              <span class="dec-hint">🔒 Retenu / Refusé seront décidés par le manager après l'entretien</span>
             </div>
           </div>
         </div>
@@ -703,6 +709,73 @@
           </ul>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ Modal Affectation à un manager (phase 1) ═══════════ -->
+<div class="modal-overlay" *ngIf="showScheduleModal" (click)="closeScheduleModal()">
+  <div class="modal-form schedule-modal" (click)="$event.stopPropagation()">
+    <div class="mf-header">
+      <div class="mf-icon">📨</div>
+      <h3>Affecter à un manager</h3>
+      <p class="mf-sub" *ngIf="scheduleApp">{{ scheduleApp.applicantName }} — {{ scheduleApp.jobOfferTitle }}</p>
+    </div>
+
+    <div class="mf-body">
+      <div class="assign-info-banner">
+        <span class="aib-icon">ℹ️</span>
+        <span>
+          Vous affectez ce candidat à un manager. Le manager recevra un email et fixera lui-même
+          la date, l'heure et le lieu depuis son dashboard. Le candidat sera notifié à la planification définitive.
+        </span>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Manager assigné <span class="req">*</span></label>
+          <select [(ngModel)]="scheduleForm.managerUsername">
+            <option value="">-- Sélectionner --</option>
+            <option *ngFor="let m of managers" [value]="m.username">
+              {{ m.firstName }} {{ m.lastName }} ({{ m.username }})
+            </option>
+          </select>
+          <p class="hint" *ngIf="managers.length === 0">
+            ⚠️ Aucun manager configuré. Crée un employé avec le rôle <strong>MANAGER</strong>.
+          </p>
+        </div>
+        <div class="field">
+          <label>Type candidat</label>
+          <select [(ngModel)]="scheduleForm.candidateType">
+            <option value="INTERNAL">🏢 Interne</option>
+            <option value="EXTERNAL">🌐 Externe</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>
+            Email candidat
+            <span *ngIf="scheduleForm.candidateType === 'EXTERNAL'" class="req">*</span>
+            <span *ngIf="scheduleForm.candidateType === 'INTERNAL'" class="opt">(auto-résolu si vide)</span>
+          </label>
+          <input type="email" [(ngModel)]="scheduleForm.candidateEmail"
+                 [placeholder]="scheduleForm.candidateType === 'EXTERNAL' ? 'jean.dupont@exemple.com (obligatoire)' : 'Laisser vide pour résolution auto via le matricule'" />
+        </div>
+        <div class="field full">
+          <label>Note pour le manager <span class="opt">(optionnel)</span></label>
+          <textarea [(ngModel)]="scheduleForm.rhNote" rows="3"
+                    placeholder="Ex: Profil senior, prévoir test technique. Préférer un créneau matinal."></textarea>
+        </div>
+        <div class="email-notice full">
+          📧 Le manager recevra un email pour planifier. Le candidat recevra un email « pre-shortlist » rassurant.
+        </div>
+      </div>
+    </div>
+
+    <div class="mf-footer">
+      <button class="btn-cancel" (click)="closeScheduleModal()">Annuler</button>
+      <button class="btn-submit" [disabled]="scheduleSaving" (click)="submitInterview()">
+        {{ scheduleSaving ? '⏳ Affectation…' : '📨 Affecter au manager' }}
+      </button>
     </div>
   </div>
 </div>

@@ -94,6 +94,27 @@ spring:
           filters:
             - TokenRelay=
 
+        - id: external-candidate-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/external-candidates/**
+          filters:
+            - TokenRelay=
+
+        - id: training-provider-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/training-providers/**
+          filters:
+            - TokenRelay=
+
+        - id: training-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/training/**
+          filters:
+            - TokenRelay=
+
   # --- Keycloak / OAuth2 Resource Server ---
   security:
     oauth2:
@@ -110,3 +131,18 @@ logging:
   level:
     org.springframework.cloud.gateway: DEBUG
     org.springframework.security: DEBUG
+
+# Actuator (healthchecks Docker + monitoring Prometheus)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  info:
+    git:
+      mode: full

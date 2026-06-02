@@ -61,9 +61,20 @@ import { KeycloakService } from '../../../services/keycloak.service';
 
           <p class="offer-desc" *ngIf="offer.description">{{ offer.description }}</p>
 
-          <div class="offer-skills-row" *ngIf="offer.requiredSkills">
-            <span class="skills-label">Compétences requises</span>
-            <p class="skills-text">{{ offer.requiredSkills }}</p>
+          <div class="offer-skills-row" *ngIf="offer.skills?.length">
+            <span class="skills-label">🎯 Compétences requises</span>
+            <div class="skills-chips">
+              <div class="skill-chip" *ngFor="let skill of offer.skills">
+                <span class="skill-name">{{ skill.name }}</span>
+                <span class="skill-level" [ngClass]="'lvl-' + getRequiredLevel(offer, skill.id)">
+                  Niveau {{ getRequiredLevel(offer, skill.id) }} · {{ getLevelLabel(getRequiredLevel(offer, skill.id)) }}
+                </span>
+                <div class="level-dots">
+                  <span class="dot" *ngFor="let d of [1,2,3,4,5]"
+                        [class.filled]="d <= getRequiredLevel(offer, skill.id)"></span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="offer-actions" *ngIf="!isAdmin">
@@ -223,9 +234,33 @@ import { KeycloakService } from '../../../services/keycloak.service';
     .offer-skills-row { margin-bottom: 16px; }
     .skills-label {
       font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-      color: #94a3b8; letter-spacing: 0.5px; margin-bottom: 6px; display: block;
+      color: #94a3b8; letter-spacing: 0.5px; margin-bottom: 10px; display: block;
     }
-    .skills-text { margin: 0; color: #334155; font-size: 0.88rem; line-height: 1.5; }
+    .skills-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    .skill-chip {
+      display: flex; flex-direction: column; gap: 6px;
+      background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+      border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 10px 14px; min-width: 160px;
+      transition: all 0.25s ease;
+    }
+    .skill-chip:hover { border-color: #93c5fd; box-shadow: 0 4px 12px rgba(59,130,246,0.08); }
+    .skill-name { font-weight: 700; color: #1e293b; font-size: 0.88rem; }
+    .skill-level {
+      font-size: 0.72rem; font-weight: 600; padding: 2px 8px;
+      border-radius: 6px; align-self: flex-start;
+    }
+    .skill-level.lvl-1 { background: #fef3c7; color: #92400e; }
+    .skill-level.lvl-2 { background: #fde68a; color: #78350f; }
+    .skill-level.lvl-3 { background: #dbeafe; color: #1e40af; }
+    .skill-level.lvl-4 { background: #ddd6fe; color: #5b21b6; }
+    .skill-level.lvl-5 { background: #dcfce7; color: #166534; }
+    .level-dots { display: flex; gap: 4px; }
+    .level-dots .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #e2e8f0; transition: background 0.2s;
+    }
+    .level-dots .dot.filled { background: linear-gradient(135deg, #3b82f6, #2563eb); }
 
     .offer-actions { display: flex; gap: 10px; }
     .apply-btn {
@@ -426,5 +461,17 @@ export class MyApplicationsComponent implements OnInit {
       case 'REFUSE': return 'Refusé';
       default: return status;
     }
+  }
+
+  getRequiredLevel(offer: any, skillId: number): number {
+    const levels = offer?.skillLevels || {};
+    return levels[skillId] ?? levels[String(skillId)] ?? 3;
+  }
+
+  getLevelLabel(level: number): string {
+    const labels: { [k: number]: string } = {
+      1: 'Débutant', 2: 'Notions', 3: 'Intermédiaire', 4: 'Avancé', 5: 'Expert'
+    };
+    return labels[level] || '—';
   }
 }

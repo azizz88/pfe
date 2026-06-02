@@ -20,11 +20,13 @@ export class EmployeeDirectoryComponent implements OnInit {
   departments: any[] = [];
   allServices: any[] = [];
   filteredServices: any[] = [];
+  managers: any[] = []; // managers uniques calculés depuis les départements
 
   searchKeyword = '';
   selectedDeptId = '';
   selectedServiceId = '';
-  viewMode: 'grid' | 'list' = 'grid';
+  selectedManagerId = '';
+  viewMode: 'grid' | 'list' | 'grouped' = 'grid';
 
   // Détail employé
   showDetail = false;
@@ -50,8 +52,29 @@ export class EmployeeDirectoryComponent implements OnInit {
 
   loadDepartments(): void {
     this.employeeApi.getDepartments().subscribe({
-      next: (data) => this.departments = data
+      next: (data) => {
+        this.departments = data;
+        this.computeManagers();
+      }
     });
+  }
+
+  /** Calcule la liste unique des managers à partir des départements. */
+  computeManagers(): void {
+    const seen = new Set<number>();
+    this.managers = [];
+    for (const dept of this.departments) {
+      const mgr = dept.manager;
+      if (mgr && mgr.id && !seen.has(mgr.id)) {
+        seen.add(mgr.id);
+        this.managers.push(mgr);
+      }
+    }
+  }
+
+  /** Renvoie le manager responsable d'un employé (via son département). */
+  getManagerOf(emp: any): any | null {
+    return emp?.department?.manager || null;
   }
 
   loadServices(): void {
@@ -96,19 +119,42 @@ export class EmployeeDirectoryComponent implements OnInit {
       result = result.filter(emp => emp.service?.id === +this.selectedServiceId);
     }
 
+    // Filtre par manager
+    if (this.selectedManagerId) {
+      result = result.filter(emp => emp.department?.manager?.id === +this.selectedManagerId);
+    }
+
     this.filteredEmployees = result;
   }
 
   hasActiveFilters(): boolean {
-    return !!(this.searchKeyword.trim() || this.selectedDeptId || this.selectedServiceId);
+    return !!(this.searchKeyword.trim() || this.selectedDeptId || this.selectedServiceId || this.selectedManagerId);
   }
 
   resetFilters(): void {
     this.searchKeyword = '';
     this.selectedDeptId = '';
     this.selectedServiceId = '';
+    this.selectedManagerId = '';
     this.filteredServices = [];
     this.applyFilters();
+  }
+
+  /** Regroupe filteredEmployees par manager : retourne [{ manager, employees[] }, …] + un groupe "Sans manager". */
+  groupedByManager(): { manager: any | null; employees: any[] }[] {
+    const map = new Map<string, { manager: any | null; employees: any[] }>();
+    for (const emp of this.filteredEmployees) {
+      const mgr = this.getManagerOf(emp);
+      const key = mgr ? `mgr-${mgr.id}` : 'none';
+      if (!map.has(key)) map.set(key, { manager: mgr, employees: [] });
+      map.get(key)!.employees.push(emp);
+    }
+    // managers en premier (triés par nom), puis le groupe "sans manager" à la fin
+    const groups = Array.from(map.values()).filter(g => g.manager);
+    groups.sort((a, b) => (a.manager.lastName || '').localeCompare(b.manager.lastName || ''));
+    const orphans = map.get('none');
+    if (orphans) groups.push(orphans);
+    return groups;
   }
 
   getAvatarColor(emp: any): string {

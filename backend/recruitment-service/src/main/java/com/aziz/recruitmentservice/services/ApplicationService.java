@@ -90,13 +90,18 @@ public class ApplicationService {
     }
 
     /**
-     * Change le statut d'une candidature (workflow).
-     * Transitions autorisées :
-     *   EN_ATTENTE → ENTRETIEN
-     *   ENTRETIEN → RETENU ou REFUSE
-     *   EN_ATTENTE → REFUSE
+     * Change le statut d'une candidature (workflow RH).
+     * Le RH ne peut positionner que EN_ATTENTE ou ENTRETIEN.
+     * Les décisions finales RETENU / REFUSE sont prises par le manager
+     * via le résultat d'entretien (InterviewService).
      */
     public Application updateStatus(Long id, ApplicationStatus newStatus) {
+        if (newStatus == ApplicationStatus.RETENU || newStatus == ApplicationStatus.REFUSE) {
+            throw new IllegalArgumentException(
+                "Le RH ne peut pas définir le statut " + newStatus
+                + ". Cette décision revient au manager après l'entretien."
+            );
+        }
         Application application = applicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Candidature non trouvée avec l'ID: " + id));
 

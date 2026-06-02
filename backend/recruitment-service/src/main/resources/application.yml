@@ -29,6 +29,17 @@ spring:
         jwt:
           issuer-uri: http://localhost:8180/realms/aziz
 
+  # --- Mail (SMTP MailHog en dev) ---
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
 # Port du service
 server:
   port: 8082
@@ -37,6 +48,35 @@ server:
 services:
   employee-service:
     url: http://localhost:8081
+
+# Paramètres applicatifs (convocation d'entretien)
+app:
+  mail:
+    from: noreply@sirh.local
+  login-url: http://localhost:4200
+
+# Configuration Google Gemini API (suggestion d'organismes de formation)
+# Si la clé est vide, le service utilise un fallback set-overlap (score sur intersection de skills).
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: gemini-2.0-flash
+  base-url: https://generativelanguage.googleapis.com/v1beta/models
+  timeout-seconds: 20
+
+# Actuator (healthchecks Docker + monitoring Prometheus)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  info:
+    git:
+      mode: full
 
 ---
 # ===================================================

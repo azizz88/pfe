@@ -95,6 +95,21 @@ app:
   upload:
     dir: ./uploads
 
+# Actuator (healthchecks Docker + monitoring Prometheus)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  info:
+    git:
+      mode: full
+
 ---
 # ===================================================
 # Profil DEV (H2 en mémoire, sans MySQL)

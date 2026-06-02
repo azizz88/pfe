@@ -32,3 +32,39 @@ export const employeeGuard: CanActivateFn = () => {
 
   return false;
 };
+
+/**
+ * Guard fonctionnel pour protéger les routes MANAGER.
+ * Le HR_ADMIN peut aussi y accéder (super-rôle).
+ */
+export const managerGuard: CanActivateFn = () => {
+  const keycloakService = inject(KeycloakService);
+  const router = inject(Router);
+
+  if (keycloakService.isManager() || keycloakService.isHrAdmin()) {
+    return true;
+  }
+
+  router.navigate(['/employee/dashboard']);
+  return false;
+};
+
+/**
+ * Guard pour la route racine "/" : aiguille vers le dashboard adapté au rôle.
+ * - HR_ADMIN  → /admin/dashboard
+ * - MANAGER   → /manager/dashboard
+ * - EMPLOYEE  → /employee/dashboard
+ */
+export const rootRedirectGuard: CanActivateFn = () => {
+  const keycloakService = inject(KeycloakService);
+  const router = inject(Router);
+
+  if (keycloakService.isHrAdmin()) {
+    router.navigate(['/admin/dashboard']);
+  } else if (keycloakService.isManager()) {
+    router.navigate(['/manager/dashboard']);
+  } else {
+    router.navigate(['/employee/dashboard']);
+  }
+  return false;
+};

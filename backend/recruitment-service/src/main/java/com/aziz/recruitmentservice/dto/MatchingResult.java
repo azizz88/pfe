@@ -20,8 +20,17 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MatchingResult {
-    /** ID de la candidature (Application) — nécessaire pour le bulk update */
+    /** ID de la candidature (Application) — nécessaire pour le bulk update. Null pour les candidats externes. */
     private Long applicationId;
+
+    /** ID du candidat externe — non null si source != INTERNAL */
+    private Long externalCandidateId;
+
+    /** Origine du candidat dans le matching : "INTERNAL" ou "EXTERNAL" */
+    private String source;
+
+    /** Email du candidat (utile pour planifier l'entretien d'un externe directement). */
+    private String candidateEmail;
 
     private String employeeMatricule;
     private String applicantName;
