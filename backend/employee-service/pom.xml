@@ -76,7 +76,7 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-admin-client</artifactId>
-            <version>24.0.0</version>
+            <version>26.0.9</version>
         </dependency>
 
         <!-- Mail (envoi des identifiants à l'employé via Mailhog en dev) -->
