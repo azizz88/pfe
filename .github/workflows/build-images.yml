@@ -82,7 +82,7 @@ jobs:
           platforms: linux/amd64
 
       - name: Trivy scan (HIGH+CRITICAL, fail on findings)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}-${{ matrix.image.name }}@${{ steps.push.outputs.digest }}
           severity: HIGH,CRITICAL
