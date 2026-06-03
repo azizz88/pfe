@@ -5,6 +5,84 @@
 
 ---
 
+## 📅 Dernière session — 2026-06-03
+
+**Travail accompli aujourd'hui** :
+
+| # | Action | Résultat |
+|---|---|---|
+| 12.f | Workflow permissions → Read and write | ✅ |
+| 12.c | Environments staging (libre) + production (approval gate azizz88) | ✅ |
+| 12.d | Branch rulesets `protect-main` + `protect-develop` via gh CLI | ✅ bypass actors azizz88 + dependabot configurés |
+| 13 | Premier run CI réel — tous les jobs verts sur main + develop | ✅ |
+| 14 | Build-images vert — 4 images pushées vers GHCR (privées) | ✅ Fix trivy-action 0.24.0→0.36.0 (PR #23) |
+| 15 | Deploy mode démo — staging auto ✅ / production gate ✅ | ✅ Deploy #25 via workflow_dispatch |
+| cleanup | Dockerfile.naive supprimé + mysql_data retiré + realm-export.json ajouté | ✅ PR #26 |
+| Dependabot | 8 PRs safe mergés (actions GH + lombok + zone.js + poi-ooxml) | ✅ 15 PRs risqués laissés ouverts |
+| monitoring | Prometheus v2.53.0 + Grafana v11.0.0 ajoutés à docker-compose.yml | ✅ PR #29 |
+| dashboard | Dashboard SIRH 8 panels : JVM, HTTP, CPU, threads, latence p99, HikariCP, status codes | ✅ PR #31 |
+| sync | develop synced avec main à chaque étape | ✅ PRs #25, #28, #30, #32 |
+
+**État du pipeline (tous verts)** :
+- CI : ✅ main + develop
+- Build-images : ✅ main + develop (4 images GHCR)
+- Deploy : ✅ staging auto après build develop / production via approval gate
+
+**Stack locale au moment de la fermeture** :
+- Arrêtée proprement avec `docker compose stop` (volumes préservés)
+- Données Keycloak + Postgres + Grafana + Prometheus intactes dans les volumes
+
+### 🔍 À reprendre en début de prochaine session
+
+```bash
+# Relancer la stack complète (10 conteneurs maintenant)
+docker compose up -d
+docker compose ps   # tous (healthy) attendu
+
+# URLs
+http://localhost:4200    # Angular
+http://localhost:8888    # API Gateway
+http://localhost:8180    # Keycloak admin
+http://localhost:9090    # Prometheus (targets: 4 UP)
+http://localhost:3000    # Grafana (admin/admin) → dashboard SIRH
+http://localhost:8025    # MailHog
+http://localhost:5050    # pgAdmin
+```
+
+### 📋 Ce qui reste (optionnel avant rendu)
+
+| Tâche | Priorité | Effort |
+|---|---|---|
+| SonarCloud (12.e) — `SONAR_TOKEN` + `SONAR_ORG` | 🟡 Moyen | ~15 min |
+| Status checks dans `protect-main` (4 job names) | 🟡 Moyen | ~5 min |
+| Trier les 15 PRs Dependabot risqués (Spring Boot 4, TS 6, PDFBox 3...) | 🔵 Faible | après rendu |
+| `docker compose down -v && up -d` sur poste vierge (test realm-export) | 🟡 Moyen | ~30 min |
+| README.md + diagramme pipeline | 🔵 Faible | ~2h |
+
+### ⚠️ PRs Dependabot dangereux — NE PAS MERGER avant rendu
+
+| PR | Dépendance | Risque |
+|---|---|---|
+| #14, #11, #2 | Spring Boot 3.2.5 → 4.0.6 | Breaking major — réécriture partielle |
+| #1 | Spring Cloud 2023 → 2025.1.1 | Incompatible avec SB 3.2.x |
+| #19 | TypeScript 5 → 6 | Breaking Angular build |
+| #5 | PDFBox 2 → 3 | API extraction CV cassée |
+| #18 | keycloak-js 24 → 26 | Peut casser flow OIDC |
+| #13 | keycloak-admin-client 24 → 26 | Major version |
+| #16 | Angular group 11 updates | Trop large, risque |
+| #12, #9, #6 | Java 17 → 25 (Dockerfiles runtime) | LTS change |
+| #10, #7, #3 | Maven 3.9 → 3-eclipse-26 (build) | Build image change |
+
+### 🛠️ gh CLI installé
+
+```
+gh version 2.93.0 — authentifié comme azizz88
+Scopes : admin:repo_hook, gist, read:org, repo, workflow
+```
+Toujours disponible dans les prochaines sessions.
+
+---
+
 ## 📅 Dernière session — 2026-06-02
 
 **Travail accompli aujourd'hui** :
