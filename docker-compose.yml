@@ -13,7 +13,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.0
     container_name: keycloak
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
@@ -22,6 +22,7 @@ services:
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./keycloak-theme/sirh-theme:/opt/keycloak/themes/sirh-theme
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
     networks:
       - sirh-net
 
@@ -190,4 +191,3 @@ volumes:
   keycloak_data:
   postgres_data:
   employee_uploads:
-  mysql_data:  # conservé pour rollback éventuel ; non utilisé par défaut
