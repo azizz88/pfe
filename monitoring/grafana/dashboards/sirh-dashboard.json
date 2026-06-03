@@ -1,7 +1,7 @@
 {
   "title": "SIRH — Observabilité",
   "uid": "sirh-main",
-  "version": 1,
+  "version": 2,
   "schemaVersion": 38,
   "refresh": "15s",
   "time": { "from": "now-30m", "to": "now" },
@@ -122,6 +122,75 @@
           "unit": "ms",
           "color": { "mode": "palette-classic" }
         }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Connexions DB actives (HikariCP)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{job=~\"employee-service|recruitment-service\"}",
+          "legendFormat": "actives — {{job}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "hikaricp_connections_pending{job=~\"employee-service|recruitment-service\"}",
+          "legendFormat": "en attente — {{job}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "hikaricp_connections{job=~\"employee-service|recruitment-service\"}",
+          "legendFormat": "pool total — {{job}}",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Requêtes HTTP par status code",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (status, job) (rate(http_server_requests_seconds_count{job=~\"employee-service|recruitment-service|api-gateway\"}[1m]))",
+          "legendFormat": "{{status}} — {{job}}",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "^5.*" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "^4.*" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "^2.*" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+            ]
+          }
+        ]
       }
     }
   ]
