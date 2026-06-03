@@ -5,6 +5,64 @@
 
 ---
 
+## 📅 Dernière session — 2026-06-02
+
+**Travail accompli aujourd'hui** :
+
+| # | Étape | Livrable | Vérifiable par |
+|---|---|---|---|
+| 0 | Switch Jenkins → GitHub Actions | CLAUDE.md + mémoire mis à jour | section « Architecture pipeline GitHub Actions » |
+| 6 | Dockerfiles Spring Boot (employee + recruitment) | `backend/{employee,recruitment}-service/Dockerfile` + `.dockerignore` | `docker images sirh-employee-service:test` → 423 Mo |
+| 7 | Dockerfile API Gateway | `backend/api-gateway/Dockerfile` + `.dockerignore` | `docker images sirh-api-gateway:test` → 337 Mo |
+| 8 | Docker Compose complet + profil docker | `docker-compose.yml` + `.env.example` + profil `docker` ajouté aux 3 services | `docker compose ps` → 5 (healthy) en ~2 min |
+| 9 | Optimisation images + Trivy | Comparatif naïf 1.16 Go vs optimisé 423 Mo (-63 %), CVE HIGH+CRIT -61 % | `Dockerfile.naive` + commandes Trivy reproductibles dans CLAUDE.md |
+| 10 | Tests bout-en-bout (T1-T20) | JWT routing OK, CORS OK, cold start 54s, persistance OK | section « Étape 10 » détaillée dans CLAUDE.md |
+| 11 | Workflows GitHub Actions + Dependabot | `.github/workflows/{ci,build-images,deploy}.yml` + `.github/dependabot.yml` + branche `develop` poussée | `git log --oneline -3` |
+
+**Commits poussés** (sur main ET develop, fast-forward) :
+```
+e82892c ci: workflows GitHub Actions + Dependabot (étape 11)
+3ed9944 feat(devops): conteneurisation complète (étapes 5-10)
+```
+
+### 🔍 À observer/tester en début de prochaine session
+
+1. **Workflows GitHub Actions** (4 runs ont dû se déclencher au push) :
+   - URL : https://github.com/azizz88/pfe/actions
+   - Sur chaque run, vérifier le statut des jobs (backend matrix ×3, frontend, sonar, build-images matrix ×4)
+   - Sonar va warn-skip (token absent), c'est attendu.
+   - Build-images peut failer si « Workflow permissions » est en read-only (Settings → Actions → General).
+
+2. **Packages GHCR** (créés au premier `build-images` vert) :
+   - URL : https://github.com/azizz88?tab=packages
+   - 4 packages attendus : `sirh-frontend`, `sirh-api-gateway`, `sirh-employee-service`, `sirh-recruitment-service`
+   - Par défaut **privés** → les passer en public si tu veux les montrer en soutenance.
+
+3. **Stack locale** (déjà UP avec la session d'hier, données persistées dans les volumes) :
+   ```bash
+   docker compose ps                                              # 5 (healthy) attendu
+   curl http://localhost:8888/actuator/health/liveness            # gateway UP
+   curl http://localhost:4200/                                    # Angular 200 OK
+   curl http://localhost:8025/                                    # MailHog UI
+   curl http://localhost:8180/realms/aziz                         # Keycloak realm
+   ```
+
+4. **Cleanup éventuel à faire avant le rendu final** :
+   - Supprimer `backend/employee-service/Dockerfile.naive` une fois le chapitre Étape 9 rédigé
+   - Décider du sort du volume `mysql_data` (commenté inutilisé dans `docker-compose.yml`)
+   - Tester un cycle `docker compose down -v && docker compose up -d` (vérifier que tout se reconstruit sans volumes pré-existants — il faudra fournir un `realm-export.json` pour Keycloak)
+
+### 📋 Prochaine étape concrète — **Étape 12** (setup repo GitHub côté UI)
+
+Détaillée dans la section « Prochaine étape : Étape 12 » plus bas. Ordre suggéré :
+- 12.f (Workflow permissions write) → débloquer `build-images`
+- 12.c (Environments staging + production) → débloquer `deploy.yml`
+- 12.d (Branch protection main + develop)
+- 12.e + 12.a + 12.b (SonarCloud)
+- 12.a (SSH secrets pour deploy réel, optionnel)
+
+---
+
 ## 🎯 Projet
 
 **SIRH** — Plateforme RH (mémoire de fin d'études).
