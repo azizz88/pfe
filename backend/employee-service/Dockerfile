@@ -21,13 +21,13 @@ RUN --mount=type=cache,target=/root/.m2 \
  && mv target/*.jar target/app.jar
 
 # ---------- Stage 2 : extraction des layers ----------
-FROM eclipse-temurin:17-jre-alpine AS extractor
+FROM eclipse-temurin:25-jre-alpine AS extractor
 WORKDIR /extracted
 COPY --from=build /build/target/app.jar app.jar
 RUN java -Djarmode=layertools -jar app.jar extract
 
 # ---------- Stage 3 : runtime ----------
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 # fontconfig + ttf-dejavu : requis par PDFBox pour l'extraction CV
 # tini             : reaper PID 1 (signaux propres)
