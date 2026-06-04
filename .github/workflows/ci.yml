@@ -19,7 +19,7 @@ concurrency:
 # Permissions minimales (principe du moindre privilège)
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write   # requis pour la PR decoration SonarCloud
 
 jobs:
 
