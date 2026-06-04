@@ -5,37 +5,36 @@
 
 ---
 
-## 📅 Dernière session — 2026-06-03
+## 📅 Dernière session — 2026-06-04
 
 **Travail accompli aujourd'hui** :
 
 | # | Action | Résultat |
 |---|---|---|
-| 12.f | Workflow permissions → Read and write | ✅ |
-| 12.c | Environments staging (libre) + production (approval gate azizz88) | ✅ |
-| 12.d | Branch rulesets `protect-main` + `protect-develop` via gh CLI | ✅ bypass actors azizz88 + dependabot configurés |
-| 13 | Premier run CI réel — tous les jobs verts sur main + develop | ✅ |
-| 14 | Build-images vert — 4 images pushées vers GHCR (privées) | ✅ Fix trivy-action 0.24.0→0.36.0 (PR #23) |
-| 15 | Deploy mode démo — staging auto ✅ / production gate ✅ | ✅ Deploy #25 via workflow_dispatch |
-| cleanup | Dockerfile.naive supprimé + mysql_data retiré + realm-export.json ajouté | ✅ PR #26 |
-| Dependabot | 8 PRs safe mergés (actions GH + lombok + zone.js + poi-ooxml) | ✅ 15 PRs risqués laissés ouverts |
-| monitoring | Prometheus v2.53.0 + Grafana v11.0.0 ajoutés à docker-compose.yml | ✅ PR #29 |
-| dashboard | Dashboard SIRH 8 panels : JVM, HTTP, CPU, threads, latence p99, HikariCP, status codes | ✅ PR #31 |
-| sync | develop synced avec main à chaque étape | ✅ PRs #25, #28, #30, #32 |
+| 12.e | SonarCloud activé — 3 projets backend analysés | ✅ |
+| 12.e | `SONAR_TOKEN` (global analysis token) + `SONAR_ORG=azizz88` ajoutés via gh CLI | ✅ |
+| 12.e | `sonar.organization` + `sonar.host.url` ajoutés dans les 3 `pom.xml` | ✅ |
+| 12.e | `pull-requests: write` dans `ci.yml` pour PR decoration | ✅ |
+| 12.e | Branche `main` configurée comme Main Branch dans les 3 projets SonarCloud | ✅ |
+
+**État SonarCloud** :
+- `azizz88_pfe-api-gateway` → analysé (Java) ✅
+- `azizz88_pfe-employee-service` → analysé (Java) ✅
+- `azizz88_pfe-recruitment-service` (`recruitment-service`) → analysé (Java, 3.9k LOC) ✅
+- `pfe` → analysé par auto-analysis SonarCloud (CSS, TypeScript, 47k LOC) ✅ Quality Gate Passed
 
 **État du pipeline (tous verts)** :
-- CI : ✅ main + develop
-- Build-images : ✅ main + develop (4 images GHCR)
-- Deploy : ✅ staging auto après build develop / production via approval gate
+- CI : ✅ backend ×3 + frontend + SonarCloud (commit `bacdcde`)
+- Build-images : ✅ main
+- Deploy : ✅ staging auto / production via approval gate
 
 **Stack locale au moment de la fermeture** :
-- Arrêtée proprement avec `docker compose stop` (volumes préservés)
-- Données Keycloak + Postgres + Grafana + Prometheus intactes dans les volumes
+- Non redémarrée cette session (volumes préservés depuis session 2026-06-03)
 
 ### 🔍 À reprendre en début de prochaine session
 
 ```bash
-# Relancer la stack complète (10 conteneurs maintenant)
+# Relancer la stack complète (10 conteneurs)
 docker compose up -d
 docker compose ps   # tous (healthy) attendu
 
@@ -47,16 +46,28 @@ http://localhost:9090    # Prometheus (targets: 4 UP)
 http://localhost:3000    # Grafana (admin/admin) → dashboard SIRH
 http://localhost:8025    # MailHog
 http://localhost:5050    # pgAdmin
+
+# SonarCloud
+https://sonarcloud.io/organizations/azizz88/projects   # 4 projets analysés
 ```
+
+### 🔑 Secrets GitHub en place
+
+| Secret/Variable | Valeur | Type |
+|---|---|---|
+| `SONAR_TOKEN` | token global analysis (40 hex chars) | Secret repo |
+| `SONAR_ORG` | `azizz88` | Variable repo |
+
+> ⚠️ Si le job SonarCloud échoue avec **403 sur `batch/index`**, le token a expiré.
+> Aller sur `sonarcloud.io/account/security` → générer un nouveau **Global Analysis Token** → `! gh secret set SONAR_TOKEN --repo azizz88/pfe`
 
 ### 📋 Ce qui reste (optionnel avant rendu)
 
 | Tâche | Priorité | Effort |
 |---|---|---|
-| SonarCloud (12.e) — `SONAR_TOKEN` + `SONAR_ORG` | 🟡 Moyen | ~15 min |
 | Status checks dans `protect-main` (4 job names) | 🟡 Moyen | ~5 min |
-| Trier les 15 PRs Dependabot risqués (Spring Boot 4, TS 6, PDFBox 3...) | 🔵 Faible | après rendu |
 | `docker compose down -v && up -d` sur poste vierge (test realm-export) | 🟡 Moyen | ~30 min |
+| Trier les 15 PRs Dependabot risqués (Spring Boot 4, TS 6, PDFBox 3...) | 🔵 Faible | après rendu |
 | README.md + diagramme pipeline | 🔵 Faible | ~2h |
 
 ### ⚠️ PRs Dependabot dangereux — NE PAS MERGER avant rendu
