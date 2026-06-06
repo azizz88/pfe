@@ -4,3 +4,4 @@
 
 CREATE DATABASE sirh_employees;
 CREATE DATABASE sirh_recruitment;
+CREATE DATABASE sonarqube;

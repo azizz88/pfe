@@ -5,61 +5,58 @@
 
 ---
 
-## 📅 Dernière session — 2026-06-04
+## 📅 Dernière session — 2026-06-06
 
 **Travail accompli aujourd'hui** :
 
 | # | Action | Résultat |
 |---|---|---|
-| 12.e | SonarCloud activé — 3 projets backend analysés | ✅ |
-| 12.e | `SONAR_TOKEN` (global analysis token) + `SONAR_ORG=azizz88` ajoutés via gh CLI | ✅ |
-| 12.e | `sonar.organization` + `sonar.host.url` ajoutés dans les 3 `pom.xml` | ✅ |
-| 12.e | `pull-requests: write` dans `ci.yml` pour PR decoration | ✅ |
-| 12.e | Branche `main` configurée comme Main Branch dans les 3 projets SonarCloud | ✅ |
+| — | Migration SonarCloud → **SonarQube Community Edition 10.4** (obligatoire PFE) | ✅ |
+| — | SonarQube ajouté à `docker-compose.yml` (port 9000, PostgreSQL `sonarqube`) | ✅ |
+| — | `init-db.sql` : +`CREATE DATABASE sonarqube` | ✅ |
+| — | 3 `pom.xml` : suppression `sonar.organization`, `host.url` → `localhost:9000`, +`projectKey` | ✅ |
+| — | `ci.yml` : job SonarQube éphémère dans le runner (token généré dynamiquement, aucun secret requis) | ✅ |
 
-**État SonarCloud** :
-- `azizz88_pfe-api-gateway` → analysé (Java) ✅
-- `azizz88_pfe-employee-service` → analysé (Java) ✅
-- `azizz88_pfe-recruitment-service` (`recruitment-service`) → analysé (Java, 3.9k LOC) ✅
-- `pfe` → analysé par auto-analysis SonarCloud (CSS, TypeScript, 47k LOC) ✅ Quality Gate Passed
-
-**État du pipeline (tous verts)** :
-- CI : ✅ backend ×3 + frontend + SonarCloud (commit `bacdcde`)
-- Build-images : ✅ main
-- Deploy : ✅ staging auto / production via approval gate
+**État SonarQube** :
+- Local : `http://localhost:9000` (admin/admin au 1er démarrage — changer le MDP obligatoire)
+- CI : instance Docker éphémère démarrée dans le runner GitHub Actions, token généré à la volée
+- 3 projets backend : `pfe-api-gateway`, `pfe-employee-service`, `pfe-recruitment-service`
 
 **Stack locale au moment de la fermeture** :
-- Non redémarrée cette session (volumes préservés depuis session 2026-06-03)
+- Non redémarrée cette session
 
 ### 🔍 À reprendre en début de prochaine session
 
 ```bash
-# Relancer la stack complète (10 conteneurs)
+# Recréer les volumes pour inclure la base sonarqube (si première fois)
+docker compose down -v
 docker compose up -d
-docker compose ps   # tous (healthy) attendu
+docker compose ps   # tous (healthy) attendu — SonarQube prend ~2 min à démarrer
 
 # URLs
 http://localhost:4200    # Angular
 http://localhost:8888    # API Gateway
 http://localhost:8180    # Keycloak admin
+http://localhost:9000    # SonarQube (admin/admin → forcer changement MDP)
 http://localhost:9090    # Prometheus (targets: 4 UP)
 http://localhost:3000    # Grafana (admin/admin) → dashboard SIRH
 http://localhost:8025    # MailHog
 http://localhost:5050    # pgAdmin
 
-# SonarCloud
-https://sonarcloud.io/organizations/azizz88/projects   # 4 projets analysés
+# Lancer une analyse SonarQube locale depuis un service backend
+cd backend/employee-service
+mvn sonar:sonar -Dsonar.token=<token_généré_dans_SQ>
 ```
 
-### 🔑 Secrets GitHub en place
+### 🔑 Secrets GitHub
 
-| Secret/Variable | Valeur | Type |
-|---|---|---|
-| `SONAR_TOKEN` | token global analysis (40 hex chars) | Secret repo |
-| `SONAR_ORG` | `azizz88` | Variable repo |
+> `SONAR_TOKEN` et `SONAR_ORG` ne sont **plus nécessaires** (token généré dynamiquement en CI).
+> Ils peuvent être supprimés : `gh secret delete SONAR_TOKEN --repo azizz88/pfe`
 
-> ⚠️ Si le job SonarCloud échoue avec **403 sur `batch/index`**, le token a expiré.
-> Aller sur `sonarcloud.io/account/security` → générer un nouveau **Global Analysis Token** → `! gh secret set SONAR_TOKEN --repo azizz88/pfe`
+| Secret/Variable | Statut |
+|---|---|
+| `SONAR_TOKEN` | ⛔ Obsolète — peut être supprimé |
+| `SONAR_ORG` (variable) | ⛔ Obsolète — peut être supprimé |
 
 ### 📋 Ce qui reste (optionnel avant rendu)
 
