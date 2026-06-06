@@ -11,6 +11,9 @@ on:
   push:
     branches: [main, develop]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # Annule les runs en cours sur la même PR si on push à nouveau
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
