@@ -55,7 +55,7 @@ jobs:
          && github.event.workflow_run.conclusion == 'success'
          && github.event.workflow_run.head_branch == 'develop'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Resolve image tag
         id: tag
@@ -96,7 +96,7 @@ jobs:
     if: >
       github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: SSH deploy (gracieux si secrets absents)
         env:

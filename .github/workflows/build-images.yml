@@ -42,7 +42,7 @@ jobs:
           - name: recruitment-service
             context: backend/recruitment-service
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
