@@ -1,0 +1,79 @@
+@startuml sprint1_usecase
+
+skinparam actorStyle default
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+
+skinparam usecase {
+  BorderThickness 1.5
+  FontSize        12
+  FontColor       #111111
+  FontName        "DejaVu Sans"
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor     #222222
+  FontStyle       bold
+  FontSize        13
+  FontName        "DejaVu Sans"
+}
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor     #999999
+  BorderThickness 1.5
+  FontStyle       bold
+  FontSize        14
+  FontColor       #111111
+  FontName        "DejaVu Sans"
+}
+skinparam arrow {
+  Color    #444444
+  FontSize 10
+  FontName "DejaVu Sans"
+}
+
+left to right direction
+
+actor "Admin RH" as RH
+actor "Employé"  as EMP
+
+RH -[hidden]down-> EMP
+
+rectangle "Sprint 1 — Authentification, Gestion des Employés & Compétences" {
+
+  together {
+    usecase "Gérer les employés"              as UC1 #FFFACD
+    usecase "Gérer les départements"          as UC2 #FFFACD
+    usecase "Gérer les compétences"           as UC3 #FFFACD
+    usecase "Associer compétences\nà un employé" as UC4 #FFFACD
+  }
+
+  together {
+    usecase "Consulter son profil"            as UC5 #D6EAF8
+    usecase "Modifier mot de passe"           as UC6 #D6EAF8
+  }
+
+  usecase "S'authentifier" as AUTH #FFD6E0
+  UC3 -[hidden]- AUTH
+
+}
+
+' Flèches pleines : Acteur --> UseCase
+RH  --> UC1
+RH  --> UC2
+RH  --> UC3
+RH  --> UC4
+EMP --> UC5
+EMP --> UC6
+
+' Flèches pointillées : <<include>>
+UC1 ..> AUTH : <<include>>
+UC2 ..> AUTH : <<include>>
+UC3 ..> AUTH : <<include>>
+UC4 ..> AUTH : <<include>>
+UC5 ..> AUTH : <<include>>
+UC6 ..> AUTH : <<include>>
+
+@enduml

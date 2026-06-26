@@ -1,0 +1,202 @@
+@startuml SIRH_ClassDiagram
+
+hide circle
+hide empty members
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 11
+skinparam linetype ortho
+skinparam nodesep 55
+skinparam ranksep 75
+
+skinparam class {
+  BackgroundColor       #FFFFFF
+  BorderColor           #4472C4
+  HeaderBackgroundColor #4472C4
+  FontColor             #FFFFFF
+  FontStyle             bold
+  FontSize              12
+  AttributeFontColor    #1A1A1A
+  AttributeFontSize     10
+}
+
+skinparam arrow {
+  Color    #444444
+  FontSize  9
+  FontName "DejaVu Sans"
+}
+
+' ═══════════════════════════════════
+'  EMPLOYEE SERVICE
+' ═══════════════════════════════════
+
+class Departement {
+  +id : Long
+  +nom : String
+  +description : String
+}
+
+class Employe {
+  +id : Long
+  +matricule : String
+  +nom : String
+  +prenom : String
+  +email : String
+  +telephone : String
+  +poste : String
+  +dateEmbauche : Date
+  +keycloakUsername : String
+}
+
+class Service {
+  +id : Long
+  +nom : String
+  +description : String
+}
+
+class Contrat {
+  +id : Long
+  +type : CDI | CDD | STAGE
+  +dateDebut : Date
+  +dateFin : Date
+  +salaire : Double
+}
+
+class Document {
+  +id : Long
+  +nomFichier : String
+  +typeFichier : String
+  +cheminFichier : String
+  +dateUpload : Date
+}
+
+class HistoriquePoste {
+  +id : Long
+  +poste : String
+  +departement : String
+  +service : String
+  +dateDebut : Date
+  +dateFin : Date
+  +motif : EMBAUCHE | PROMOTION | MOBILITE | MUTATION
+  +createdAt : LocalDateTime
+}
+
+class CompetenceEmploye {
+  +id : Long
+  +nomCompetence : String
+  +categorie : String
+  +niveau : Integer (1..5)
+}
+
+' ═══════════════════════════════════
+'  RECRUITMENT SERVICE
+' ═══════════════════════════════════
+
+class OffreEmploi {
+  +id : Long
+  +titre : String
+  +description : String
+  +departement : String
+  +statut : ACTIVE | CLOTUREE
+  +datePublication : Date
+  +dateLimite : Date
+}
+
+class Candidature {
+  +id : Long
+  +matriculeCandidat : String
+  +nomCandidat : String
+  +statut : EN_ATTENTE | ENTRETIEN | RETENU | REFUSE
+  +dateSoumission : Date
+  +scoreMatching : Double
+  +categorieMatching : IDEAL | A_FORMER | EXTERNE
+}
+
+class Entretien {
+  +id : Long
+  +nomCandidat : String
+  +dateEntretien : DateTime
+  +lieu : String
+  +typeCandidat : INTERNE | EXTERNE
+  +statut : A_PLANIFIER | PLANIFIE | REALISE | ANNULE
+  +nomManager : String
+  +resultat : String
+}
+
+class Competence {
+  +id : Long
+  +nom : String
+  +categorie : String
+  +description : String
+}
+
+class OrganismeFormation {
+  +id : Long
+  +nom : String
+  +email : String
+  +certifieQualiopi : Boolean
+  +mode : PRESENTIEL | DISTANCIEL | HYBRIDE
+  +prixMoyenEur : Integer
+  +dureeMoyenneJours : Integer
+  +tauxReussite : Double
+}
+
+class PropositionFormation {
+  +id : Long
+  +matriculeEmploye : String
+  +nomEmploye : String
+  +scoreIA : Integer
+  +justificationIA : String
+  +statut : PROPOSE | ACCEPTE | REFUSE | EN_COURS | TERMINE
+  +dateInscription : DateTime
+  +dateCompletion : DateTime
+  +certificatUrl : String
+}
+
+class CandidatExterne {
+  +id : Long
+  +nom : String
+  +prenom : String
+  +email : String
+  +posteActuel : String
+  +anneesExperience : Integer
+  +source : LINKEDIN | MANUEL | AUTRE
+}
+
+class CompetenceCandidatExterne {
+  +id : Long
+  +nomCompetence : String
+  +categorie : String
+  +niveau : Integer (1..5)
+}
+
+' ═══════════════════════════════════
+'  RELATIONS
+' ═══════════════════════════════════
+
+Departement    "1"  o--  "N"  Service           : contient
+Departement    "N"  -->  "1"  Employe            : gere par
+Employe        "N"  -->  "1"  Departement        : appartient a
+Employe        "N"  -->  "1"  Service            : rattache a
+Employe        "1"  *--  "1"  Contrat            : possede
+Employe        "1"  *--  "N"  Document           : documents
+Employe        "1"  *--  "N"  HistoriquePoste    : historique poste
+Employe        "1"  *--  "N"  CompetenceEmploye  : competences
+
+OffreEmploi    "1"  *--  "N"  Candidature        : recoit
+OffreEmploi    "N"  -->  "N"  Competence         : requiert
+Candidature    "1"  *--  "N"  Entretien          : genere
+
+OrganismeFormation "1"  *--  "N"  PropositionFormation : proposee via
+OrganismeFormation "N"  -->  "N"  Competence           : couvre
+
+CandidatExterne "1" *-- "N" CompetenceCandidatExterne  : competences
+
+CompetenceEmploye         "N"  ..>  Competence   : ref.
+CompetenceCandidatExterne "N"  ..>  Competence   : ref.
+HistoriquePoste           ..>  Candidature        : source candidature
+PropositionFormation      ..>  Candidature        : source candidature
+
+@enduml

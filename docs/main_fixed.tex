@@ -1,0 +1,141 @@
+\documentclass[a4paper,12pt]{report}
+
+% ====== Packages ======
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{eso-pic}
+\usepackage{tikzpagenodes}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{placeins}
+\usepackage{tocbibind}
+\usepackage{url}
+\usepackage[skins,many]{tcolorbox}
+
+% ====== Configuration ======
+\geometry{margin=2.5cm}
+
+% ── Palette vert olive ──────────────────────────────────────────
+\definecolor{OliveVert}{HTML}{4A5E23}    % vert olive foncé (principal)
+\definecolor{OliveGold}{HTML}{8B7500}    % or olive (accents)
+\definecolor{OliveClair}{HTML}{D4E6A5}   % vert olive clair (fonds)
+\definecolor{OliveMid}{HTML}{6B8E23}     % vert olive moyen (sous-titres)
+\colorlet{headerblue}{OliveVert}
+
+% ── Bordure double olive sur chaque page ────────────────────────
+\AddToShipoutPictureBG{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \draw[OliveVert, line width=2.5pt]
+      ([xshift=1.1cm,yshift=-1.1cm]current page.north west)
+      rectangle
+      ([xshift=-1.1cm,yshift=1.1cm]current page.south east);
+    \draw[OliveGold, line width=0.7pt]
+      ([xshift=1.4cm,yshift=-1.4cm]current page.north west)
+      rectangle
+      ([xshift=-1.4cm,yshift=1.4cm]current page.south east);
+  \end{tikzpicture}
+}
+
+% ── Style des titres ────────────────────────────────────────────
+
+% Chapitres numérotés
+\titleformat{\chapter}[hang]
+  {\Huge\bfseries\color{OliveVert}}{\thechapter}{2pc}{}
+
+% Chapitres non numérotés (Conclusion, Introduction générale)
+\titleformat*{\chapter}{\Huge\bfseries\color{OliveVert}}
+
+% Sections numérotées : numéro dans boîte olive + filet or dessous
+\titleformat{\section}[hang]
+  {\Large\bfseries\color{OliveVert}}
+  {\colorbox{OliveVert}{\color{white}\small\hspace{3pt}\thesection\hspace{3pt}}}
+  {0.8em}{}
+  [\vspace{-4pt}\textcolor{OliveGold}{\hrule height 0.5pt}\vspace{3pt}]
+
+% Sections non numérotées (Introduction, Conclusion de chapitre)
+\titleformat*{\section}{\Large\bfseries\color{OliveVert}}
+
+% Sous-sections : barre verticale olive à gauche
+\titleformat{\subsection}[hang]
+  {\large\bfseries\color{OliveMid}}
+  {\textcolor{OliveVert}{\vrule width 3pt height 0.85em depth 0.1em}\hspace{6pt}\thesubsection}
+  {0.5em}{}
+
+% Sous-sous-sections
+\titleformat{\subsubsection}[hang]
+  {\normalsize\bfseries\color{OliveMid}}
+  {\thesubsubsection}{0.5em}{}
+
+\begin{document}
+
+% ====== Page de garde ======
+\input{title.tex}
+\newpage
+\thispagestyle{empty}
+\mbox{}
+\newpage
+
+% ====== Sign ======
+\cleardoublepage
+\input{signature}
+
+% ====== Dédicace ======
+\cleardoublepage
+\input{dedicace.tex}
+
+% ====== Remerciements ======
+\cleardoublepage
+\input{remerciements.tex}
+
+% ====== Table des matières, figures et tableaux ======
+\cleardoublepage
+\tableofcontents
+\cleardoublepage
+\listoffigures
+\cleardoublepage
+\listoftables
+
+% ====== Introduction Générale ======
+\cleardoublepage
+\input{introduction.tex}
+
+% ====== Chapitre 1 ======
+\cleardoublepage
+\input{chapitre1.tex}
+
+% ====== Chapitre 2 ======
+\cleardoublepage
+\input{chapitre2}
+
+% ====== Chapitre 3 ======
+\cleardoublepage
+\input{chapitre3}
+
+% ====== Chapitre 4 ======
+\cleardoublepage
+\input{chapitre4}
+
+% ====== Chapitre 5 ======
+\cleardoublepage
+\input{chapitre5}
+
+% ====== Conclusion Générale ======
+\cleardoublepage
+\input{Conclusionfinal}
+
+% ====== Webographie ======
+\cleardoublepage
+\input{Webographie}
+
+\end{document}

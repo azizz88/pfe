@@ -1,0 +1,136 @@
+@startuml SIRH_UseCases
+
+skinparam actorStyle default
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+
+skinparam usecase {
+  BorderThickness 1.5
+  FontSize        12
+  FontColor       #111111
+  FontName        "DejaVu Sans"
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor     #222222
+  FontStyle       bold
+  FontSize        13
+  FontName        "DejaVu Sans"
+}
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor     #999999
+  BorderThickness 1.5
+  FontStyle       bold
+  FontSize        15
+  FontColor       #111111
+  FontName        "DejaVu Sans"
+}
+skinparam arrow {
+  Color    #444444
+  FontSize 10
+  FontName "DejaVu Sans"
+}
+
+left to right direction
+
+' Ordre inversé identique à l'original smetana : donne Employé=haut, Admin RH=bas
+actor "Admin RH" as RH
+actor "Manager"  as MGR
+actor "Employé"  as EMP
+
+RH  -[hidden]down-> MGR
+MGR -[hidden]down-> EMP
+
+rectangle "USECASE GLOBAL" {
+
+  ' Admin RH UCs — 1er déclaré → bas
+  together {
+    usecase "Gérer les employés"               as UC15 #FFFACD
+    usecase "Gérer les offres d'emploi"        as UC16 #FFFACD
+    usecase "Gérer les candidatures"           as UC17 #FFFACD
+    usecase "Matching IA"                      as UC18 #FFFACD
+    usecase "Gérer candidats externes"         as UC19 #FFFACD
+    usecase "Assigner entretiens aux managers" as UC20 #FFFACD
+    usecase "Gérer les formations"             as UC21 #FFFACD
+    usecase "Gérer compétences et référentiel" as UC22 #FFFACD
+    usecase "Gérer départements et services"   as UC23 #FFFACD
+    usecase "Extraire compétences depuis CV"   as UC24 #FFFACD
+  }
+
+  ' Manager UCs — milieu
+  together {
+    usecase "Gérer les entretiens assignés" as UC10 #D5F5E3
+    usecase "Planifier un entretien"        as UC11 #D5F5E3
+    usecase "Recommander une formation"     as UC12 #D5F5E3
+    usecase "Gérer mon équipe"              as UC13 #D5F5E3
+    usecase "Statistiques entretiens"       as UC14 #D5F5E3
+  }
+
+  ' Employé UCs — dernier → haut
+  together {
+    usecase "Consulter / Modifier profil"      as UC1 #D6EAF8
+    usecase "Parcourir offres d'emploi"        as UC2 #D6EAF8
+    usecase "Soumettre une candidature"        as UC3 #D6EAF8
+    usecase "Suivre mes candidatures"          as UC4 #D6EAF8
+    usecase "Consulter mes formations"         as UC6 #D6EAF8
+    usecase "Accepter / Refuser une formation" as UC7 #D6EAF8
+  }
+
+  ' AUTH hors des together — ancré au niveau Manager (centre vertical)
+  usecase "S'authentifier" as AUTH #FFD6E0
+  UC12 -[hidden]- AUTH
+
+}
+
+' ── Flèches pleines : Acteur --> UseCase ──
+EMP --> UC1
+EMP --> UC2
+EMP --> UC3
+EMP --> UC4
+EMP --> UC6
+EMP --> UC7
+
+MGR --> UC10
+MGR --> UC11
+MGR --> UC12
+MGR --> UC13
+MGR --> UC14
+
+RH  --> UC15
+RH  --> UC16
+RH  --> UC17
+RH  --> UC18
+RH  --> UC19
+RH  --> UC20
+RH  --> UC21
+RH  --> UC22
+RH  --> UC23
+RH  --> UC24
+
+' ── Flèches pointillées : <<include>> ──
+UC1  ..> AUTH : <<include>>
+UC2  ..> AUTH : <<include>>
+UC3  ..> AUTH : <<include>>
+UC4  ..> AUTH : <<include>>
+UC6  ..> AUTH : <<include>>
+UC7  ..> AUTH : <<include>>
+UC10 ..> AUTH : <<include>>
+UC11 ..> AUTH : <<include>>
+UC12 ..> AUTH : <<include>>
+UC13 ..> AUTH : <<include>>
+UC14 ..> AUTH : <<include>>
+UC15 ..> AUTH : <<include>>
+UC16 ..> AUTH : <<include>>
+UC17 ..> AUTH : <<include>>
+UC18 ..> AUTH : <<include>>
+UC19 ..> AUTH : <<include>>
+UC20 ..> AUTH : <<include>>
+UC21 ..> AUTH : <<include>>
+UC22 ..> AUTH : <<include>>
+UC23 ..> AUTH : <<include>>
+UC24 ..> AUTH : <<include>>
+
+@enduml

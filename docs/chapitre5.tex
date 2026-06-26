@@ -1,0 +1,442 @@
+% ============================================================
+%  Chapitre 5 — Sprint 3 : Entretiens, Formations & Recommandations
+% ============================================================
+
+\chapter*{}
+\thispagestyle{empty}
+
+\begin{center}
+  \vspace*{2cm}
+  {\Huge\bfseries\color{blue!70} Chapitre 5}\\[0.8cm]
+  {\LARGE\bfseries\color{blue!70} Sprint 3 : Entretiens, Formations \&}\\[0.3cm]
+  {\LARGE\bfseries\color{blue!70} Recommandations IA}\\[1.5cm]
+
+  \begin{tcolorbox}[
+    enhanced,
+    colback=blue!5,
+    colframe=blue!70,
+    boxrule=1.5pt,
+    arc=4pt,
+    width=0.85\textwidth,
+    halign=center
+  ]
+    \large
+    Ce chapitre décrit le troisième sprint du projet SIRH, dédié à la gestion
+    du cycle de vie des entretiens de sélection. Il couvre l'affectation des
+    managers par le Responsable RH, la planification et la conduite des entretiens,
+    ainsi que la recommandation intelligente de formations pour les candidats
+    nécessitant un renforcement de compétences, grâce à l'intégration de
+    l'intelligence artificielle via l'API Gemini de Google.
+  \end{tcolorbox}
+\end{center}
+
+\addcontentsline{toc}{chapter}{Chapitre 5 : Sprint 3 — Entretiens, Formations \& Recommandations}
+\newpage
+
+\renewcommand{\thesection}{\Roman{section}.}
+\renewcommand{\thesubsection}{\Roman{section}.\arabic{subsection}.}
+
+% ============================================================
+\section{Spécification fonctionnelle du Sprint 3}
+% ============================================================
+
+\subsection{Backlog du Sprint 3}
+
+Le Sprint 3 regroupe quatre User Stories portant sur la gestion des entretiens
+de sélection et la recommandation de parcours de formation adaptés aux profils
+des candidats.
+
+\begin{longtable}{|>{\centering\arraybackslash}p{1.2cm}|>{\arraybackslash}p{2.8cm}|>{\arraybackslash}p{4.5cm}|>{\centering\arraybackslash}p{1.2cm}|>{\arraybackslash}p{4.8cm}|}
+  \hline
+  \textbf{Id US} &
+  \textbf{User Story} &
+  \textbf{Description} &
+  \textbf{Id tâche} &
+  \textbf{Tâche} \\
+  \hline
+  \endfirsthead
+
+  \hline
+  \textbf{Id US} &
+  \textbf{User Story} &
+  \textbf{Description} &
+  \textbf{Id tâche} &
+  \textbf{Tâche} \\
+  \hline
+  \endhead
+
+  \hline
+  \endfoot
+
+  \hline
+  \endlastfoot
+
+  % ----- US15 -----
+  \multirow{3}{*}{\color{blue!70}\textbf{US15}} &
+  \multirow{3}{2.8cm}{\color{blue!70} Assigner un manager à l'entretien} &
+  \multirow{3}{4.5cm}{En tant que Responsable RH, je veux affecter un manager
+  à une candidature retenue afin d'organiser un entretien de sélection.} &
+  \color{blue!70} 15.1 & Élaborer les diagrammes du scénario « Assigner un manager ». \\ \cline{4-5}
+  & & & \color{blue!70} 15.2 & Implémenter le cas d'utilisation « Assigner un manager ». \\ \cline{4-5}
+  & & & \color{blue!70} 15.3 & Tester le cas d'utilisation « Assigner un manager ». \\ \hline
+
+  % ----- US16 -----
+  \multirow{3}{*}{\color{blue!70}\textbf{US16}} &
+  \multirow{3}{2.8cm}{\color{blue!70} Planifier et conduire l'entretien} &
+  \multirow{3}{4.5cm}{En tant que Manager, je veux consulter mes entretiens
+  planifiés, envoyer une convocation et enregistrer le résultat afin de statuer
+  sur les candidats.} &
+  \color{blue!70} 16.1 & Élaborer les diagrammes du scénario « Conduire l'entretien ». \\ \cline{4-5}
+  & & & \color{blue!70} 16.2 & Implémenter le cas d'utilisation « Conduire l'entretien ». \\ \cline{4-5}
+  & & & \color{blue!70} 16.3 & Tester le cas d'utilisation « Conduire l'entretien ». \\ \hline
+
+  % ----- US17 -----
+  \multirow{3}{*}{\color{blue!70}\textbf{US17}} &
+  \multirow{3}{2.8cm}{\color{blue!70} Recommander une formation via IA} &
+  \multirow{3}{4.5cm}{En tant que Manager, je veux obtenir des recommandations
+  d'organismes de formation adaptées aux compétences manquantes du candidat,
+  générées par intelligence artificielle.} &
+  \color{blue!70} 17.1 & Élaborer les diagrammes du scénario « Recommander une formation ». \\ \cline{4-5}
+  & & & \color{blue!70} 17.2 & Implémenter le cas d'utilisation « Recommander une formation ». \\ \cline{4-5}
+  & & & \color{blue!70} 17.3 & Tester le cas d'utilisation « Recommander une formation ». \\ \hline
+
+  % ----- US18 -----
+  \multirow{3}{*}{\color{blue!70}\textbf{US18}} &
+  \multirow{3}{2.8cm}{\color{blue!70} Notifier les acteurs par email} &
+  \multirow{3}{4.5cm}{En tant que Système, je veux envoyer automatiquement
+  des convocations à l'entretien et des notifications de proposition de formation
+  aux employés concernés.} &
+  \color{blue!70} 18.1 & Élaborer les diagrammes du scénario « Envoyer les notifications ». \\ \cline{4-5}
+  & & & \color{blue!70} 18.2 & Implémenter le cas d'utilisation « Envoyer les notifications ». \\ \cline{4-5}
+  & & & \color{blue!70} 18.3 & Tester le cas d'utilisation « Envoyer les notifications ». \\ \hline
+
+\end{longtable}
+
+\subsection{Acteurs impliqués}
+
+\begin{longtable}{|>{\bfseries\arraybackslash}p{3.5cm}|>{\arraybackslash}p{11.5cm}|}
+  \hline
+  \textbf{Acteur} &
+  \textbf{Rôle dans le Sprint 3} \\
+  \hline
+  \endfirsthead
+  \hline
+  \textbf{Acteur} &
+  \textbf{Rôle dans le Sprint 3} \\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+
+  Administrateur RH &
+  Consulte les candidatures retenues, désigne le manager responsable de
+  l'entretien et déclenche l'envoi de la convocation au candidat. \\ \hline
+
+  Manager &
+  Prend en charge les entretiens assignés, consulte le profil du candidat,
+  conduit l'entretien et formule sa décision. En cas d'orientation en formation,
+  il initie la recommandation par intelligence artificielle et soumet
+  la proposition à l'employé. \\ \hline
+
+  Employé &
+  Reçoit la convocation à l'entretien par email. Il est ensuite informé de la
+  décision et peut accepter ou décliner la proposition de formation depuis
+  son espace personnel. \\ \hline
+
+  API Gemini (Google) &
+  Service d'intelligence artificielle sollicité par la plateforme pour analyser
+  l'écart de compétences du candidat et proposer les trois organismes de formation
+  les mieux adaptés à son profil. \\ \hline
+
+\end{longtable}
+
+% ============================================================
+\section{Diagramme de cas d'utilisation du Sprint 3}
+% ============================================================
+
+Le diagramme suivant illustre l'ensemble des cas d'utilisation du Sprint 3.
+Trois acteurs principaux interagissent avec le système : l'Administrateur RH,
+le Manager et l'Employé. L'API Gemini intervient en tant qu'acteur secondaire
+lors de la phase de recommandation de formation.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{images/sprint3_usecase.png}
+  \caption{Diagramme de cas d'utilisation — Sprint 3}
+  \label{fig:sprint3_usecase}
+\end{figure}
+
+% ============================================================
+\section{Analyse des cas d'utilisation}
+% ============================================================
+
+\subsection{Cas d'utilisation : Assigner un manager à l'entretien}
+
+\begin{longtable}{|>{\bfseries\arraybackslash}p{3.5cm}|>{\arraybackslash}p{11.5cm}|}
+  \hline
+  \rowcolor{headerblue}
+  \multicolumn{2}{|l|}{\textcolor{white}{\textbf{UC — Assigner un manager à l'entretien}}} \\
+  \hline
+  \endfirsthead
+  \hline
+  \endhead
+  \hline
+  \endfoot
+
+  Acteur principal & Administrateur RH \\ \hline
+
+  Pré-conditions &
+  L'Administrateur RH est connecté à la plateforme. Une candidature retenue
+  est en attente d'affectation. Au moins un manager est disponible dans le
+  système. \\ \hline
+
+  Post-conditions &
+  Un entretien est planifié et associé au manager désigné. Une convocation
+  est envoyée automatiquement au candidat. Le statut de la candidature est
+  mis à jour. \\ \hline
+
+  Scénario principal &
+  \begin{enumerate}
+    \item L'Administrateur RH consulte la liste des candidatures en attente
+          d'entretien.
+    \item Il sélectionne une candidature et ouvre le formulaire d'affectation.
+    \item Le système affiche la liste des managers disponibles.
+    \item L'administrateur choisit un manager et renseigne la date, l'heure
+          et le lieu de l'entretien.
+    \item Il confirme. Le système enregistre l'entretien, envoie une convocation
+          par email au candidat et met à jour le statut de la candidature.
+  \end{enumerate} \\ \hline
+
+  Scénario alternatif &
+  \textbf{[Aucun manager disponible]} : le système affiche un message
+  d'avertissement et l'affectation est suspendue jusqu'à l'ajout d'un manager. \\ \hline
+\end{longtable}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\textwidth]{images/seq_sys_assigner.png}
+  \caption{Diagramme de séquence système — Assigner un manager}
+  \label{fig:seq_sys_assigner}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{images/seq_det_assigner.png}
+  \caption{Diagramme de séquence détaillé — Assigner un manager}
+  \label{fig:seq_det_assigner}
+\end{figure}
+
+\subsection{Cas d'utilisation : Planifier et conduire l'entretien}
+
+\begin{longtable}{|>{\bfseries\arraybackslash}p{3.5cm}|>{\arraybackslash}p{11.5cm}|}
+  \hline
+  \rowcolor{headerblue}
+  \multicolumn{2}{|l|}{\textcolor{white}{\textbf{UC — Planifier et conduire l'entretien}}} \\
+  \hline
+  \endfirsthead
+  \hline
+  \endhead
+  \hline
+  \endfoot
+
+  Acteur principal & Manager \\ \hline
+
+  Pré-conditions &
+  Le Manager est connecté à la plateforme. Un entretien lui a été assigné
+  et le candidat a reçu sa convocation. \\ \hline
+
+  Post-conditions &
+  La décision de l'entretien est enregistrée. Le statut de la candidature
+  est mis à jour et le candidat est notifié du résultat. \\ \hline
+
+  Scénario principal &
+  \begin{enumerate}
+    \item Le Manager accède à son tableau de bord et consulte ses entretiens
+          planifiés.
+    \item Il sélectionne un entretien et prend connaissance du profil et
+          du score de compatibilité du candidat.
+    \item Il conduit l'entretien et saisit ses observations.
+    \item Il enregistre sa décision : Retenu, Refusé ou Orientation en formation.
+    \item Le système met à jour le statut de la candidature et notifie
+          le candidat par email.
+  \end{enumerate} \\ \hline
+
+  Scénario alternatif &
+  \textbf{[Orientation en formation]} : le manager choisit d'orienter le
+  candidat vers une formation. Le système calcule l'écart de compétences
+  et sollicite l'API Gemini pour proposer les organismes les plus adaptés.
+  Le manager sélectionne un organisme et soumet la proposition à l'employé. \\ \hline
+\end{longtable}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\textwidth]{images/seq_sys_entretien.png}
+  \caption{Diagramme de séquence système — Conduire l'entretien}
+  \label{fig:seq_sys_entretien}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{images/seq_det_entretien.png}
+  \caption{Diagramme de séquence détaillé — Conduire l'entretien}
+  \label{fig:seq_det_entretien}
+\end{figure}
+
+\subsection{Cas d'utilisation : Recommander une formation via IA}
+
+\begin{longtable}{|>{\bfseries\arraybackslash}p{3.5cm}|>{\arraybackslash}p{11.5cm}|}
+  \hline
+  \rowcolor{headerblue}
+  \multicolumn{2}{|l|}{\textcolor{white}{\textbf{UC — Recommander une formation via IA}}} \\
+  \hline
+  \endfirsthead
+  \hline
+  \endhead
+  \hline
+  \endfoot
+
+  Acteur principal & Manager (déclenche) / Système IA (traite) \\ \hline
+
+  Pré-conditions &
+  L'entretien s'est conclu par une orientation en formation. Le catalogue
+  des organismes de formation est disponible dans la plateforme. \\ \hline
+
+  Post-conditions &
+  Une proposition de formation est créée et soumise à l'employé.
+  L'employé reçoit une notification par email l'invitant à consulter
+  et répondre à la proposition. \\ \hline
+
+  Scénario principal &
+  \begin{enumerate}
+    \item Le Manager déclenche la recommandation depuis le tableau de bord.
+    \item Le système identifie les compétences manquantes du candidat par
+          rapport aux exigences du poste.
+    \item Il transmet ces informations, accompagnées du catalogue des
+          organismes, au service d'intelligence artificielle.
+    \item L'API Gemini retourne les trois organismes les plus adaptés,
+          avec un score et une justification pour chacun.
+    \item Le manager consulte les résultats, choisit un organisme et
+          confirme la proposition.
+    \item La proposition est enregistrée et l'employé est notifié.
+  \end{enumerate} \\ \hline
+
+  Scénario alternatif &
+  \textbf{[Service IA indisponible]} : le manager peut sélectionner
+  manuellement un organisme depuis le catalogue de la plateforme. \\ \hline
+\end{longtable}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\textwidth]{images/seq_sys_formation_reco.png}
+  \caption{Diagramme de séquence système — Recommandation de formation}
+  \label{fig:seq_sys_formation_reco}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{images/seq_det_formation_reco.png}
+  \caption{Diagramme de séquence détaillé — Recommandation de formation}
+  \label{fig:seq_det_formation_reco}
+\end{figure}
+
+% ============================================================
+\section{Diagramme de classes du Sprint 3}
+% ============================================================
+
+Le diagramme de classes ci-dessous présente les entités introduites durant
+le Sprint 3 ainsi que leurs relations avec les éléments existants du système.
+
+Les trois nouvelles entités sont :
+\begin{itemize}
+  \item \textbf{Entretien} : regroupe les informations relatives à un entretien
+        de sélection — le manager responsable, la date, le lieu et la décision
+        finale. Elle est associée à une candidature interne ou à un candidat externe.
+  \item \textbf{Organisme de formation} : représente un prestataire de formation
+        référencé dans le catalogue de la plateforme, avec ses domaines
+        de compétences, son mode de délivrance et son statut de partenariat.
+  \item \textbf{Proposition de formation} : matérialise la proposition soumise
+        à l'employé à l'issue de l'entretien, avec le suivi de son état
+        (proposée, acceptée, refusée ou en cours).
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{images/class_sprint3.png}
+  \caption{Diagramme de classes — Sprint 3}
+  \label{fig:class_sprint3}
+\end{figure}
+
+% ============================================================
+\section{Réalisation}
+% ============================================================
+
+\subsection{Interface Responsable RH — Affectation du manager}
+
+L'interface RH permet de sélectionner un manager et de lui affecter une
+candidature pour la planification de l'entretien. La convocation est
+générée et envoyée automatiquement dès la validation.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{images/ihm_assigner_manager.png}
+  \caption{Interface RH — Affectation d'un manager à un entretien}
+  \label{fig:ihm_assigner_manager}
+\end{figure}
+
+\subsection{Interface Manager — Tableau de bord des entretiens}
+
+Le tableau de bord centralise les entretiens assignés au manager. Il lui
+permet de consulter le profil de chaque candidat, de saisir ses observations
+et d'enregistrer sa décision à l'issue de l'entretien.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{images/ihm_manager_interviews.png}
+  \caption{Interface Manager — Tableau de bord des entretiens}
+  \label{fig:ihm_manager_interviews}
+\end{figure}
+
+\subsection{Interface Manager — Recommandations de formation}
+
+Après une décision d'orientation en formation, la plateforme affiche les
+trois organismes recommandés par l'intelligence artificielle, avec leur
+score de pertinence et une justification. Le manager sélectionne l'organisme
+le plus adapté avant de soumettre la proposition.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{images/ihm_formation_reco.png}
+  \caption{Interface Manager — Recommandations de formation générées par IA}
+  \label{fig:ihm_formation_reco}
+\end{figure}
+
+\subsection{Interface Employé — Proposition de formation}
+
+L'employé consulte depuis son espace personnel la proposition de formation
+qui lui a été soumise. Il peut visualiser l'organisme recommandé et les
+compétences ciblées, puis accepter ou décliner la proposition.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{images/ihm_employee_formation.png}
+  \caption{Interface Employé — Consultation de la proposition de formation}
+  \label{fig:ihm_employee_formation}
+\end{figure}
+
+% ============================================================
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+% ============================================================
+
+Ce troisième sprint a permis de mettre en place le cycle complet de gestion
+des entretiens au sein de la plateforme SIRH, depuis l'affectation du manager
+jusqu'à la soumission d'une proposition de formation personnalisée à l'employé.
+
+L'intégration de l'intelligence artificielle via l'API Gemini constitue la
+valeur ajoutée principale de ce sprint : en analysant l'écart entre le profil
+du candidat et les exigences du poste, la plateforme génère des recommandations
+d'organismes de formation pertinentes et justifiées, réduisant le temps de
+décision du manager et assurant des orientations adaptées aux besoins réels.
+
+Le sprint suivant portera sur la gestion des candidats externes et le
+développement d'outils de pilotage avancés pour les managers.

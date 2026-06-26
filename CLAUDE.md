@@ -5,6 +5,284 @@
 
 ---
 
+## 📅 Dernière session — 2026-06-24
+
+**Travail accompli aujourd'hui** : Correction diagramme de classes Sprint 2 (XML + style draw.io) + rédaction `chapitre5.tex` (Sprint 3)
+
+| # | Tâche | Statut |
+|---|---|---|
+| 1 | Correction erreur XML `class_sprint2` — suppression des commentaires avec `--` (Double hyphen within comment, ligne 217) | ✅ |
+| 2 | Adaptation style draw.io diagramme classes Sprint 2 — 3 itérations pour correspondre à l'exemple (jaune/bleu/vert/rose, corps blanc unique HTML, pas de `rounded=1`, flèches `strokeWidth=1`) | ✅ |
+| 3 | Création `chapitre5.tex` — Chapitre Sprint 3 complet (US15–US18, Entretiens, Formations & Recommandations IA) | ✅ |
+
+### Style draw.io final — Diagramme de classes Sprint 2
+
+**Couleurs validées** :
+- Entités Sprint 2 principales : jaune `#FFD966` (header), strokeColor `#B45F06`
+- Entités Sprint 1 référencées : bleu clair `#9FC5E8`, strokeColor `#1F618D`
+- Entité Competence (catalogue) : vert clair `#B6D7A8`, strokeColor `#2E7D32`
+- Enums : rose/saumon `#EA9999`, strokeColor `#CC0000`, `fontStyle=3`
+- Corps de toutes les entités : `fillColor=#ffffff;strokeColor=none` (blanc sans bordure)
+
+**Structure des cellules** :
+- Swimlane header : `startSize=28`, `fontStyle=1`, taille totale = header + corps
+- Corps = 1 seul enfant `text;html=1;strokeColor=none;fillColor=#ffffff` avec `&lt;br&gt;`
+- PAS de `rounded=1` ni `arcSize` (coins droits)
+
+**Associations** :
+- Flèches : `endArrow=open;endFill=0;endSize=8;strokeColor=#333333;strokeWidth=1;fontStyle=2`
+- Multiplicités : `edgeLabel` enfants avec `x=±0.85 relative`
+- Dépendances enum : `dashed=1;endArrow=open;endFill=0;strokeColor=#888888`
+
+### Fichiers LaTeX du Chapitre 5 — images attendues
+
+Le fichier `chapitre5.tex` référence ces images (à placer dans `images/`) :
+
+| Nom de fichier | Contenu | Source |
+|---|---|---|
+| `sprint3_usecase.png` | Diagramme UC Sprint 3 | draw.io ❌ à faire |
+| `seq_sys_assigner.png` | Séquence système assigner manager | draw.io ❌ à faire |
+| `seq_det_assigner.png` | Séquence détaillé assigner manager | draw.io ❌ à faire |
+| `seq_sys_entretien.png` | Séquence système conduire entretien | draw.io ❌ à faire |
+| `seq_det_entretien.png` | Séquence détaillé conduire entretien | draw.io ❌ à faire |
+| `seq_sys_formation_reco.png` | Séquence système recommandation formation | draw.io ❌ à faire |
+| `seq_det_formation_reco.png` | Séquence détaillé recommandation formation | draw.io ❌ à faire |
+| `class_sprint3.png` | Diagramme de classes Sprint 3 | draw.io ❌ à faire |
+| `ihm_assigner_manager.png` | Capture IHM modal assignation | screenshot ❌ |
+| `ihm_manager_interviews.png` | Capture IHM tableau de bord manager | screenshot ❌ |
+| `ihm_formation_reco.png` | Capture IHM recommandations IA | screenshot ❌ |
+| `ihm_employee_formation.png` | Capture IHM espace formation employé | screenshot ❌ |
+
+### Structure chapitre5.tex rédigé
+
+| Section | Contenu |
+|---|---|
+| Section I | Backlog Sprint 3 (longtable US15–US18 avec tâches) + table acteurs |
+| Section II | Diagramme de cas d'utilisation (ref `sprint3_usecase.png`) |
+| Section III | Analyse UC : Assigner manager + Conduire entretien + Recommandation formation |
+| Section IV | Diagramme de classes Sprint 3 (Interview + TrainingProvider + TrainingProposal) |
+| Section V | Réalisation — 4 captures IHM (RH, Manager entretiens, Manager formation, Employé formation) |
+| Conclusion | Bilan sprint + transition vers Sprint 4 |
+
+### Prochaine session — Suite Sprint 3 + Chapitre 5
+
+Diagrammes draw.io à créer (ordre suggéré) :
+1. **Diagramme UC Sprint 3** → `sprint3_usecase.png` (acteurs : RH, Manager, Employé, API Gemini)
+2. **Séquence système « Assigner un manager »** → `seq_sys_assigner.png`
+3. **Séquence détaillé « Assigner un manager »** → `seq_det_assigner.png`
+4. **Séquence système « Conduire l'entretien »** → `seq_sys_entretien.png`
+5. **Séquence détaillé « Conduire l'entretien »** → `seq_det_entretien.png`
+6. **Séquence système « Recommandation formation »** → `seq_sys_formation_reco.png`
+7. **Séquence détaillé « Recommandation formation »** → `seq_det_formation_reco.png`
+8. **Diagramme de classes Sprint 3** → `class_sprint3.png`
+
+---
+
+## 📅 Dernière session — 2026-06-23
+
+**Travail accompli aujourd'hui** : Rédaction du Chapitre 4 (Sprint 2) + correction LaTeX + création de 4 diagrammes draw.io
+
+| # | Tâche | Statut |
+|---|---|---|
+| 1 | Correction `main.tex` — fusion `tcolorbox` (option clash) + ajout packages manquants (`multirow`, `colortbl`, `array`, `url`, `float`) | ✅ |
+| 2 | Correction `chapitre5.tex` — syntaxe `\multirow{rows}{width}{content}` dans longtable Sprint 3 | ✅ |
+| 3 | Création `chapitre4.tex` — Chapitre Sprint 2 complet (US7–US14, Offres Internes, Candidatures & Matching IA) | ✅ |
+| 4 | Diagramme draw.io — **Cas d'utilisation Sprint 2** (zones colorées RH/Employé/Manager, 11 UC, 1 include fonctionnel) | ✅ |
+| 5 | Diagramme draw.io — **Raffinement « Gérer les offres de poste »** (1 UC principal + 6 sous-UC avec `<<include>>`) | ✅ |
+| 6 | Diagramme draw.io — **Séquence système « Créer une offre »** (Admin RH + Système, 7 messages, 2 cadres alt) | ✅ |
+| 7 | Diagramme draw.io — **Séquence détaillé « Créer une offre »** (4 composants : Interface + Controller + Service + DB, 18 messages, 2 cadres alt) | ✅ |
+
+### Fichiers LaTeX du Chapitre 4 — images attendues
+
+Le fichier `chapitre4.tex` référence ces images (à placer dans `images/`) :
+
+| Nom de fichier | Contenu | Source |
+|---|---|---|
+| `sprint2_usecase.png` | Diagramme UC Sprint 2 | draw.io ✅ fait |
+| `raffi_offres.png` | Diagramme raffinement offres | draw.io ✅ fait |
+| `seq_sys_offre.png` | Séquence système créer offre | draw.io ✅ fait |
+| `seq_det_offre.png` | Séquence détaillé créer offre | draw.io ✅ fait |
+| `seq_sys_candidature.png` | Séquence système postuler | draw.io ❌ à faire |
+| `seq_det_candidature.png` | Séquence détaillé postuler | draw.io ❌ à faire |
+| `seq_sys_matching.png` | Séquence système matching IA | draw.io ❌ à faire |
+| `seq_det_matching.png` | Séquence détaillé matching IA | draw.io ❌ à faire |
+| `seq_sys_consulter_cand.png` | Séquence système consulter candidatures | draw.io ❌ à faire |
+| `class_sprint2.png` | Diagramme de classes Sprint 2 | draw.io ❌ à faire |
+| `ihm_offres_rh.png` | Capture IHM liste offres (RH) | screenshot ❌ |
+| `ihm_offres_employe.png` | Capture IHM offres (Employé) | screenshot ❌ |
+| `ihm_matching.png` | Capture IHM résultat matching | screenshot ❌ |
+| `ihm_candidatures_rh.png` | Capture IHM gestion candidatures | screenshot ❌ |
+
+### Structure des diagrammes draw.io réalisés
+
+**Diagramme UC Sprint 2** :
+- Système boundary gris, 3 zones colorées (RH jaune, Employé bleu, Manager vert)
+- Acteurs : RH (jaune), Employé (bleu), Manager (vert), API Gemini (violet)
+- S'authentifier (rose) en haut-droite, relié aux 3 acteurs par flèches pleines
+- 1 seul `<<include>>` fonctionnel : Postuler → Calculer le score de matching IA
+
+**Diagramme raffinement « Gérer les offres de poste »** :
+- UC principal (orange/gras) à gauche, 6 sous-UC (jaune) à droite en colonne
+- 6 flèches `<<include>>` pointillées du UC principal vers chaque sous-UC
+- Sous-UC : Consulter liste, Créer, Modifier, Publier, Archiver, Définir compétences
+
+**Séquence système « Créer une offre »** :
+- 2 lifelines : Admin RH (umlActor gauche) + Système (box droite)
+- 7 messages numérotés (1-5 pleines →, 3/6/7 pointillées ←)
+- 2 cadres alt : `[Champs obligatoires manquants]` + `[Date de clôture antérieure à aujourd'hui]`
+
+**Séquence détaillé « Créer une offre »** :
+- 4 composants : Interface offre (bleu), Controller offre (vert), Service offre (jaune), Base de Données (rose)
+- 18 messages total + 2 cadres alt imbriqués
+- Alt 1 : `[Données invalides]` (erreur saisie) / `[Données valides]` (envoi backend)
+- Alt 2 : `[Date de clôture antérieure]` (erreur retour) / `[Offre enregistrée avec succès]` (save DB + confirmation)
+- 3 messages hors cadre alt2 : propagation confirmation → affichage succès
+
+### Corrections LaTeX importantes (à retenir)
+
+| Erreur | Cause | Correction |
+|---|---|---|
+| Option clash `tcolorbox` | 2 `\usepackage` avec options différentes | Fusionner en `\usepackage[skins,many]{tcolorbox}` (1 seule ligne) |
+| `\rowcolor` undefined | Package `colortbl` manquant | Ajouter `\usepackage{colortbl}` avant `tcolorbox` |
+| `\multirow` syntax error | `\multirow{5}` sans args 2 et 3 | Toujours `\multirow{N}{*}{contenu}` ou `\multirow{N}{2cm}{contenu}` |
+| `headerblue` undefined | `\definecolor` absent | Ajouter `\definecolor{headerblue}{RGB}{68,114,196}` dans le préambule |
+| URL non définie en Webographie | Package `url` manquant | Ajouter `\usepackage{url}` |
+
+### Numérotation des chapitres du rapport
+
+| Fichier LaTeX | Contenu | Statut |
+|---|---|---|
+| `chapitre1.tex` | Contexte, existant, solution proposée | ✅ rédigé |
+| `chapitre2.tex` | Analyse des besoins, backlog, architecture | ✅ rédigé |
+| `chapitre3.tex` | Sprint 1 — Auth & Gestion employés | ✅ rédigé |
+| `chapitre4.tex` | Sprint 2 — Offres internes, Candidatures, Matching IA | ✅ rédigé (images manquantes) |
+| `chapitre5.tex` | Sprint 3 — Événements, Soumissions, Attestations | ✅ rédigé (corrigé) |
+| `chapitre6.tex` | Sprint 4 — Manager, Entretiens, Décisions | ❓ existait avant session |
+| `chapitre7.tex` / `chapitre5.tex` | Sprint 5 — Formation, Notifications, Candidats externes | ❓ coupé en milieu session précédente |
+| `Conclusionfinal.tex` | Conclusion générale | ❓ |
+| `Webographie.tex` | Références web | ❓ (nécessite `\usepackage{url}`) |
+
+### Prochaine session — Suite Chapitre 4 Sprint 2
+
+Diagrammes draw.io restants à créer (dans l'ordre) :
+1. **Séquence système « Postuler à une offre »** → `seq_sys_candidature.png`
+2. **Séquence détaillé « Postuler à une offre »** → `seq_det_candidature.png`
+3. **Séquence système « Calculer le score de matching IA »** → `seq_sys_matching.png`
+4. **Séquence détaillé « Calculer le score de matching IA »** → `seq_det_matching.png`
+5. **Séquence système « Consulter les candidatures »** → `seq_sys_consulter_cand.png`
+6. **Diagramme de classes Sprint 2** → `class_sprint2.png`
+7. **Section réalisation** : IHM captures d'écran (après que l'app tourne)
+
+---
+
+## 📅 Dernière session — 2026-06-11
+
+**Travail accompli aujourd'hui** : Rédaction du Chapitre 1 et début Chapitre 2 du rapport PFE
+
+| # | Section rédigée | Statut |
+|---|---|---|
+| 1 | Description du projet | ✅ |
+| 2 | Étude de l'existant | ✅ |
+| 3 | Critique de l'existant (5 points) | ✅ |
+| 4 | Solution proposée (5 points) | ✅ |
+| 5 | Conclusion Chapitre 1 | ✅ |
+| 6 | Introduction Chapitre 2 | ✅ |
+| 7 | Identification des acteurs (RH, Manager, Employé) | ✅ |
+| 8 | Besoins fonctionnels (3 acteurs) | ✅ |
+| 9 | Besoins non fonctionnels (5 critères) | ✅ |
+| 10 | Identification des besoins fonctionnels (intro UML) | ✅ |
+| 11 | Réalisatrice du projet (équipe Scrum) | ✅ |
+| 12 | Backlog produit (18 User Stories, 5 sprints) | ✅ |
+| 13 | Code LaTeX du backlog produit (longtable) | ✅ |
+
+### Conventions de rédaction validées cette session
+
+- **Nom du projet** : SIRH (pas "SIRH PRO")
+- **Entreprise d'accueil** : Arab Soft
+- **Langue** : français académique, style humain et fluide
+- **Acteurs** : Administrateur RH / Manager / Employé
+- **IA** : API Gemini de Google — extraction compétences depuis CV + moteur de matching
+- **Flux matching** : RH upload CV → IA extrait compétences → stockées en DB → employé postule → matching sur données déjà indexées (pas de ré-analyse)
+- **Stack mentionnée dans le rapport** : Angular 21, Spring Boot, Spring Cloud Gateway, Keycloak, PostgreSQL, Docker, GitHub Actions
+
+### Backlog produit — 18 User Stories réparties sur 5 sprints
+
+| Sprint | User Stories |
+|---|---|
+| Sprint 1 | 1-Authentification, 2-Gestion employés, 3-Gestion départements |
+| Sprint 2 | 4-Extraction compétences IA, 5-Profil employé, 6-Visualiser compétences, 7-Historique carrière |
+| Sprint 3 | 8-Offres poste internes, 9-Postuler offre, 10-Score matching, 11-Consulter candidatures |
+| Sprint 4 | 12-Tableau de bord manager, 13-Planifier entretiens, 14-Statuer candidatures, 15-Historique poste auto |
+| Sprint 5 | 16-Proposer formation, 17-Notifications email, 18-Candidats externes |
+
+### Prochaine session — Suite du rapport PFE
+
+Chapitres restants à rédiger :
+- **Chapitre 2 (suite)** : Diagramme de cas d'utilisation global, architecture technique, environnement de développement
+- **Chapitre DevOps** : pipeline GitHub Actions, conteneurisation Docker, SonarQube, Trivy
+- **Chapitres Sprints** : description de chaque sprint (conception + réalisation)
+
+---
+
+## 📅 Dernière session — 2026-06-09
+
+**Travail accompli aujourd'hui** :
+
+| # | Action | Résultat |
+|---|---|---|
+| 1 | Diagramme de cas d'utilisation PlantUML | `docs/use-case-diagram.puml` + `docs/SIRH_UseCases.png` ✅ |
+| 2 | Diagramme de classes PlantUML | `docs/class-diagram.puml` + `docs/SIRH_ClassDiagram.png` ✅ |
+| 3 | Installation Graphviz (moteur de layout) | `C:\Program Files\Graphviz\bin\dot.exe` ✅ |
+| 4 | Téléchargement PlantUML jar | `docs/plantuml.jar` (v1.2024.6) ✅ |
+
+### Diagramme Use Cases — `docs/SIRH_UseCases.png`
+
+- **Ordre des acteurs** : Employé (haut, bleu) → Manager (milieu, vert) → Admin RH (bas, jaune)
+- **UC S'authentifier** : rose, à droite, relié à tous les UC par `<<include>>` pointillés
+- **Flèches** : pleines acteur→UC, pointillées pour include uniquement
+- **Police** : DejaVu Sans avec `-charset UTF-8` (accents OK)
+- **Moteur** : `!pragma layout smetana` (pas Graphviz — meilleur pour ce layout)
+- **Commande de régénération** :
+```powershell
+java -DPLANTUML_LIMIT_SIZE=20000 -jar docs\plantuml.jar -tpng -scale 2 -charset UTF-8 docs\use-case-diagram.puml -o docs\
+```
+
+### Diagramme de Classes — `docs/SIRH_ClassDiagram.png`
+
+- **Style** : headers bleu `#4472C4`, corps blanc, `hide circle` (pas de cercle C), enums en ligne
+- **14 entités** : Employe, Departement, Service, Contrat, Document, HistoriquePoste, CompetenceEmploye, OffreEmploi, Candidature, Entretien, Competence, OrganismeFormation, PropositionFormation, CandidatExterne, CompetenceCandidatExterne
+- **Lignes** : `linetype ortho` (angles droits comme draw.io)
+- **Commande de régénération** :
+```powershell
+$env:Path += ";C:\Program Files\Graphviz\bin"
+java -DPLANTUML_LIMIT_SIZE=20000 -DGRAPHVIZ_DOT="C:\Program Files\Graphviz\bin\dot.exe" -jar docs\plantuml.jar -tpng -scale 2 -charset UTF-8 docs\class-diagram.puml -o docs\
+```
+
+### Outils installés cette session
+
+| Outil | Chemin | Usage |
+|---|---|---|
+| Graphviz | `C:\Program Files\Graphviz\bin\dot.exe` | Layout des diagrammes de classe |
+| PlantUML jar | `docs\plantuml.jar` (v1.2024.6) | Génération PNG/SVG |
+
+### Prochaine session — Rédaction du rapport PFE
+
+> Reprendre par la **rédaction du rapport** (mémoire de fin d'études).
+
+Chapitres à rédiger (ordre suggéré) :
+1. **Chapitre DevOps** : pipeline GitHub Actions, conteneurisation Docker, SonarQube, Trivy — s'appuyer sur les étapes 1-15 documentées dans ce CLAUDE.md
+2. **Chapitre Architecture** : diagrammes use cases + classes générés aujourd'hui
+3. **Chapitre Fonctionnel** : description des features (matching IA, entretiens, formations, extraction CV)
+
+Livrables déjà disponibles pour le rapport :
+- `docs/SIRH_UseCases.png` — diagramme use cases
+- `docs/SIRH_ClassDiagram.png` — diagramme de classes
+- `docs/SIRH_UseCases.svg` — version vectorielle use cases
+- `.github/workflows/` — ci.yml, build-images.yml, deploy.yml
+- `docker-compose.yml` — stack complète 8 conteneurs
+
+---
+
 ## 📅 Dernière session — 2026-06-06
 
 **Travail accompli aujourd'hui** :
