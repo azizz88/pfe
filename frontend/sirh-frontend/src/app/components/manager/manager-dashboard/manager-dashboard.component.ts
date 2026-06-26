@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { KeycloakService } from '../../../services/keycloak.service';
 import { EmployeeApiService } from '../../../services/employee-api.service';
 import { RecruitmentApiService } from '../../../services/recruitment-api.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 /**
  * Dashboard de l'espace Manager.
@@ -15,153 +16,163 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
 @Component({
   selector: 'app-manager-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, IconComponent],
   template: `
-    <div class="mgr-dashboard">
-      <div class="mgr-header">
-        <div>
-          <h1>🎙️ Dashboard Manager</h1>
-          <p class="mgr-welcome">
+    <div class="page fade-in">
+      <div class="page-header">
+        <div class="page-header__title">
+          <h1>Tableau de bord</h1>
+          <p class="page-header__sub">
             Bienvenue {{ keycloak.getFullName() }}.
-            <span *ngIf="team?.manager?.matricule"> Matricule {{ team.manager.matricule }}.</span>
+            <span *ngIf="team?.manager?.matricule">Matricule {{ team.manager.matricule }}.</span>
           </p>
         </div>
-        <div class="mgr-quick-actions">
-          <a routerLink="/manager/interviews" class="qa-btn primary">📅 Mes entretiens</a>
-          <a routerLink="/manager/organigramme" class="qa-btn">🌳 Organigramme</a>
+        <div class="page-header__actions">
+          <a routerLink="/manager/interviews" class="btn btn--accent">
+            <app-icon name="interview" [size]="17" /> Mes entretiens
+          </a>
+          <a routerLink="/manager/organigramme" class="btn btn--secondary">
+            <app-icon name="org-chart" [size]="17" /> Organigramme
+          </a>
         </div>
       </div>
 
       <!-- KPIs -->
-      <div class="kpi-grid">
-        <div class="kpi-card kpi-pending">
-          <div class="kpi-icon">⏳</div>
-          <div class="kpi-content">
-            <div class="kpi-value">{{ stats?.pendingScheduling || 0 }}</div>
-            <div class="kpi-label">À planifier</div>
+      <div class="grid grid--kpi" style="margin-bottom: var(--sp-6)">
+        <div class="stat">
+          <span class="stat__icon" style="background: var(--c-warning-soft); color: var(--c-warning-ink)"><app-icon name="pending" [size]="20" /></span>
+          <div class="stat__body">
+            <span class="stat__value">{{ stats?.pendingScheduling || 0 }}</span>
+            <span class="stat__label">À planifier</span>
           </div>
         </div>
-        <div class="kpi-card kpi-scheduled">
-          <div class="kpi-icon">📅</div>
-          <div class="kpi-content">
-            <div class="kpi-value">{{ stats?.scheduled || 0 }}</div>
-            <div class="kpi-label">Planifiés</div>
+        <div class="stat">
+          <span class="stat__icon" style="background: var(--c-info-soft); color: var(--c-info-ink)"><app-icon name="calendar" [size]="20" /></span>
+          <div class="stat__body">
+            <span class="stat__value">{{ stats?.scheduled || 0 }}</span>
+            <span class="stat__label">Planifiés</span>
           </div>
         </div>
-        <div class="kpi-card kpi-completed">
-          <div class="kpi-icon">✅</div>
-          <div class="kpi-content">
-            <div class="kpi-value">{{ stats?.completed || 0 }}</div>
-            <div class="kpi-label">Réalisés</div>
+        <div class="stat">
+          <span class="stat__icon" style="background: var(--c-success-soft); color: var(--c-success-ink)"><app-icon name="approve" [size]="20" /></span>
+          <div class="stat__body">
+            <span class="stat__value">{{ stats?.completed || 0 }}</span>
+            <span class="stat__label">Réalisés</span>
           </div>
         </div>
-        <div class="kpi-card kpi-rate">
-          <div class="kpi-icon">🎯</div>
-          <div class="kpi-content">
-            <div class="kpi-value">{{ stats?.acceptanceRate || 0 }}%</div>
-            <div class="kpi-label">Taux d'acceptation</div>
-            <div class="kpi-sub" *ngIf="stats">
-              {{ stats.positive }} positifs · {{ stats.negative }} négatifs
-            </div>
+        <div class="stat">
+          <span class="stat__icon"><app-icon name="target" [size]="20" /></span>
+          <div class="stat__body">
+            <span class="stat__value">{{ stats?.acceptanceRate || 0 }}%</span>
+            <span class="stat__label">Taux d'acceptation</span>
+            <span class="stat__label" *ngIf="stats">{{ stats.positive }} positifs · {{ stats.negative }} négatifs</span>
           </div>
         </div>
       </div>
 
       <div class="dash-grid">
-        <!-- Colonne 1 : Prochains entretiens + activité mensuelle -->
+        <!-- Colonne 1 : Prochains entretiens + activité -->
         <div class="dash-col">
-          <div class="panel">
-            <div class="panel-head">
-              <h2>🗣️ Mes prochains entretiens</h2>
-              <a routerLink="/manager/interviews" class="panel-more">Voir tout →</a>
+          <div class="card">
+            <div class="card__header">
+              <span class="card__title"><app-icon name="interview" [size]="17" /> Mes prochains entretiens</span>
+              <a routerLink="/manager/interviews" class="card-more">Voir tout <app-icon name="arrow-right" [size]="14" /></a>
             </div>
-            <div *ngIf="!stats?.upcoming?.length" class="panel-empty">
-              Aucun entretien planifié à venir.
-            </div>
-            <div *ngFor="let it of stats?.upcoming || []" class="upcoming-row">
-              <div class="up-date">
-                <div class="up-day">{{ formatDay(it.scheduledDate) }}</div>
-                <div class="up-month">{{ formatMonth(it.scheduledDate) }}</div>
+            <div class="card__body">
+              <div *ngIf="!stats?.upcoming?.length" class="empty-state">
+                <span class="empty-state__icon"><app-icon name="calendar" [size]="24" /></span>
+                <span class="empty-state__text">Aucun entretien planifié à venir.</span>
               </div>
-              <div class="up-body">
-                <div class="up-title">{{ it.candidateName || '—' }}</div>
-                <div class="up-meta">
-                  <span>💼 {{ it.jobOfferTitle || 'Offre inconnue' }}</span>
-                  <span *ngIf="it.location"> · 📍 {{ it.location }}</span>
+              <div *ngFor="let it of stats?.upcoming || []" class="upcoming-row">
+                <div class="up-date">
+                  <div class="up-day">{{ formatDay(it.scheduledDate) }}</div>
+                  <div class="up-month">{{ formatMonth(it.scheduledDate) }}</div>
                 </div>
-                <div class="up-time">🕒 {{ formatTime(it.scheduledDate) }}</div>
+                <div class="up-body">
+                  <div class="up-title">{{ it.candidateName || '—' }}</div>
+                  <div class="up-meta">
+                    <span><app-icon name="job" [size]="13" /> {{ it.jobOfferTitle || 'Offre inconnue' }}</span>
+                    <span *ngIf="it.location"> · <app-icon name="location" [size]="13" /> {{ it.location }}</span>
+                  </div>
+                  <div class="up-meta"><app-icon name="clock" [size]="13" /> {{ formatTime(it.scheduledDate) }}</div>
+                </div>
+                <span class="badge" [ngClass]="it.candidateType === 'EXTERNAL' ? 'badge--warning' : 'badge--success'">
+                  {{ it.candidateType === 'EXTERNAL' ? 'Externe' : 'Interne' }}
+                </span>
               </div>
-              <span class="up-type-badge" [class.ext]="it.candidateType === 'EXTERNAL'">
-                {{ it.candidateType === 'EXTERNAL' ? 'Externe' : 'Interne' }}
-              </span>
             </div>
           </div>
 
-          <div class="panel">
-            <div class="panel-head">
-              <h2>📊 Activité (6 derniers jours)</h2>
+          <div class="card">
+            <div class="card__header">
+              <span class="card__title"><app-icon name="chart" [size]="17" /> Activité (6 derniers jours)</span>
             </div>
-            <div class="monthly-bars">
-              <div class="bar-col" *ngFor="let m of stats?.daily || []">
-                <div class="bar-stack" [title]="m.total + ' entretien(s) le ' + formatShortDate(m.day)">
-                  <div class="bar-segment bar-positive"
-                       [style.height.%]="barHeight(m.positive, maxDaily)"></div>
-                  <div class="bar-segment bar-negative"
-                       [style.height.%]="barHeight(m.negative, maxDaily)"></div>
-                  <div class="bar-segment bar-neutral"
-                       [style.height.%]="barHeight(m.total - m.positive - m.negative, maxDaily)"></div>
+            <div class="card__body">
+              <div class="bars">
+                <div class="bar-col" *ngFor="let m of stats?.daily || []">
+                  <div class="bar-stack" [title]="m.total + ' entretien(s) le ' + formatShortDate(m.day)">
+                    <div class="bar-seg bar-pos" [style.height.%]="barHeight(m.positive, maxDaily)"></div>
+                    <div class="bar-seg bar-neg" [style.height.%]="barHeight(m.negative, maxDaily)"></div>
+                    <div class="bar-seg bar-neu" [style.height.%]="barHeight(m.total - m.positive - m.negative, maxDaily)"></div>
+                  </div>
+                  <div class="bar-label">{{ shortDayLabel(m.day) }}</div>
+                  <div class="bar-value">{{ m.total }}</div>
                 </div>
-                <div class="bar-label">{{ shortDayLabel(m.day) }}</div>
-                <div class="bar-value">{{ m.total }}</div>
               </div>
-            </div>
-            <div class="legend">
-              <span class="lg lg-pos">✅ Positifs</span>
-              <span class="lg lg-neg">❌ Négatifs</span>
-              <span class="lg lg-neu">○ En cours / autres</span>
+              <div class="legend">
+                <span class="legend__item"><i class="dot dot-pos"></i> Positifs</span>
+                <span class="legend__item"><i class="dot dot-neg"></i> Négatifs</span>
+                <span class="legend__item"><i class="dot dot-neu"></i> En cours / autres</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Colonne 2 : Équipe + département -->
+        <!-- Colonne 2 : Périmètre + équipe -->
         <div class="dash-col">
-          <div class="panel">
-            <div class="panel-head">
-              <h2>🏢 Mon périmètre</h2>
+          <div class="card">
+            <div class="card__header">
+              <span class="card__title"><app-icon name="department" [size]="17" /> Mon périmètre</span>
             </div>
-            <div *ngIf="!team?.departments?.length" class="panel-empty">
-              Vous n'êtes pas encore désigné manager d'un département.
-            </div>
-            <div *ngFor="let d of team?.departments || []" class="dept-card">
-              <div class="dept-name">🏗️ {{ d.name }}</div>
-              <div class="dept-desc" *ngIf="d.description">{{ d.description }}</div>
-              <div class="dept-meta">👥 {{ d.employeeCount }} employé(s)</div>
+            <div class="card__body">
+              <div *ngIf="!team?.departments?.length" class="empty-state">
+                <span class="empty-state__icon"><app-icon name="department" [size]="24" /></span>
+                <span class="empty-state__text">Vous n'êtes pas encore désigné manager d'un département.</span>
+              </div>
+              <div *ngFor="let d of team?.departments || []" class="dept-card">
+                <div class="dept-name"><app-icon name="department" [size]="16" /> {{ d.name }}</div>
+                <div class="dept-desc" *ngIf="d.description">{{ d.description }}</div>
+                <div class="dept-meta"><app-icon name="employees" [size]="14" /> {{ d.employeeCount }} employé(s)</div>
+              </div>
             </div>
           </div>
 
-          <div class="panel">
-            <div class="panel-head">
-              <h2>👥 Mon équipe</h2>
-              <span class="panel-count" *ngIf="team?.teamSize">{{ team.teamSize }}</span>
+          <div class="card">
+            <div class="card__header">
+              <span class="card__title"><app-icon name="team" [size]="17" /> Mon équipe</span>
+              <span class="badge badge--neutral" *ngIf="team?.teamSize">{{ team.teamSize }}</span>
             </div>
-            <div *ngIf="!team?.team?.length" class="panel-empty">
-              Aucun employé à afficher.
-            </div>
-            <div *ngFor="let e of team?.team || []" class="team-row">
-              <div class="team-avatar">{{ initialsOf(e) }}</div>
-              <div class="team-body">
-                <div class="team-name">
-                  {{ e.firstName }} {{ e.lastName }}
-                  <span class="badge-promo" *ngIf="e.recentPromotion" title="Promotion récente">
-                    🚀 Promu
-                  </span>
-                </div>
-                <div class="team-meta">
-                  <span>💼 {{ e.position || '—' }}</span>
-                  <span *ngIf="e.serviceName"> · {{ e.serviceName }}</span>
-                </div>
-                <div class="team-sub" *ngIf="e.hireDate">
-                  📅 Embauché·e le {{ formatShortDate(e.hireDate) }}
+            <div class="card__body">
+              <div *ngIf="!team?.team?.length" class="empty-state">
+                <span class="empty-state__icon"><app-icon name="team" [size]="24" /></span>
+                <span class="empty-state__text">Aucun employé à afficher.</span>
+              </div>
+              <div *ngFor="let e of team?.team || []" class="team-row">
+                <span class="avatar avatar--round">{{ initialsOf(e) }}</span>
+                <div class="team-body">
+                  <div class="team-name">
+                    {{ e.firstName }} {{ e.lastName }}
+                    <span class="badge badge--success" *ngIf="e.recentPromotion" title="Promotion récente">
+                      <app-icon name="promoted" [size]="12" /> Promu
+                    </span>
+                  </div>
+                  <div class="team-meta">
+                    <app-icon name="job" [size]="13" /> {{ e.position || '—' }}
+                    <span *ngIf="e.serviceName"> · {{ e.serviceName }}</span>
+                  </div>
+                  <div class="team-sub" *ngIf="e.hireDate">
+                    <app-icon name="calendar" [size]="12" /> Embauché·e le {{ formatShortDate(e.hireDate) }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -171,235 +182,58 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
     </div>
   `,
   styles: [`
-    .mgr-dashboard { padding: 0; }
-
-    .mgr-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 24px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-    }
-    .mgr-header h1 { color: #1e3a5f; margin: 0 0 4px 0; }
-    .mgr-welcome { color: #64748b; margin: 0; font-size: 0.95rem; }
-
-    .mgr-quick-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    .qa-btn {
-      padding: 9px 16px;
-      background: white;
-      color: #1e3a5f;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-    .qa-btn:hover { background: #f8fafc; transform: translateY(-1px); }
-    .qa-btn.primary {
-      background: linear-gradient(135deg, #1e3a5f, #3b82f6);
-      color: white;
-      border-color: transparent;
-    }
-    .qa-btn.primary:hover { box-shadow: 0 6px 16px rgba(30, 58, 95, 0.3); }
-
-    /* KPIs */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .kpi-card {
-      background: white;
-      border-radius: 14px;
-      padding: 18px 20px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      transition: transform 0.2s;
-    }
-    .kpi-card:hover { transform: translateY(-2px); }
-    .kpi-icon { font-size: 2rem; line-height: 1; }
-    .kpi-value { font-size: 1.8rem; font-weight: 700; color: #0f172a; line-height: 1; }
-    .kpi-label { font-size: 0.78rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-    .kpi-sub { font-size: 0.7rem; color: #94a3b8; margin-top: 2px; }
-    .kpi-pending { border-left: 4px solid #f59e0b; }
-    .kpi-scheduled { border-left: 4px solid #3b82f6; }
-    .kpi-completed { border-left: 4px solid #10b981; }
-    .kpi-rate { border-left: 4px solid #8b5cf6; }
+    .card-more { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-13); font-weight: 600; color: var(--c-accent-ink); }
+    .card-more:hover { text-decoration: underline; }
 
     /* Layout 2 colonnes */
-    .dash-grid {
-      display: grid;
-      grid-template-columns: 1.3fr 1fr;
-      gap: 20px;
-    }
-    .dash-col { display: flex; flex-direction: column; gap: 20px; }
-
-    .panel {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 20px 22px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    .panel-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-    }
-    .panel-head h2 { margin: 0; color: #1e3a5f; font-size: 1rem; }
-    .panel-more {
-      color: #3b82f6;
-      font-size: 0.8rem;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .panel-more:hover { text-decoration: underline; }
-    .panel-count {
-      background: #eff6ff;
-      color: #1d4ed8;
-      padding: 2px 10px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 700;
-    }
-    .panel-empty {
-      padding: 16px;
-      text-align: center;
-      color: #94a3b8;
-      font-size: 0.85rem;
-      background: #f8fafc;
-      border-radius: 8px;
-    }
+    .dash-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--sp-5); }
+    .dash-col { display: flex; flex-direction: column; gap: var(--sp-5); }
 
     /* Prochains entretiens */
-    .upcoming-row {
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      padding: 12px;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    .upcoming-row:last-child { border-bottom: none; }
-    .up-date {
-      flex-shrink: 0;
-      text-align: center;
-      width: 50px;
-      padding: 6px 0;
-      background: #eff6ff;
-      border-radius: 8px;
-    }
-    .up-day { font-size: 1.3rem; font-weight: 700; color: #1d4ed8; line-height: 1; }
-    .up-month { font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
-    .up-body { flex: 1; }
-    .up-title { font-weight: 600; color: #0f172a; font-size: 0.95rem; }
-    .up-meta { font-size: 0.78rem; color: #64748b; margin-top: 2px; }
-    .up-time { font-size: 0.78rem; color: #64748b; margin-top: 2px; }
-    .up-type-badge {
-      padding: 3px 10px;
-      background: #dcfce7;
-      color: #166534;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .up-type-badge.ext { background: #fef3c7; color: #92400e; }
+    .upcoming-row { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3) 0; border-bottom: 1px solid var(--c-border); }
+    .upcoming-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .upcoming-row:first-child { padding-top: 0; }
+    .up-date { flex: none; text-align: center; width: 50px; padding: 7px 0; background: var(--c-accent-soft); border-radius: var(--r-md); }
+    .up-day { font-size: 1.3rem; font-weight: 700; color: var(--c-accent-ink); line-height: 1; }
+    .up-month { font-size: var(--fs-11); color: var(--c-muted); text-transform: uppercase; font-weight: 600; }
+    .up-body { flex: 1; min-width: 0; }
+    .up-title { font-weight: 600; color: var(--c-ink); font-size: var(--fs-15); }
+    .up-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: var(--fs-13); color: var(--c-muted); margin-top: 2px; }
+    .up-meta span { display: inline-flex; align-items: center; gap: 4px; }
 
-    /* Activité mensuelle */
-    .monthly-bars {
-      display: flex;
-      align-items: flex-end;
-      gap: 12px;
-      height: 160px;
-      padding: 8px 0;
-    }
-    .bar-col {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-    .bar-stack {
-      width: 100%;
-      height: 110px;
-      background: #f1f5f9;
-      border-radius: 6px 6px 0 0;
-      position: relative;
-      display: flex;
-      flex-direction: column-reverse;
-      overflow: hidden;
-    }
-    .bar-segment { width: 100%; transition: height 0.3s; }
-    .bar-positive { background: #10b981; }
-    .bar-negative { background: #ef4444; }
-    .bar-neutral { background: #cbd5e1; }
-    .bar-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
-    .bar-value { font-size: 0.85rem; color: #0f172a; font-weight: 700; }
-    .legend { display: flex; gap: 14px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
-    .lg { font-size: 0.75rem; color: #64748b; }
-    .lg-pos { color: #166534; }
-    .lg-neg { color: #991b1b; }
+    /* Activité (mini barres) */
+    .bars { display: flex; align-items: flex-end; gap: var(--sp-3); height: 150px; padding: var(--sp-2) 0; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .bar-stack { width: 100%; height: 104px; background: var(--c-surface-3); border-radius: var(--r-sm) var(--r-sm) 0 0; display: flex; flex-direction: column-reverse; overflow: hidden; }
+    .bar-seg { width: 100%; transition: height .3s ease; }
+    .bar-pos { background: var(--c-success); }
+    .bar-neg { background: var(--c-danger); }
+    .bar-neu { background: var(--c-border-strong); }
+    .bar-label { font-size: var(--fs-11); color: var(--c-muted); text-transform: uppercase; font-weight: 600; }
+    .bar-value { font-size: var(--fs-13); color: var(--c-ink); font-weight: 700; }
+    .legend { display: flex; gap: var(--sp-4); justify-content: center; margin-top: var(--sp-2); flex-wrap: wrap; }
+    .legend__item { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); color: var(--c-muted); }
+    .dot { width: 9px; height: 9px; border-radius: 3px; }
+    .dot-pos { background: var(--c-success); }
+    .dot-neg { background: var(--c-danger); }
+    .dot-neu { background: var(--c-border-strong); }
 
-    /* Département */
-    .dept-card {
-      padding: 12px 14px;
-      background: #f8fafc;
-      border-radius: 10px;
-      border: 1px solid #e2e8f0;
-      margin-bottom: 10px;
-    }
-    .dept-card:last-child { margin-bottom: 0; }
-    .dept-name { font-weight: 600; color: #1e3a5f; }
-    .dept-desc { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
-    .dept-meta { font-size: 0.8rem; color: #475569; margin-top: 6px; font-weight: 500; }
+    /* Périmètre */
+    .dept-card { padding: var(--sp-3) var(--sp-4); background: var(--c-surface-2); border-radius: var(--r-md); border: 1px solid var(--c-border); }
+    .dept-card + .dept-card { margin-top: var(--sp-2); }
+    .dept-name { display: flex; align-items: center; gap: 7px; font-weight: 600; color: var(--c-ink); }
+    .dept-desc { font-size: var(--fs-13); color: var(--c-muted); margin-top: 4px; }
+    .dept-meta { display: flex; align-items: center; gap: 6px; font-size: var(--fs-13); color: var(--c-ink-soft); margin-top: 6px; font-weight: 500; }
 
     /* Équipe */
-    .team-row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      padding: 10px 8px;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    .team-row:last-child { border-bottom: none; }
-    .team-avatar {
-      width: 40px; height: 40px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-      color: white;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.85rem;
-      font-weight: 700;
-    }
+    .team-row { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3) 0; border-bottom: 1px solid var(--c-border); }
+    .team-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .team-row:first-child { padding-top: 0; }
+    .team-row .avatar { background: var(--c-accent-soft); color: var(--c-accent-ink); }
     .team-body { flex: 1; min-width: 0; }
-    .team-name {
-      font-weight: 600;
-      color: #0f172a;
-      font-size: 0.92rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .badge-promo {
-      background: linear-gradient(135deg, #fef3c7, #fde68a);
-      color: #78350f;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.65rem;
-      font-weight: 700;
-    }
-    .team-meta { font-size: 0.78rem; color: #64748b; margin-top: 2px; }
-    .team-sub { font-size: 0.72rem; color: #94a3b8; margin-top: 2px; }
+    .team-name { font-weight: 600; color: var(--c-ink); font-size: var(--fs-14); display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+    .team-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: var(--fs-13); color: var(--c-muted); margin-top: 2px; }
+    .team-sub { display: flex; align-items: center; gap: 5px; font-size: var(--fs-12); color: var(--c-faint); margin-top: 2px; }
 
     @media (max-width: 1100px) {
       .dash-grid { grid-template-columns: 1fr; }

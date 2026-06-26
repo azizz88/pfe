@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RecruitmentApiService } from '../../../services/recruitment-api.service';
 import { KeycloakService } from '../../../services/keycloak.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 /**
  * Composant "Mes Candidatures".
@@ -11,131 +12,137 @@ import { KeycloakService } from '../../../services/keycloak.service';
 @Component({
   selector: 'app-my-applications',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   template: `
-    <div class="applications">
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-icon">💼</div>
-          <div>
-            <h1>Offres d'emploi</h1>
-            <p class="header-subtitle">Découvrez les opportunités disponibles au sein de l'entreprise</p>
-          </div>
+    <div class="applications page page--narrow fade-in">
+      <header class="page-header">
+        <div class="page-header__title">
+          <h1>Offres d'emploi</h1>
+          <p class="page-header__sub">Découvrez les opportunités disponibles au sein de l'entreprise</p>
         </div>
-        <div class="offers-count" *ngIf="activeOffers.length > 0">
-          <span class="count-number">{{ activeOffers.length }}</span>
-          <span class="count-label">offre(s) active(s)</span>
+        <div class="page-header__actions" *ngIf="activeOffers.length > 0">
+          <span class="badge badge--neutral">
+            <app-icon name="job" [size]="14" /> {{ activeOffers.length }} offre(s) active(s)
+          </span>
         </div>
-      </div>
+      </header>
 
       <!-- Tabs -->
-      <div class="tabs">
-        <button [class.active]="activeTab === 'offers'" (click)="activeTab = 'offers'">
-          <span class="tab-icon">🎯</span> Offres Actives
-          <span class="tab-badge" *ngIf="activeOffers.length > 0">{{ activeOffers.length }}</span>
+      <nav class="tabs">
+        <button class="tab" [class.active]="activeTab === 'offers'" (click)="activeTab = 'offers'">
+          <app-icon name="target" [size]="16" /> Offres actives
+          <span class="tab__count" *ngIf="activeOffers.length > 0">{{ activeOffers.length }}</span>
         </button>
-        <button *ngIf="!isAdmin" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">
-          <span class="tab-icon">📋</span> Mon Historique
-          <span class="tab-badge history-badge" *ngIf="myApplications.length > 0">{{ myApplications.length }}</span>
+        <button class="tab" *ngIf="!isAdmin" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">
+          <app-icon name="list" [size]="16" /> Mon historique
+          <span class="tab__count" *ngIf="myApplications.length > 0">{{ myApplications.length }}</span>
         </button>
-      </div>
+      </nav>
 
       <!-- Active offers -->
-      <div class="offers-grid" *ngIf="activeTab === 'offers'">
-        <div class="offer-card" *ngFor="let offer of activeOffers; let i = index"
-             [style.animation-delay]="i * 60 + 'ms'">
-          <div class="offer-top">
-            <div class="offer-title-row">
-              <h3>{{ offer.title }}</h3>
-              <span class="status-badge active">ACTIVE</span>
+      <div class="offers-list" *ngIf="activeTab === 'offers'">
+        <article class="card offer-card" *ngFor="let offer of activeOffers; let i = index"
+                 [style.animation-delay]="i * 60 + 'ms'">
+          <div class="card__body">
+            <div class="offer-head">
+              <h3 class="offer-title">{{ offer.title }}</h3>
+              <span class="badge badge--success">Active</span>
             </div>
+
             <div class="offer-tags">
-              <span class="tag dept-tag" *ngIf="offer.department">
-                <span class="tag-icon">🏗️</span> {{ offer.department }}
+              <span class="chip" *ngIf="offer.department">
+                <app-icon name="department" [size]="14" /> {{ offer.department }}
               </span>
-              <span class="tag deadline-tag" *ngIf="offer.deadline">
-                <span class="tag-icon">📅</span> {{ offer.deadline }}
+              <span class="chip" *ngIf="offer.deadline">
+                <app-icon name="calendar" [size]="14" /> {{ offer.deadline }}
               </span>
             </div>
-          </div>
 
-          <p class="offer-desc" *ngIf="offer.description">{{ offer.description }}</p>
+            <p class="offer-desc" *ngIf="offer.description">{{ offer.description }}</p>
 
-          <div class="offer-skills-row" *ngIf="offer.skills?.length">
-            <span class="skills-label">🎯 Compétences requises</span>
-            <div class="skills-chips">
-              <div class="skill-chip" *ngFor="let skill of offer.skills">
-                <span class="skill-name">{{ skill.name }}</span>
-                <span class="skill-level" [ngClass]="'lvl-' + getRequiredLevel(offer, skill.id)">
-                  Niveau {{ getRequiredLevel(offer, skill.id) }} · {{ getLevelLabel(getRequiredLevel(offer, skill.id)) }}
-                </span>
-                <div class="level-dots">
-                  <span class="dot" *ngFor="let d of [1,2,3,4,5]"
-                        [class.filled]="d <= getRequiredLevel(offer, skill.id)"></span>
+            <div class="offer-skills" *ngIf="offer.skills?.length">
+              <span class="u-eyebrow skills-label">
+                <app-icon name="target" [size]="13" /> Compétences requises
+              </span>
+              <div class="skills-chips">
+                <div class="skill-chip" *ngFor="let skill of offer.skills">
+                  <span class="skill-name">{{ skill.name }}</span>
+                  <span class="skill-level" [ngClass]="'lvl-' + getRequiredLevel(offer, skill.id)">
+                    Niveau {{ getRequiredLevel(offer, skill.id) }} · {{ getLevelLabel(getRequiredLevel(offer, skill.id)) }}
+                  </span>
+                  <div class="level-dots">
+                    <span class="dot" *ngFor="let d of [1,2,3,4,5]"
+                          [class.filled]="d <= getRequiredLevel(offer, skill.id)"></span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="offer-actions" *ngIf="!isAdmin">
-            <button class="apply-btn" *ngIf="!hasApplied(offer.id)" (click)="applyToOffer(offer)">
-              <span>🚀</span> Postuler maintenant
-            </button>
-            <button class="applied-btn" *ngIf="hasApplied(offer.id)" disabled>
-              ✅ Candidature envoyée
-            </button>
+            <div class="offer-actions" *ngIf="!isAdmin">
+              <button class="btn btn--accent" *ngIf="!hasApplied(offer.id)" (click)="applyToOffer(offer)">
+                <app-icon name="send" [size]="16" /> Postuler maintenant
+              </button>
+              <button class="btn btn--secondary" *ngIf="hasApplied(offer.id)" disabled>
+                <app-icon name="check" [size]="16" /> Candidature envoyée
+              </button>
+            </div>
           </div>
-        </div>
+        </article>
 
         <div class="empty-state" *ngIf="activeOffers.length === 0">
-          <div class="empty-icon">📭</div>
-          <p>Aucune offre active pour le moment</p>
-          <span>Les nouvelles opportunités seront publiées ici.</span>
+          <div class="empty-state__icon"><app-icon name="inbox" [size]="28" /></div>
+          <h3 class="empty-state__title">Aucune offre active pour le moment</h3>
+          <p class="empty-state__text">Les nouvelles opportunités seront publiées ici.</p>
         </div>
       </div>
 
       <!-- Application history (employees only) -->
       <div class="history-list" *ngIf="!isAdmin && activeTab === 'history'">
-        <div class="history-card" *ngFor="let app of myApplications; let i = index"
-             [style.animation-delay]="i * 60 + 'ms'">
-          <div class="history-left">
-            <div class="history-status-dot" [ngClass]="getStatusClass(app.status)"></div>
-          </div>
-          <div class="history-content">
+        <article class="card history-card" *ngFor="let app of myApplications; let i = index"
+                 [style.animation-delay]="i * 60 + 'ms'">
+          <div class="card__body history-body">
             <div class="history-top">
-              <h3>{{ app.jobOfferTitle }}</h3>
-              <span class="status-badge" [ngClass]="getStatusClass(app.status)">{{ getStatusLabel(app.status) }}</span>
+              <h3 class="history-title">{{ app.jobOfferTitle }}</h3>
+              <span class="badge" [ngClass]="getStatusClass(app.status)">{{ getStatusLabel(app.status) }}</span>
             </div>
             <div class="history-meta">
-              <span>📅 Soumis le {{ app.applicationDate }}</span>
+              <app-icon name="calendar" [size]="14" /> Soumis le {{ app.applicationDate }}
             </div>
             <p class="history-cover" *ngIf="app.coverLetter">{{ app.coverLetter }}</p>
           </div>
-        </div>
+        </article>
 
         <div class="empty-state" *ngIf="myApplications.length === 0">
-          <div class="empty-icon">📝</div>
-          <p>Vous n'avez pas encore postulé</p>
-          <span>Consultez les offres actives pour découvrir les opportunités.</span>
+          <div class="empty-state__icon"><app-icon name="document" [size]="28" /></div>
+          <h3 class="empty-state__title">Vous n'avez pas encore postulé</h3>
+          <p class="empty-state__text">Consultez les offres actives pour découvrir les opportunités.</p>
         </div>
       </div>
 
       <!-- Apply modal -->
       <div class="modal-overlay" *ngIf="showApplyModal" (click)="showApplyModal = false">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <div class="modal-icon">🚀</div>
-            <h3>Postuler à cette offre</h3>
-            <p class="modal-offer-title">{{ selectedOffer?.title }}</p>
+        <div class="modal modal--sm" role="dialog" aria-modal="true" aria-label="Postuler à cette offre"
+             (click)="$event.stopPropagation()">
+          <div class="modal__header">
+            <div class="modal__title-wrap">
+              <h3 class="modal__title"><app-icon name="send" [size]="20" /> Postuler à cette offre</h3>
+              <p class="modal__sub" *ngIf="selectedOffer?.title">{{ selectedOffer?.title }}</p>
+            </div>
+            <button class="icon-btn" type="button" (click)="showApplyModal = false" aria-label="Fermer">
+              <app-icon name="close" [size]="18" />
+            </button>
           </div>
-          <div class="modal-body">
-            <label>Lettre de motivation</label>
-            <textarea [(ngModel)]="coverLetter" placeholder="Décrivez votre motivation pour ce poste..." rows="6"></textarea>
+          <div class="modal__body">
+            <div class="field">
+              <label class="label" for="cover-letter">Lettre de motivation</label>
+              <textarea id="cover-letter" class="textarea" [(ngModel)]="coverLetter"
+                        placeholder="Décrivez votre motivation pour ce poste..." rows="6"></textarea>
+            </div>
           </div>
-          <div class="modal-actions">
-            <button class="cancel-btn" (click)="showApplyModal = false">Annuler</button>
-            <button class="submit-btn" (click)="submitApplication()">
-              <span>📨</span> Envoyer ma candidature
+          <div class="modal__footer">
+            <button class="btn btn--secondary" (click)="showApplyModal = false">Annuler</button>
+            <button class="btn btn--accent" (click)="submitApplication()">
+              <app-icon name="send" [size]="16" /> Envoyer ma candidature
             </button>
           </div>
         </div>
@@ -143,233 +150,86 @@ import { KeycloakService } from '../../../services/keycloak.service';
     </div>
   `,
   styles: [`
-    .applications {
-      animation: fadeIn 0.4s ease;
-    }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes cardIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .applications { padding-bottom: var(--sp-6); }
 
-    /* Header */
-    .page-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
-    }
-    .header-content { display: flex; align-items: center; gap: 16px; }
-    .header-icon { font-size: 2.4rem; }
-    .page-header h1 {
-      margin: 0; font-size: 1.7rem; font-weight: 800;
-      background: linear-gradient(135deg, #1e3a5f, #3b82f6);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    .header-subtitle { margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem; }
+    /* Listes */
+    .offers-list, .history-list { display: flex; flex-direction: column; gap: var(--sp-4); }
 
-    .offers-count {
-      display: flex; align-items: center; gap: 8px;
-      background: linear-gradient(135deg, #eff6ff, #dbeafe);
-      border: 1px solid #bfdbfe; border-radius: 12px; padding: 10px 18px;
-    }
-    .offers-count .count-number { font-size: 1.5rem; font-weight: 800; color: #1d4ed8; }
-    .offers-count .count-label { font-size: 0.8rem; color: #3b82f6; }
+    .offer-card, .history-card { animation: cardIn .3s ease both; }
+    @keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-    /* Tabs */
-    .tabs { display: flex; gap: 8px; margin-bottom: 24px; }
-    .tabs button {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 22px; border: 2px solid #e2e8f0; background: white;
-      border-radius: 10px; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      color: #64748b; transition: all 0.25s ease; position: relative;
-    }
-    .tabs button:hover { border-color: #93c5fd; color: #3b82f6; background: #f8fafc; }
-    .tabs button.active {
-      border-color: #3b82f6; background: linear-gradient(135deg, #eff6ff, #dbeafe);
-      color: #1d4ed8; box-shadow: 0 2px 8px rgba(59,130,246,0.15);
-    }
-    .tab-icon { font-size: 1rem; }
-    .tab-badge {
-      background: #3b82f6; color: white; font-size: 0.7rem; font-weight: 700;
-      padding: 2px 8px; border-radius: 10px; min-width: 20px; text-align: center;
-    }
-    .history-badge { background: #6366f1; }
+    .offer-card .card__body { display: flex; flex-direction: column; gap: var(--sp-4); }
 
-    /* Offers grid */
-    .offers-grid {
-      display: flex; flex-direction: column; gap: 16px;
+    .offer-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: var(--sp-3);
     }
-    .offer-card {
-      background: white; border-radius: 16px; border: 1px solid #e2e8f0;
-      padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      transition: all 0.3s ease; animation: cardIn 0.4s ease both;
-    }
-    .offer-card:hover { border-color: #93c5fd; box-shadow: 0 8px 24px rgba(59,130,246,0.1); transform: translateY(-2px); }
+    .offer-title { font-size: var(--fs-16); margin: 0; }
 
-    .offer-top { margin-bottom: 14px; }
-    .offer-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
-    .offer-title-row h3 { margin: 0; color: #1e293b; font-size: 1.15rem; font-weight: 700; }
-
-    .status-badge {
-      padding: 4px 14px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0;
-    }
-    .status-badge.active { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #166534; }
-    .status-badge.pending { background: linear-gradient(135deg, #fef9c3, #fde68a); color: #854d0e; }
-    .status-badge.interview { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; }
-    .status-badge.accepted { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #166534; }
-    .status-badge.rejected { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
-
-    .offer-tags { display: flex; gap: 10px; flex-wrap: wrap; }
-    .tag {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 0.8rem; padding: 4px 12px; border-radius: 8px; font-weight: 500;
-    }
-    .tag-icon { font-size: 0.85rem; }
-    .dept-tag { background: #f0fdf4; color: #166534; }
-    .deadline-tag { background: #fef3c7; color: #92400e; }
+    .offer-tags { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 
     .offer-desc {
-      color: #475569; font-size: 0.9rem; line-height: 1.6; margin: 0 0 14px 0;
-      padding: 12px 16px; background: #f8fafc; border-radius: 10px;
-      border-left: 3px solid #3b82f6;
+      color: var(--c-ink-soft); font-size: var(--fs-14); line-height: 1.6; margin: 0;
+      padding: var(--sp-3) var(--sp-4); background: var(--c-surface-2);
+      border-radius: var(--r-md); border-left: 3px solid var(--c-accent);
     }
 
-    .offer-skills-row { margin-bottom: 16px; }
-    .skills-label {
-      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-      color: #94a3b8; letter-spacing: 0.5px; margin-bottom: 10px; display: block;
-    }
-    .skills-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    /* Compétences */
+    .offer-skills { display: flex; flex-direction: column; gap: var(--sp-3); }
+    .skills-label { display: inline-flex; align-items: center; gap: 6px; }
+    .skills-chips { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
     .skill-chip {
       display: flex; flex-direction: column; gap: 6px;
-      background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-      border: 1px solid #e2e8f0; border-radius: 12px;
-      padding: 10px 14px; min-width: 160px;
-      transition: all 0.25s ease;
+      background: var(--c-surface-2); border: 1px solid var(--c-border);
+      border-radius: var(--r-md); padding: var(--sp-3); min-width: 170px;
     }
-    .skill-chip:hover { border-color: #93c5fd; box-shadow: 0 4px 12px rgba(59,130,246,0.08); }
-    .skill-name { font-weight: 700; color: #1e293b; font-size: 0.88rem; }
+    .skill-name { font-weight: 650; color: var(--c-ink); font-size: var(--fs-13); }
     .skill-level {
-      font-size: 0.72rem; font-weight: 600; padding: 2px 8px;
-      border-radius: 6px; align-self: flex-start;
+      font-size: var(--fs-11); font-weight: 600; padding: 2px 8px;
+      border-radius: var(--r-xs); align-self: flex-start;
     }
-    .skill-level.lvl-1 { background: #fef3c7; color: #92400e; }
-    .skill-level.lvl-2 { background: #fde68a; color: #78350f; }
-    .skill-level.lvl-3 { background: #dbeafe; color: #1e40af; }
-    .skill-level.lvl-4 { background: #ddd6fe; color: #5b21b6; }
-    .skill-level.lvl-5 { background: #dcfce7; color: #166534; }
+    .skill-level.lvl-1 { background: var(--c-surface-3); color: var(--c-muted); }
+    .skill-level.lvl-2 { background: var(--c-info-soft); color: var(--c-info-ink); }
+    .skill-level.lvl-3 { background: var(--c-brand-soft); color: var(--c-brand-ink); }
+    .skill-level.lvl-4 { background: var(--c-accent-soft); color: var(--c-accent-ink); }
+    .skill-level.lvl-5 { background: var(--c-success-soft); color: var(--c-success-ink); }
     .level-dots { display: flex; gap: 4px; }
-    .level-dots .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #e2e8f0; transition: background 0.2s;
-    }
-    .level-dots .dot.filled { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .level-dots .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-border-strong); }
+    .level-dots .dot.filled { background: var(--c-accent); }
 
-    .offer-actions { display: flex; gap: 10px; }
-    .apply-btn {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 24px; background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white; border: none; border-radius: 10px; cursor: pointer;
-      font-size: 0.9rem; font-weight: 600; transition: all 0.25s ease;
-      box-shadow: 0 4px 12px rgba(37,99,235,0.25);
-    }
-    .apply-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,0.35); }
-    .applied-btn {
-      padding: 10px 24px; background: #f1f5f9; color: #64748b;
-      border: 1px solid #e2e8f0; border-radius: 10px; cursor: not-allowed;
-      font-size: 0.9rem; font-weight: 600;
-    }
+    .offer-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 
-    /* History */
-    .history-list { display: flex; flex-direction: column; gap: 12px; }
-    .history-card {
-      display: flex; gap: 16px; background: white; border-radius: 14px;
-      border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      transition: all 0.3s ease; animation: cardIn 0.4s ease both;
+    /* Historique */
+    .history-body { display: flex; flex-direction: column; gap: var(--sp-2); }
+    .history-top {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
     }
-    .history-card:hover { border-color: #c7d2fe; box-shadow: 0 6px 16px rgba(99,102,241,0.1); }
-
-    .history-left { display: flex; align-items: flex-start; padding-top: 4px; }
-    .history-status-dot {
-      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    .history-title { font-size: var(--fs-15); margin: 0; }
+    .history-meta {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: var(--fs-13); color: var(--c-muted);
     }
-    .history-status-dot.pending { background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.4); }
-    .history-status-dot.interview { background: #3b82f6; box-shadow: 0 0 8px rgba(59,130,246,0.4); }
-    .history-status-dot.accepted { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.4); }
-    .history-status-dot.rejected { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.4); }
-
-    .history-content { flex: 1; }
-    .history-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
-    .history-top h3 { margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e293b; }
-    .history-meta { font-size: 0.82rem; color: #64748b; margin-bottom: 8px; }
     .history-cover {
-      margin: 0; padding: 10px 14px; background: #f8fafc; border-radius: 8px;
-      font-size: 0.85rem; color: #475569; line-height: 1.5;
-      border-left: 3px solid #6366f1;
+      margin: 4px 0 0; padding: var(--sp-3) var(--sp-4); background: var(--c-surface-2);
+      border-radius: var(--r-md); font-size: var(--fs-13); color: var(--c-ink-soft);
+      line-height: 1.5; border-left: 3px solid var(--c-border-strong);
     }
 
-    /* Modal */
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(15,23,42,0.6);
-      backdrop-filter: blur(4px); display: flex;
-      align-items: center; justify-content: center; z-index: 1000;
-      animation: fadeIn 0.2s ease;
-    }
-    .modal {
-      background: white; border-radius: 20px; width: 90%; max-width: 520px;
-      box-shadow: 0 24px 48px rgba(0,0,0,0.2); overflow: hidden;
-      animation: modalIn 0.3s ease;
-    }
-    @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    /* Variantes de statut renvoyées par getStatusClass() */
+    .badge.pending   { background: var(--c-warning-soft); color: var(--c-warning-ink); }
+    .badge.interview { background: var(--c-info-soft);    color: var(--c-info-ink); }
+    .badge.accepted  { background: var(--c-success-soft); color: var(--c-success-ink); }
+    .badge.rejected  { background: var(--c-danger-soft);  color: var(--c-danger-ink); }
 
-    .modal-header {
-      text-align: center; padding: 28px 24px 16px;
-      background: linear-gradient(135deg, #eff6ff, #f8fafc);
-    }
-    .modal-icon { font-size: 2rem; margin-bottom: 8px; }
-    .modal-header h3 { margin: 0 0 4px 0; color: #1e293b; font-size: 1.2rem; font-weight: 700; }
-    .modal-offer-title { margin: 0; color: #3b82f6; font-weight: 600; font-size: 0.95rem; }
+    /* Onglet actif (le binding reste [class.active]) */
+    .tab.active { color: var(--c-accent-ink); border-bottom-color: var(--c-accent); }
+    .tab.active .tab__count { background: var(--c-accent-soft); color: var(--c-accent-ink); }
 
-    .modal-body { padding: 20px 24px; }
-    .modal-body label {
-      display: block; font-size: 0.8rem; font-weight: 700; color: #64748b;
-      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
-    }
-    .modal-body textarea {
-      width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px;
-      font-size: 0.9rem; resize: vertical; outline: none; box-sizing: border-box;
-      font-family: inherit; transition: border-color 0.2s;
-    }
-    .modal-body textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-
-    .modal-actions {
-      display: flex; justify-content: flex-end; gap: 10px;
-      padding: 16px 24px 24px; border-top: 1px solid #f1f5f9;
-    }
-    .cancel-btn {
-      padding: 10px 20px; border: 1px solid #e2e8f0; background: white;
-      border-radius: 10px; cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      color: #64748b; transition: all 0.2s;
-    }
-    .cancel-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
-    .submit-btn {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 22px; background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white; border: none; border-radius: 10px; cursor: pointer;
-      font-size: 0.88rem; font-weight: 600; transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(37,99,235,0.25);
-    }
-    .submit-btn:hover { box-shadow: 0 6px 16px rgba(37,99,235,0.35); }
-
-    /* Empty state */
-    .empty-state {
-      text-align: center; padding: 48px 20px; color: #94a3b8;
-    }
-    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
-    .empty-state p { font-size: 1.05rem; color: #64748b; margin: 0 0 4px 0; font-weight: 600; }
-    .empty-state span { font-size: 0.85rem; }
+    /* Modale */
+    .modal__title-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
     @media (max-width: 640px) {
-      .page-header { flex-direction: column; align-items: flex-start; }
-      .offer-title-row { flex-direction: column; }
-      .history-top { flex-direction: column; align-items: flex-start; }
+      .offer-head, .history-top { flex-direction: column; align-items: flex-start; }
     }
   `]
 })

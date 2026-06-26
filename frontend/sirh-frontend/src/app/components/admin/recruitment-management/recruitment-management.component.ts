@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RecruitmentApiService } from '../../../services/recruitment-api.service';
 import { EmployeeApiService } from '../../../services/employee-api.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 /**
  * Gestion du recrutement pour le RH Admin.
@@ -11,7 +12,7 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
 @Component({
   selector: 'app-recruitment-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   templateUrl: './recruitment-management.component.html',
   styleUrls: ['./recruitment-management.component.css']
 })
@@ -309,7 +310,7 @@ export class RecruitmentManagementComponent implements OnInit {
             r.currentStatus = dec;
           }
         });
-        alert(`✅ ${res.updated} candidature(s) mise(s) à jour avec succès.`);
+        alert(`${res.updated} candidature(s) mise(s) à jour avec succès.`);
         // Recharge la liste globale des candidatures pour synchroniser le reste de l'app
         this.loadAllApplications();
       },
@@ -327,13 +328,6 @@ export class RecruitmentManagementComponent implements OnInit {
       'EXTERNAL': 'Recrutement Externe'
     };
     return map[cat] || cat;
-  }
-
-  getCategoryIcon(cat: string): string {
-    const map: { [k: string]: string } = {
-      'IDEAL': '✅', 'TRAINING': '🎓', 'EXTERNAL': '🌐'
-    };
-    return map[cat] || '❓';
   }
 
   /** Compte les candidats par catégorie pour les KPI du modal */
@@ -374,16 +368,6 @@ export class RecruitmentManagementComponent implements OnInit {
       'REFUSE': 'Refusé'
     };
     return labels[status] || status;
-  }
-
-  getStatusIcon(status: string): string {
-    const icons: { [key: string]: string } = {
-      'EN_ATTENTE': '⏳',
-      'ENTRETIEN': '🗣️',
-      'RETENU': '✅',
-      'REFUSE': '❌'
-    };
-    return icons[status] || '📋';
   }
 
   switchTab(tab: string): void {
@@ -432,14 +416,6 @@ export class RecruitmentManagementComponent implements OnInit {
       case 'REJECTED_BY_MANAGER': return 'Refusé par manager';
       default: return s || '—';
     }
-  }
-
-  /** Libellé du résultat d'entretien. */
-  interviewResultLabel(r: string): string {
-    if (r === 'POSITIF') return '✅ Positif';
-    if (r === 'NEGATIF' || r === 'NÉGATIF') return '❌ Négatif';
-    if (r === 'EN_COURS') return '⏳ En cours';
-    return r;
   }
 
   pipelineByStatus(status: string): any[] {
@@ -516,7 +492,7 @@ export class RecruitmentManagementComponent implements OnInit {
     this.recruitmentApi.assignInterview(payload).subscribe({
       next: () => {
         this.scheduleSaving = false;
-        alert(`✅ Entretien affecté à ${managerName}. Le manager recevra un email et fixera la date.`);
+        alert(`Entretien affecté à ${managerName}. Le manager recevra un email et fixera la date.`);
         this.closeScheduleModal();
       },
       error: (err) => {

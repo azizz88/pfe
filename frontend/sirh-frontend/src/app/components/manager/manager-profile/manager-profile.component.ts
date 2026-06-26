@@ -4,6 +4,7 @@ import { KeycloakService } from '../../../services/keycloak.service';
 import { EmployeeApiService } from '../../../services/employee-api.service';
 import { RecruitmentApiService } from '../../../services/recruitment-api.service';
 import { forkJoin } from 'rxjs';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 /**
  * Profil de l'espace Manager.
@@ -16,373 +17,262 @@ import { forkJoin } from 'rxjs';
 @Component({
   selector: 'app-manager-profile',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   template: `
-    <div class="profile-page">
-      <h1>👤 Mon Profil — Manager</h1>
+    <div class="page profile-page">
+      <div class="page-header">
+        <div class="page-header__title">
+          <h1>Mon profil</h1>
+          <span class="page-header__sub">Espace manager</span>
+        </div>
+      </div>
 
       <div class="profile-layout">
-        <!-- Carte profil + département -->
-        <div class="profile-card">
-          <div class="profile-avatar">
-            <div class="avatar-circle">{{ initials() }}</div>
-            <h2>{{ profile?.firstName }} {{ profile?.lastName }}</h2>
-            <span class="role-badge">Manager</span>
-          </div>
+        <!-- Carte profil + informations -->
+        <div class="card">
+          <div class="card__body">
+            <div class="profile-id">
+              <div class="avatar avatar--lg avatar--round">{{ initials() }}</div>
+              <div>
+                <h2 class="profile-name">{{ profile?.firstName }} {{ profile?.lastName }}</h2>
+                <span class="badge badge--accent">Manager</span>
+              </div>
+            </div>
 
-          <div class="profile-details">
-            <h3>📋 Informations personnelles</h3>
-            <div class="detail-row">
-              <label>Matricule</label>
-              <div class="detail-value">
-                <span class="lock-icon">🔒</span>
-                {{ profile?.matricule || keycloak.getUserName() }}
-              </div>
-            </div>
-            <div class="detail-row">
-              <label>Nom complet</label>
-              <div class="detail-value">
-                <span class="lock-icon">🔒</span>
-                {{ profile?.firstName }} {{ profile?.lastName }}
-              </div>
-            </div>
-            <div class="detail-row">
-              <label>Email</label>
-              <div class="detail-value">
-                <span class="lock-icon">🔒</span>
-                {{ profile?.email || keycloak.getEmail() }}
-              </div>
-            </div>
-            <div class="detail-row" *ngIf="profile?.position">
-              <label>Poste actuel</label>
-              <div class="detail-value">
-                <span class="lock-icon">🔒</span>
-                {{ profile?.position }}
-              </div>
-            </div>
-            <div class="detail-row" *ngIf="profile?.hireDate">
-              <label>Date d'embauche</label>
-              <div class="detail-value">
-                <span class="lock-icon">🔒</span>
-                {{ profile?.hireDate }}
-              </div>
-            </div>
+            <div class="section-title">Informations personnelles</div>
+            <dl class="dl">
+              <dt>Matricule</dt>
+              <dd class="locked"><app-icon name="lock" [size]="13" /> {{ profile?.matricule || keycloak.getUserName() }}</dd>
+
+              <dt>Nom complet</dt>
+              <dd class="locked"><app-icon name="lock" [size]="13" /> {{ profile?.firstName }} {{ profile?.lastName }}</dd>
+
+              <dt>Email</dt>
+              <dd class="locked"><app-icon name="lock" [size]="13" /> {{ profile?.email || keycloak.getEmail() }}</dd>
+
+              <ng-container *ngIf="profile?.position">
+                <dt>Poste actuel</dt>
+                <dd class="locked"><app-icon name="lock" [size]="13" /> {{ profile?.position }}</dd>
+              </ng-container>
+
+              <ng-container *ngIf="profile?.hireDate">
+                <dt>Date d'embauche</dt>
+                <dd class="locked"><app-icon name="lock" [size]="13" /> {{ profile?.hireDate }}</dd>
+              </ng-container>
+            </dl>
           </div>
         </div>
 
-        <!-- Carte sécurité + département -->
+        <!-- Colonne latérale : département + sécurité -->
         <div class="side-col">
-          <div class="dept-card">
-            <h3>🏢 Département(s) géré(s)</h3>
-            <div *ngIf="!team?.departments?.length" class="empty-small">
-              Aucun département à votre charge.
-            </div>
-            <div *ngFor="let d of team?.departments || []" class="dept-item">
-              <div class="dept-name">🏗️ {{ d.name }}</div>
-              <div class="dept-meta">👥 {{ d.employeeCount }} employé(s)</div>
-              <div class="dept-desc" *ngIf="d.description">{{ d.description }}</div>
+          <div class="card">
+            <div class="card__header"><div class="card__title">Département(s) géré(s)</div></div>
+            <div class="card__body">
+              <div *ngIf="!team?.departments?.length" class="empty-mini">
+                Aucun département à votre charge.
+              </div>
+              <div *ngFor="let d of team?.departments || []" class="dept-item">
+                <div class="dept-name"><app-icon name="department" [size]="15" /> {{ d.name }}</div>
+                <div class="dept-meta"><app-icon name="team" [size]="14" /> {{ d.employeeCount }} employé(s)</div>
+                <div class="dept-desc" *ngIf="d.description">{{ d.description }}</div>
+              </div>
             </div>
           </div>
 
-          <div class="password-card">
-            <h3>🔑 Sécurité</h3>
-            <button class="change-pwd-btn" (click)="changePassword()">
-              🔒 Modifier mon mot de passe
-            </button>
+          <div class="card">
+            <div class="card__header"><div class="card__title">Sécurité</div></div>
+            <div class="card__body">
+              <p class="help">Vous serez redirigé vers Keycloak pour modifier votre mot de passe en toute sécurité.</p>
+              <button class="btn btn--primary btn--block" (click)="changePassword()">
+                <app-icon name="lock" [size]="16" />
+                Modifier mon mot de passe
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Indicateurs personnels -->
-      <div class="stats-section" *ngIf="stats">
-        <h3>📊 Mon activité</h3>
-        <div class="mini-kpi-grid">
-          <div class="mini-kpi"><div class="mk-value">{{ stats.total || 0 }}</div><div class="mk-label">Entretiens totaux</div></div>
-          <div class="mini-kpi"><div class="mk-value">{{ stats.completed || 0 }}</div><div class="mk-label">Réalisés</div></div>
-          <div class="mini-kpi pos"><div class="mk-value">{{ stats.positive || 0 }}</div><div class="mk-label">Promotions validées</div></div>
-          <div class="mini-kpi neg"><div class="mk-value">{{ stats.negative || 0 }}</div><div class="mk-label">Refus</div></div>
-          <div class="mini-kpi"><div class="mk-value">{{ stats.trainingRecommended || 0 }}</div><div class="mk-label">Formations recommandées</div></div>
-          <div class="mini-kpi"><div class="mk-value">{{ stats.acceptanceRate || 0 }}%</div><div class="mk-label">Taux d'acceptation</div></div>
+      <section class="block" *ngIf="stats">
+        <div class="section-title">Mon activité</div>
+        <div class="grid grid--kpi">
+          <div class="stat">
+            <div class="stat__icon"><app-icon name="interview" [size]="20" /></div>
+            <div class="stat__body"><div class="stat__value">{{ stats.total || 0 }}</div><div class="stat__label">Entretiens totaux</div></div>
+          </div>
+          <div class="stat">
+            <div class="stat__icon"><app-icon name="check" [size]="20" /></div>
+            <div class="stat__body"><div class="stat__value">{{ stats.completed || 0 }}</div><div class="stat__label">Réalisés</div></div>
+          </div>
+          <div class="stat">
+            <div class="stat__icon is-ok"><app-icon name="promoted" [size]="20" /></div>
+            <div class="stat__body"><div class="stat__value">{{ stats.positive || 0 }}</div><div class="stat__label">Promotions validées</div></div>
+          </div>
+          <div class="stat">
+            <div class="stat__icon is-danger"><app-icon name="reject" [size]="20" /></div>
+            <div class="stat__body"><div class="stat__value">{{ stats.negative || 0 }}</div><div class="stat__label">Refus</div></div>
+          </div>
+          <div class="stat">
+            <div class="stat__icon"><app-icon name="formation" [size]="20" /></div>
+            <div class="stat__body"><div class="stat__value">{{ stats.trainingRecommended || 0 }}</div><div class="stat__label">Formations recommandées</div></div>
+          </div>
+          <div class="stat">
+            <div class="stat__icon"><app-icon name="chart" [size]="20" /></div>
+            <div class="stat__body"><div class="stat__value">{{ stats.acceptanceRate || 0 }}%</div><div class="stat__label">Taux d'acceptation</div></div>
+          </div>
         </div>
-      </div>
+      </section>
 
       <!-- Historique des décisions -->
-      <div class="decisions-section">
-        <h3>📋 Mes décisions d'entretien</h3>
-        <div *ngIf="!decidedInterviews.length" class="empty-small">
+      <section class="block">
+        <div class="section-title">Mes décisions d'entretien</div>
+        <div *ngIf="!decidedInterviews.length" class="empty-mini">
           Aucune décision d'entretien finalisée.
         </div>
-        <table *ngIf="decidedInterviews.length > 0" class="dec-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Candidat</th>
-              <th>Offre</th>
-              <th>Type</th>
-              <th>Résultat</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let it of decidedInterviews">
-              <td>{{ formatDate(it.scheduledDate || it.assignedAt) }}</td>
-              <td>{{ it.candidateName || '—' }}</td>
-              <td>{{ it.jobOfferTitle || '—' }}</td>
-              <td>
-                <span class="type-pill" [class.ext]="it.candidateType === 'EXTERNAL'">
-                  {{ it.candidateType === 'EXTERNAL' ? 'Externe' : 'Interne' }}
-                </span>
-              </td>
-              <td>
-                <span class="result-pill"
-                      [class.pos]="it.result === 'POSITIF'"
-                      [class.neg]="it.result === 'NEGATIF' || it.result === 'NÉGATIF'"
-                      [class.mid]="it.result === 'EN_COURS'">
-                  {{ resultLabel(it.result) }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="table-wrap" *ngIf="decidedInterviews.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Candidat</th>
+                <th>Offre</th>
+                <th>Type</th>
+                <th>Résultat</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let it of decidedInterviews">
+                <td>{{ formatDate(it.scheduledDate || it.assignedAt) }}</td>
+                <td class="cell-strong">{{ it.candidateName || '—' }}</td>
+                <td>{{ it.jobOfferTitle || '—' }}</td>
+                <td>
+                  <span class="type-pill" [class.ext]="it.candidateType === 'EXTERNAL'">
+                    {{ it.candidateType === 'EXTERNAL' ? 'Externe' : 'Interne' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="result-pill"
+                        [class.pos]="it.result === 'POSITIF'"
+                        [class.neg]="it.result === 'NEGATIF' || it.result === 'NÉGATIF'"
+                        [class.mid]="it.result === 'EN_COURS'">
+                    {{ resultLabel(it.result) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <!-- Historique des postes -->
-      <div class="history-section">
-        <h3>📜 Mon parcours</h3>
-        <div *ngIf="!history.length" class="empty-small">
+      <section class="block">
+        <div class="section-title">Mon parcours</div>
+        <div *ngIf="!history.length" class="empty-mini">
           Aucun historique de poste pour le moment.
         </div>
-        <table *ngIf="history.length > 0" class="history-table">
-          <thead>
-            <tr>
-              <th>Poste</th>
-              <th>Département</th>
-              <th>Du</th>
-              <th>Au</th>
-              <th>Motif</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let entry of history" [class.current-row]="!entry.endDate">
-              <td><strong>{{ entry.position }}</strong></td>
-              <td>
-                {{ entry.departmentName || '—' }}
-                <span *ngIf="entry.serviceName" class="service-small"> · {{ entry.serviceName }}</span>
-              </td>
-              <td>{{ formatDate(entry.startDate) }}</td>
-              <td>
-                <span *ngIf="entry.endDate">{{ formatDate(entry.endDate) }}</span>
-                <span *ngIf="!entry.endDate" class="current-tag">Poste actuel</span>
-              </td>
-              <td>{{ reasonLabel(entry.reason) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="table-wrap" *ngIf="history.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Poste</th>
+                <th>Département</th>
+                <th>Du</th>
+                <th>Au</th>
+                <th>Motif</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let entry of history" [class.current-row]="!entry.endDate">
+                <td class="cell-strong">{{ entry.position }}</td>
+                <td>
+                  {{ entry.departmentName || '—' }}
+                  <span *ngIf="entry.serviceName" class="service-small"> · {{ entry.serviceName }}</span>
+                </td>
+                <td>{{ formatDate(entry.startDate) }}</td>
+                <td>
+                  <span *ngIf="entry.endDate">{{ formatDate(entry.endDate) }}</span>
+                  <span *ngIf="!entry.endDate" class="badge badge--success">Poste actuel</span>
+                </td>
+                <td>{{ reasonLabel(entry.reason) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   `,
   styles: [`
-    .profile-page h1 { color: #1e3a5f; margin: 0 0 24px 0; }
+    .profile-page { color: var(--c-ink); }
 
     .profile-layout {
       display: grid;
       grid-template-columns: 2fr 1fr;
-      gap: 20px;
+      gap: var(--sp-4);
       align-items: start;
-      margin-bottom: 20px;
     }
-    .profile-card, .dept-card, .password-card,
-    .stats-section, .decisions-section, .history-section {
-      background: white;
-      border-radius: 14px;
-      padding: 22px 24px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    .side-col { display: flex; flex-direction: column; gap: 20px; }
+    .side-col { display: flex; flex-direction: column; gap: var(--sp-4); }
 
-    /* Avatar */
-    .profile-avatar {
-      text-align: center;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #f1f5f9;
-      margin-bottom: 20px;
+    /* Identité */
+    .profile-id {
+      display: flex; align-items: center; gap: var(--sp-3);
+      padding-bottom: var(--sp-4); margin-bottom: var(--sp-4);
+      border-bottom: 1px solid var(--c-border);
     }
-    .avatar-circle {
-      width: 76px; height: 76px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #1e3a5f, #8b5cf6);
-      color: white;
-      font-size: 1.7rem;
-      font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 10px;
-      box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
-    }
-    .profile-avatar h2 { margin: 0 0 8px 0; color: #1e293b; font-size: 1.2rem; }
-    .role-badge {
-      display: inline-block;
-      padding: 4px 14px;
-      background: linear-gradient(135deg, #ede9fe, #ddd6fe);
-      color: #5b21b6;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+    .profile-name { font-size: var(--fs-18); margin: 0 0 6px 0; }
 
-    /* Details */
-    .profile-details h3,
-    .dept-card h3,
-    .password-card h3,
-    .stats-section h3,
-    .decisions-section h3,
-    .history-section h3 {
-      color: #1e3a5f;
-      margin: 0 0 14px 0;
-      font-size: 0.95rem;
-    }
-    .detail-row {
-      display: flex;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid #f8fafc;
-    }
-    .detail-row:last-of-type { border-bottom: none; }
-    .detail-row label {
-      width: 130px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #64748b;
-      flex-shrink: 0;
-    }
-    .detail-value {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 0.92rem;
-      color: #1e293b;
-      background: #f8fafc;
-      padding: 7px 12px;
-      border-radius: 8px;
-      border: 1px solid #f1f5f9;
-      flex: 1;
-    }
-    .lock-icon { font-size: 0.7rem; opacity: 0.5; }
+    .section-title { margin-bottom: var(--sp-3); }
+
+    .dl dd.locked { display: flex; align-items: center; gap: 6px; }
+    .dl dd.locked app-icon { color: var(--c-faint); }
 
     /* Département */
     .dept-item {
-      padding: 12px;
-      background: #f8fafc;
-      border-radius: 10px;
-      border: 1px solid #e2e8f0;
-      margin-bottom: 10px;
+      padding: var(--sp-3);
+      background: var(--c-surface-2);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
     }
-    .dept-item:last-child { margin-bottom: 0; }
-    .dept-name { font-weight: 600; color: #1e3a5f; }
-    .dept-meta { font-size: 0.78rem; color: #475569; margin-top: 4px; font-weight: 500; }
-    .dept-desc { font-size: 0.78rem; color: #64748b; margin-top: 4px; }
+    .dept-item + .dept-item { margin-top: var(--sp-2); }
+    .dept-name { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--c-ink); }
+    .dept-meta { display: flex; align-items: center; gap: 6px; font-size: var(--fs-12); color: var(--c-muted); margin-top: 4px; font-weight: 500; }
+    .dept-desc { font-size: var(--fs-12); color: var(--c-muted); margin-top: 4px; }
 
-    /* Mot de passe */
-    .change-pwd-btn {
-      width: 100%;
-      padding: 12px 18px;
-      background: linear-gradient(135deg, #1e3a5f, #2d5a87);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .change-pwd-btn:hover { background: linear-gradient(135deg, #2d5a87, #3b82f6); }
+    .help { margin-bottom: var(--sp-3); }
 
-    /* Stats */
-    .mini-kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-    }
-    .mini-kpi {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 14px;
-      text-align: center;
-    }
-    .mini-kpi.pos { background: #f0fdf4; border-color: #bbf7d0; }
-    .mini-kpi.neg { background: #fef2f2; border-color: #fecaca; }
-    .mk-value { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
-    .mk-label { font-size: 0.72rem; color: #64748b; margin-top: 4px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+    /* KPI */
+    .block { margin-top: var(--sp-6); }
+    .stat__icon.is-ok     { background: var(--c-success-soft); color: var(--c-success-ink); }
+    .stat__icon.is-danger { background: var(--c-danger-soft);  color: var(--c-danger-ink); }
 
     /* Tables */
-    .dec-table, .history-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.88rem;
-    }
-    .dec-table thead th,
-    .history-table thead th {
-      text-align: left;
-      padding: 10px 12px;
-      background: #f8fafc;
-      color: #475569;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 2px solid #e2e8f0;
-    }
-    .dec-table tbody td,
-    .history-table tbody td {
-      padding: 11px 12px;
-      border-bottom: 1px solid #f1f5f9;
-      color: #1e293b;
-    }
-    .dec-table tbody tr:last-child td,
-    .history-table tbody tr:last-child td { border-bottom: none; }
-    .history-table tbody tr.current-row td { background: #f0fdf4; }
-    .current-tag {
-      display: inline-block;
-      background: #10b981;
-      color: white;
-      padding: 2px 9px;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 600;
-    }
-    .service-small { color: #64748b; font-size: 0.8rem; }
+    .data-table tbody tr.current-row td { background: var(--c-success-soft); }
+    .service-small { color: var(--c-muted); font-size: var(--fs-12); }
 
     .type-pill {
-      display: inline-block;
-      padding: 2px 9px;
-      background: #dcfce7;
-      color: #166534;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
+      display: inline-flex; align-items: center;
+      padding: 2px 9px; border-radius: var(--r-pill);
+      font-size: var(--fs-12); font-weight: 600;
+      background: var(--c-success-soft); color: var(--c-success-ink);
     }
-    .type-pill.ext { background: #fef3c7; color: #92400e; }
-    .result-pill {
-      display: inline-block;
-      padding: 2px 9px;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      background: #f1f5f9;
-      color: #475569;
-    }
-    .result-pill.pos { background: #dcfce7; color: #166534; }
-    .result-pill.neg { background: #fee2e2; color: #991b1b; }
-    .result-pill.mid { background: #fef3c7; color: #92400e; }
+    .type-pill.ext { background: var(--c-warning-soft); color: var(--c-warning-ink); }
 
-    .stats-section, .decisions-section, .history-section { margin-top: 20px; }
-    .empty-small {
-      padding: 16px;
-      text-align: center;
-      color: #94a3b8;
-      font-size: 0.85rem;
-      background: #f8fafc;
-      border-radius: 8px;
+    .result-pill {
+      display: inline-flex; align-items: center;
+      padding: 2px 9px; border-radius: var(--r-pill);
+      font-size: var(--fs-12); font-weight: 700;
+      background: var(--c-surface-3); color: var(--c-ink-soft);
+    }
+    .result-pill.pos { background: var(--c-success-soft); color: var(--c-success-ink); }
+    .result-pill.neg { background: var(--c-danger-soft);  color: var(--c-danger-ink); }
+    .result-pill.mid { background: var(--c-warning-soft); color: var(--c-warning-ink); }
+
+    /* États vides compacts */
+    .empty-mini {
+      padding: var(--sp-4); text-align: center;
+      color: var(--c-muted); font-size: var(--fs-13);
+      background: var(--c-surface-2);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
     }
 
     @media (max-width: 900px) {
@@ -462,10 +352,10 @@ export class ManagerProfileComponent implements OnInit {
 
   resultLabel(r?: string): string {
     switch ((r || '').toUpperCase()) {
-      case 'POSITIF': return '✅ Positif';
+      case 'POSITIF': return 'Positif';
       case 'NEGATIF':
-      case 'NÉGATIF': return '❌ Négatif';
-      case 'EN_COURS': return '⏳ En cours';
+      case 'NÉGATIF': return 'Négatif';
+      case 'EN_COURS': return 'En cours';
       default: return r || '—';
     }
   }

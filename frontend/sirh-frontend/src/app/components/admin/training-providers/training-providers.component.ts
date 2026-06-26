@@ -11,84 +11,110 @@ import {
   DeliveryMode,
   Skill
 } from '../../../services/training.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 @Component({
   selector: 'app-training-providers',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   template: `
-    <div class="management">
-      <div class="header">
-        <div>
-          <h1>🏫 Organismes de Formation</h1>
-          <p class="subtitle">
+    <div class="providers-mgmt">
+      <div class="page-header">
+        <div class="page-header__title">
+          <h1>Organismes de formation</h1>
+          <span class="page-header__sub">
             Catalogue des organismes externes proposés par l'IA pour faire monter en compétence les candidats et employés.
-          </p>
+          </span>
         </div>
-        <button class="add-btn" (click)="openCreateForm()">+ Nouvel organisme</button>
+        <div class="page-header__actions">
+          <button class="btn btn--primary" (click)="openCreateForm()">
+            <app-icon name="add" [size]="16" />
+            Nouvel organisme
+          </button>
+        </div>
       </div>
 
       <!-- Toolbar : recherche + filtres -->
       <div class="toolbar">
-        <input
-          type="text"
-          class="search"
-          placeholder="🔍 Rechercher (nom, description, compétence…)"
-          [(ngModel)]="searchTerm"
-        />
-        <select [(ngModel)]="filterConvention" class="filter">
+        <div class="input-icon search-field">
+          <app-icon name="search" [size]="16" />
+          <input
+            type="text"
+            class="input"
+            placeholder="Rechercher (nom, description, compétence…)"
+            [(ngModel)]="searchTerm"
+          />
+        </div>
+        <select [(ngModel)]="filterConvention" class="select filter">
           <option value="">Tous statuts</option>
           <option value="CONVENTIONNE">Conventionnés</option>
           <option value="REFERENCE">Référencés</option>
           <option value="NOUVEAU">Nouveaux</option>
         </select>
-        <select [(ngModel)]="filterMode" class="filter">
+        <select [(ngModel)]="filterMode" class="select filter">
           <option value="">Tous modes</option>
           <option value="PRESENTIEL">Présentiel</option>
           <option value="DISTANCIEL">Distanciel</option>
           <option value="HYBRIDE">Hybride</option>
         </select>
-        <span class="count-badge">{{ filtered.length }} / {{ providers.length }}</span>
+        <span class="badge badge--neutral u-mono">{{ filtered.length }} / {{ providers.length }}</span>
       </div>
 
-      <div class="loading" *ngIf="loading">Chargement…</div>
+      <div class="loading-row" *ngIf="loading">
+        <span class="spinner"></span> Chargement…
+      </div>
 
-      <div class="empty-state" *ngIf="!loading && providers.length === 0">
-        <div class="empty-icon">🏫</div>
-        <h3>Aucun organisme enregistré</h3>
-        <p>Ajoutez les organismes de formation que votre entreprise utilise habituellement.</p>
+      <div class="card card--flat" *ngIf="!loading && providers.length === 0">
+        <div class="empty-state">
+          <div class="empty-state__icon"><app-icon name="training-provider" [size]="26" /></div>
+          <div class="empty-state__title">Aucun organisme enregistré</div>
+          <p class="empty-state__text">Ajoutez les organismes de formation que votre entreprise utilise habituellement.</p>
+        </div>
       </div>
 
       <!-- Liste cartes -->
-      <div class="cards-grid" *ngIf="!loading && filtered.length > 0">
-        <div class="card" *ngFor="let p of filtered">
-          <div class="card-head">
-            <h3>{{ p.name }}</h3>
-            <div class="actions">
-              <button class="icon-btn edit" (click)="openEditForm(p)" title="Modifier">✏️</button>
-              <button class="icon-btn delete" (click)="deleteProvider(p)" title="Supprimer">🗑️</button>
+      <div class="providers-grid" *ngIf="!loading && filtered.length > 0">
+        <div class="card provider-card" *ngFor="let p of filtered">
+          <div class="card__header">
+            <div class="provider-name">
+              <app-icon name="training-provider" [size]="18" />
+              <h3 class="card__title">{{ p.name }}</h3>
+            </div>
+            <div class="provider-actions">
+              <button class="icon-btn icon-btn--sm" (click)="openEditForm(p)" aria-label="Modifier l'organisme">
+                <app-icon name="edit" [size]="15" />
+              </button>
+              <button class="icon-btn icon-btn--sm icon-btn--danger" (click)="deleteProvider(p)" aria-label="Supprimer l'organisme">
+                <app-icon name="delete" [size]="15" />
+              </button>
             </div>
           </div>
 
-          <div class="badges">
-            <span class="badge" [ngClass]="conventionClass(p.conventionStatus)">
-              {{ conventionLabel(p.conventionStatus) }}
-            </span>
-            <span class="badge qualiopi" *ngIf="p.qualiopiCertified">✓ Qualiopi</span>
-            <span class="badge mode" *ngIf="p.deliveryMode">{{ modeLabel(p.deliveryMode) }}</span>
-          </div>
+          <div class="card__body">
+            <div class="badges">
+              <span class="badge" [ngClass]="conventionClass(p.conventionStatus)">
+                {{ conventionLabel(p.conventionStatus) }}
+              </span>
+              <span class="badge badge--success" *ngIf="p.qualiopiCertified">
+                <app-icon name="check" [size]="12" /> Qualiopi
+              </span>
+              <span class="badge badge--neutral" *ngIf="p.deliveryMode">{{ modeLabel(p.deliveryMode) }}</span>
+            </div>
 
-          <p class="description" *ngIf="p.description">{{ p.description }}</p>
+            <p class="description" *ngIf="p.description">{{ p.description }}</p>
 
-          <div class="skills" *ngIf="p.skillsCovered?.length">
-            <span class="skill-chip" *ngFor="let s of p.skillsCovered">{{ s.name }}</span>
-          </div>
+            <div class="skills" *ngIf="p.skillsCovered?.length">
+              <span class="chip" *ngFor="let s of p.skillsCovered">{{ s.name }}</span>
+            </div>
 
-          <div class="meta">
-            <div *ngIf="p.avgPriceEur != null"><span class="meta-label">Prix moyen</span> {{ p.avgPriceEur }} €</div>
-            <div *ngIf="p.avgDurationDays != null"><span class="meta-label">Durée</span> {{ p.avgDurationDays }} j</div>
-            <div *ngIf="p.pastSuccessRate != null"><span class="meta-label">Succès</span> {{ p.pastSuccessRate }}%</div>
-            <a *ngIf="p.website" [href]="p.website" target="_blank" class="link">🌐 Site</a>
+            <div class="meta">
+              <div *ngIf="p.avgPriceEur != null"><span class="meta-label">Prix moyen</span> {{ p.avgPriceEur }} €</div>
+              <div *ngIf="p.avgDurationDays != null"><span class="meta-label">Durée</span> {{ p.avgDurationDays }} j</div>
+              <div *ngIf="p.pastSuccessRate != null"><span class="meta-label">Succès</span> {{ p.pastSuccessRate }}%</div>
+              <a *ngIf="p.website" [href]="p.website" target="_blank" rel="noopener noreferrer" class="link">
+                <app-icon name="external" [size]="14" /> Site
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -99,92 +125,104 @@ import {
 
       <!-- Modal création/édition -->
       <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3>{{ editingId ? 'Modifier' : 'Ajouter' }} un organisme</h3>
+        <div class="modal modal--lg" role="dialog" aria-modal="true"
+             [attr.aria-label]="(editingId ? 'Modifier' : 'Ajouter') + ' un organisme'"
+             (click)="$event.stopPropagation()">
+          <div class="modal__header">
+            <div class="modal__title">{{ editingId ? 'Modifier' : 'Ajouter' }} un organisme</div>
+            <button class="icon-btn" (click)="closeForm()" aria-label="Fermer la fenêtre">
+              <app-icon name="close" [size]="18" />
+            </button>
+          </div>
 
-          <div class="grid-2">
-            <div class="field">
-              <label>Nom <span class="required">*</span></label>
-              <input [(ngModel)]="form.name" maxlength="150" />
+          <div class="modal__body">
+            <div class="grid-2">
+              <div class="field">
+                <label class="label" for="tp-name">Nom <span class="req">*</span></label>
+                <input id="tp-name" class="input" [(ngModel)]="form.name" maxlength="150" />
+              </div>
+              <div class="field">
+                <label class="label" for="tp-convention">Convention <span class="req">*</span></label>
+                <select id="tp-convention" class="select" [(ngModel)]="form.conventionStatus">
+                  <option value="CONVENTIONNE">Conventionné</option>
+                  <option value="REFERENCE">Référencé</option>
+                  <option value="NOUVEAU">Nouveau</option>
+                </select>
+              </div>
             </div>
+
             <div class="field">
-              <label>Convention <span class="required">*</span></label>
-              <select [(ngModel)]="form.conventionStatus">
-                <option value="CONVENTIONNE">Conventionné</option>
-                <option value="REFERENCE">Référencé</option>
-                <option value="NOUVEAU">Nouveau</option>
-              </select>
+              <label class="label" for="tp-description">Description</label>
+              <textarea id="tp-description" class="textarea" [(ngModel)]="form.description" rows="3"></textarea>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label class="label" for="tp-website">Site web</label>
+                <input id="tp-website" class="input" [(ngModel)]="form.website" type="url" placeholder="https://…" />
+              </div>
+              <div class="field">
+                <label class="label" for="tp-email">Email contact</label>
+                <input id="tp-email" class="input" [(ngModel)]="form.contactEmail" type="email" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label">Compétences couvertes</label>
+              <div class="skills-picker">
+                <span class="chip chip--select"
+                      *ngFor="let s of skillsCatalog"
+                      [class.selected]="isSkillSelected(s.id)"
+                      (click)="toggleSkill(s.id)">
+                  {{ s.name }}
+                </span>
+              </div>
+            </div>
+
+            <div class="grid-3">
+              <div class="field">
+                <label class="label" for="tp-mode">Mode</label>
+                <select id="tp-mode" class="select" [(ngModel)]="form.deliveryMode">
+                  <option [ngValue]="undefined">—</option>
+                  <option value="PRESENTIEL">Présentiel</option>
+                  <option value="DISTANCIEL">Distanciel</option>
+                  <option value="HYBRIDE">Hybride</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="label" for="tp-price">Prix moyen (€)</label>
+                <input id="tp-price" class="input" [(ngModel)]="form.avgPriceEur" type="number" min="0" />
+              </div>
+              <div class="field">
+                <label class="label" for="tp-duration">Durée (jours)</label>
+                <input id="tp-duration" class="input" [(ngModel)]="form.avgDurationDays" type="number" min="0" />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label class="label" for="tp-rate">Taux de succès (%)</label>
+                <input id="tp-rate" class="input" [(ngModel)]="form.pastSuccessRate" type="number" min="0" max="100" />
+              </div>
+              <div class="field check-field">
+                <label>
+                  <input type="checkbox" [(ngModel)]="form.qualiopiCertified" />
+                  <span>Certifié Qualiopi</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field-error" *ngIf="errorMessage">
+              <app-icon name="alert" [size]="14" /> {{ errorMessage }}
             </div>
           </div>
 
-          <div class="field">
-            <label>Description</label>
-            <textarea [(ngModel)]="form.description" rows="3"></textarea>
-          </div>
-
-          <div class="grid-2">
-            <div class="field">
-              <label>Site web</label>
-              <input [(ngModel)]="form.website" type="url" placeholder="https://…" />
-            </div>
-            <div class="field">
-              <label>Email contact</label>
-              <input [(ngModel)]="form.contactEmail" type="email" />
-            </div>
-          </div>
-
-          <div class="field">
-            <label>Compétences couvertes</label>
-            <div class="skills-picker">
-              <span class="skill-chip selectable"
-                    *ngFor="let s of skillsCatalog"
-                    [class.selected]="isSkillSelected(s.id)"
-                    (click)="toggleSkill(s.id)">
-                {{ s.name }}
-              </span>
-            </div>
-          </div>
-
-          <div class="grid-3">
-            <div class="field">
-              <label>Mode</label>
-              <select [(ngModel)]="form.deliveryMode">
-                <option [ngValue]="undefined">—</option>
-                <option value="PRESENTIEL">Présentiel</option>
-                <option value="DISTANCIEL">Distanciel</option>
-                <option value="HYBRIDE">Hybride</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Prix moyen (€)</label>
-              <input [(ngModel)]="form.avgPriceEur" type="number" min="0" />
-            </div>
-            <div class="field">
-              <label>Durée (jours)</label>
-              <input [(ngModel)]="form.avgDurationDays" type="number" min="0" />
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="field">
-              <label>Taux de succès (%)</label>
-              <input [(ngModel)]="form.pastSuccessRate" type="number" min="0" max="100" />
-            </div>
-            <div class="field checkbox">
-              <label>
-                <input type="checkbox" [(ngModel)]="form.qualiopiCertified" />
-                <span>Certifié Qualiopi</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="error-msg" *ngIf="errorMessage">{{ errorMessage }}</div>
-
-          <div class="modal-actions">
-            <button class="cancel-btn" (click)="closeForm()">Annuler</button>
-            <button class="submit-btn"
+          <div class="modal__footer">
+            <button class="btn btn--secondary" (click)="closeForm()">Annuler</button>
+            <button class="btn btn--primary"
                     [disabled]="!form.name?.trim() || !form.conventionStatus || submitting"
                     (click)="saveProvider()">
+              <app-icon name="save" [size]="16" />
               {{ editingId ? 'Enregistrer' : 'Créer' }}
             </button>
           </div>
@@ -193,75 +231,113 @@ import {
     </div>
   `,
   styles: [`
-    .management { color: #0f172a; }
-    .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; gap:16px; }
-    .header h1 { color:#1e3a5f; margin:0 0 6px 0; font-size:1.6rem; }
-    .subtitle { color:#64748b; margin:0; font-size:0.9rem; max-width:700px; }
-    .add-btn { padding:10px 20px; background:#1e3a5f; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.9rem; white-space:nowrap; }
-    .add-btn:hover { background:#17304f; }
+    :host { display: block; }
 
-    .toolbar { display:flex; gap:12px; margin-bottom:20px; align-items:center; flex-wrap:wrap; }
-    .search { flex:1; min-width:240px; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; background:#fff; outline:none; }
-    .search:focus { border-color:#1e3a5f; box-shadow:0 0 0 3px rgba(30,58,95,0.1); }
-    .filter { padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; font-size:0.85rem; }
-    .count-badge { padding:6px 14px; background:#e2e8f0; border-radius:999px; font-size:0.8rem; font-weight:600; color:#334155; }
+    .search-field { flex: 1; min-width: 240px; }
+    .filter { width: auto; min-width: 150px; }
 
-    .loading, .empty-filter { text-align:center; padding:40px; color:#94a3b8; }
-    .empty-state { text-align:center; padding:64px 24px; background:#fff; border:1px dashed #cbd5e1; border-radius:12px; }
-    .empty-icon { font-size:48px; margin-bottom:12px; }
+    .empty-filter {
+      text-align: center;
+      padding: var(--sp-7);
+      color: var(--c-muted);
+      font-style: italic;
+      margin: 0;
+    }
 
-    .cards-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:16px; }
-    .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(15,23,42,0.04); display:flex; flex-direction:column; gap:10px; }
-    .card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
-    .card-head h3 { margin:0; color:#0f172a; font-size:1.05rem; }
-    .actions { display:flex; gap:4px; }
+    /* Grille de cartes */
+    .providers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: var(--sp-4);
+    }
+    .provider-card { display: flex; flex-direction: column; }
+    .provider-card .card__header { align-items: flex-start; }
+    .provider-card .card__body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-3);
+      flex: 1;
+    }
+    .provider-name {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      min-width: 0;
+      color: var(--c-accent-ink);
+    }
+    .provider-name .card__title { font-size: var(--fs-15); }
+    .provider-actions { display: flex; gap: 2px; flex: none; }
 
-    .badges { display:flex; gap:6px; flex-wrap:wrap; }
-    .badge { padding:3px 10px; border-radius:999px; font-size:0.72rem; font-weight:600; }
-    .badge.conventionne { background:#dcfce7; color:#15803d; }
-    .badge.reference    { background:#fef9c3; color:#854d0e; }
-    .badge.nouveau      { background:#dbeafe; color:#1e40af; }
-    .badge.qualiopi     { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
-    .badge.mode         { background:#f1f5f9; color:#475569; }
+    .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    /* Statuts de convention mappés sur les tokens sémantiques */
+    .badge.conventionne { background: var(--c-success-soft); color: var(--c-success-ink); }
+    .badge.reference    { background: var(--c-warning-soft); color: var(--c-warning-ink); }
+    .badge.nouveau      { background: var(--c-info-soft);    color: var(--c-info-ink); }
 
-    .description { color:#475569; font-size:0.88rem; margin:0; line-height:1.4; }
-    .skills { display:flex; gap:4px; flex-wrap:wrap; }
-    .skill-chip { padding:3px 10px; background:#eff6ff; color:#1e3a5f; border-radius:999px; font-size:0.75rem; font-weight:500; }
-    .skill-chip.selectable { cursor:pointer; border:1px solid transparent; user-select:none; }
-    .skill-chip.selectable:hover { border-color:#1e3a5f; }
-    .skill-chip.selectable.selected { background:#1e3a5f; color:#fff; }
+    .description { color: var(--c-muted); font-size: var(--fs-13); margin: 0; line-height: 1.45; }
 
-    .meta { display:flex; gap:14px; flex-wrap:wrap; font-size:0.82rem; color:#475569; padding-top:6px; border-top:1px dashed #e2e8f0; }
-    .meta-label { color:#94a3b8; margin-right:4px; }
-    .link { color:#1e3a5f; text-decoration:none; font-weight:500; }
-    .link:hover { text-decoration:underline; }
+    .skills { display: flex; gap: 6px; flex-wrap: wrap; }
 
-    .icon-btn { background:transparent; border:1px solid #e2e8f0; padding:5px 9px; border-radius:6px; cursor:pointer; font-size:0.85rem; }
-    .icon-btn.edit:hover { border-color:#3b82f6; background:#eff6ff; }
-    .icon-btn.delete:hover { border-color:#ef4444; background:#fef2f2; }
+    .meta {
+      display: flex;
+      gap: var(--sp-4);
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: var(--fs-13);
+      color: var(--c-ink-soft);
+      padding-top: var(--sp-3);
+      border-top: 1px solid var(--c-border);
+      margin-top: auto;
+    }
+    .meta-label { color: var(--c-faint); margin-right: 4px; }
+    .link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--c-brand);
+      font-weight: 500;
+    }
+    .link:hover { color: var(--c-brand-strong); text-decoration: underline; }
 
-    /* Modal */
-    .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; overflow-y:auto; }
-    .modal { background:#fff; border-radius:12px; padding:28px; width:100%; max-width:680px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 40px rgba(0,0,0,0.2); }
-    .modal h3 { margin:0 0 20px 0; color:#0f172a; font-size:1.15rem; }
-    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
-    .field { margin-bottom:14px; }
-    .field label { display:block; font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:6px; }
-    .required { color:#ef4444; }
-    .field input, .field textarea, .field select { width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.88rem; box-sizing:border-box; outline:none; font-family:inherit; }
-    .field input:focus, .field textarea:focus, .field select:focus { border-color:#1e3a5f; box-shadow:0 0 0 3px rgba(30,58,95,0.1); }
-    .field.checkbox label { display:flex; align-items:center; gap:8px; padding-top:24px; cursor:pointer; }
-    .field.checkbox input { width:auto; }
-    .skills-picker { display:flex; flex-wrap:wrap; gap:5px; padding:10px; border:1px solid #cbd5e1; border-radius:8px; max-height:160px; overflow-y:auto; background:#f8fafc; }
+    /* Modal — grilles de champs */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); }
 
-    .error-msg { padding:10px 14px; background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:8px; font-size:0.85rem; margin-bottom:14px; }
-    .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
-    .cancel-btn { padding:9px 16px; border:1px solid #cbd5e1; background:#fff; border-radius:8px; cursor:pointer; font-size:0.9rem; color:#334155; }
-    .cancel-btn:hover { background:#f1f5f9; }
-    .submit-btn { padding:9px 16px; background:#1e3a5f; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:0.9rem; font-weight:600; }
-    .submit-btn:hover:not(:disabled) { background:#17304f; }
-    .submit-btn:disabled { background:#94a3b8; cursor:not-allowed; }
+    .skills-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: var(--sp-3);
+      border: 1px solid var(--c-border-strong);
+      border-radius: var(--r-sm);
+      max-height: 170px;
+      overflow-y: auto;
+      background: var(--c-surface-2);
+    }
+    .chip--select { cursor: pointer; user-select: none; }
+    .chip--select:hover { border-color: var(--c-accent); color: var(--c-accent-ink); }
+    .chip.selected {
+      background: var(--c-accent);
+      color: #fff;
+      border-color: var(--c-accent);
+    }
+
+    .check-field { justify-content: flex-end; }
+    .check-field label {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      cursor: pointer;
+      font-size: var(--fs-14);
+      font-weight: 500;
+      color: var(--c-ink-soft);
+      min-height: 38px;
+    }
+    .check-field input { width: auto; min-height: auto; accent-color: var(--c-brand); }
+
+    @media (max-width: 640px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
   `]
 })
 export class TrainingProvidersComponent implements OnInit {
@@ -388,7 +464,7 @@ export class TrainingProvidersComponent implements OnInit {
 
   // ── Labels & classes ──
   conventionLabel(s: ConventionStatus): string {
-    return s === 'CONVENTIONNE' ? '✓ Conventionné'
+    return s === 'CONVENTIONNE' ? 'Conventionné'
          : s === 'REFERENCE'     ? 'Référencé'
                                   : 'Nouveau';
   }
@@ -396,9 +472,9 @@ export class TrainingProvidersComponent implements OnInit {
     return s.toLowerCase();
   }
   modeLabel(m: DeliveryMode): string {
-    return m === 'PRESENTIEL' ? '📍 Présentiel'
-         : m === 'DISTANCIEL' ? '💻 Distanciel'
-                              : '🔀 Hybride';
+    return m === 'PRESENTIEL' ? 'Présentiel'
+         : m === 'DISTANCIEL' ? 'Distanciel'
+                              : 'Hybride';
   }
 
   private emptyForm(): TrainingProviderRequest {

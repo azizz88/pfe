@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EmployeeApiService } from '../../../services/employee-api.service';
 import { RecruitmentApiService } from '../../../services/recruitment-api.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 /**
  * Gestion des employés (CRUD complet) pour le RH Admin.
@@ -10,32 +11,31 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
 @Component({
   selector: 'app-employee-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   template: `
-    <div class="management">
+    <div class="page fade-in">
       <div class="page-header">
-        <div class="header-left">
-          <div class="header-icon">👥</div>
-          <div>
-            <h1>Gestion des Employés</h1>
-            <p class="header-sub">Gérez l'ensemble du personnel de votre entreprise</p>
-          </div>
+        <div class="page-header__title">
+          <h1>Gestion des Employés</h1>
+          <p class="page-header__sub">Gérez l'ensemble du personnel de votre entreprise</p>
         </div>
-        <button class="add-btn" (click)="showForm = true; resetForm()">
-          <span>+</span> Ajouter un employé
-        </button>
+        <div class="page-header__actions">
+          <button class="btn btn--primary" (click)="showForm = true; resetForm()">
+            <app-icon name="add" [size]="18" /> Ajouter un employé
+          </button>
+        </div>
       </div>
 
       <!-- Bandeau d'erreur chargement -->
-      <div class="error-banner" *ngIf="loadError">
-        <span class="error-icon">⚠️</span>
+      <div class="alert alert--danger page-alert" *ngIf="loadError">
+        <app-icon name="warning" [size]="16" class="alert__icon" />
         <span>{{ loadError }}</span>
-        <button class="retry-btn" (click)="loadError = null; loadEmployees()">Réessayer</button>
+        <button class="btn btn--sm btn--danger alert__action" (click)="loadError = null; loadEmployees()">Réessayer</button>
       </div>
 
       <!-- Bannière de succès après création -->
-      <div class="success-banner" *ngIf="createdUsername">
-        <div class="sb-icon">✅</div>
+      <div class="alert alert--success page-alert" *ngIf="createdUsername">
+        <app-icon name="approve" [size]="18" class="alert__icon" />
         <div>
           <div class="sb-title">Employé créé avec succès</div>
           <div class="sb-body">
@@ -47,70 +47,87 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
       </div>
 
       <!-- Tableau -->
-      <div class="table-container">
-        <table>
+      <div class="table-wrap">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Nom Complet</th><th>Email</th>
               <th>Poste</th><th>Département</th><th>Service</th>
-              <th>Contrat</th><th>Actions</th>
+              <th>Contrat</th><th class="cell-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let emp of employees">
-              <td>{{ emp.firstName }} {{ emp.lastName }}</td>
+              <td class="cell-strong">{{ emp.firstName }} {{ emp.lastName }}</td>
               <td>{{ emp.email }}</td>
               <td>{{ emp.position || '—' }}</td>
               <td>{{ emp.department?.name || '—' }}</td>
               <td>{{ emp.service?.name || '—' }}</td>
               <td>
-                <span *ngIf="emp.contract" class="badge" [class]="emp.contract.type">{{ emp.contract.type }}</span>
+                <span *ngIf="emp.contract" class="badge"
+                      [ngClass]="{
+                        'badge--success': emp.contract.type === 'CDI',
+                        'badge--warning': emp.contract.type === 'CDD',
+                        'badge--info': emp.contract.type === 'STAGE'
+                      }">{{ emp.contract.type }}</span>
               </td>
-              <td class="actions">
-                <button class="edit-btn" (click)="editEmployee(emp)" title="Modifier">✏️</button>
-                <button class="skill-btn" (click)="openSkills(emp)" title="Compétences">🎓</button>
-                <button class="doc-btn" (click)="openDocuments(emp)" title="Documents">📎</button>
-                <button class="delete-btn" (click)="deleteEmployee(emp.id)" title="Supprimer">🗑️</button>
+              <td class="cell-actions">
+                <button class="icon-btn" aria-label="Modifier" title="Modifier" (click)="editEmployee(emp)"><app-icon name="edit" [size]="16" /></button>
+                <button class="icon-btn" aria-label="Compétences" title="Compétences" (click)="openSkills(emp)"><app-icon name="skills" [size]="16" /></button>
+                <button class="icon-btn" aria-label="Documents" title="Documents" (click)="openDocuments(emp)"><app-icon name="document" [size]="16" /></button>
+                <button class="icon-btn icon-btn--danger" aria-label="Supprimer" title="Supprimer" (click)="deleteEmployee(emp.id)"><app-icon name="delete" [size]="16" /></button>
               </td>
             </tr>
           </tbody>
         </table>
+        <div class="empty-state" *ngIf="employees.length === 0 && !loadError">
+          <div class="empty-state__icon"><app-icon name="employees" [size]="26" /></div>
+          <div class="empty-state__title">Aucun employé</div>
+          <div class="empty-state__text">Commencez par ajouter un employé à votre organisation.</div>
+        </div>
       </div>
 
       <!-- Formulaire ajout/modification -->
       <div class="modal-overlay" *ngIf="showForm" (click)="showForm = false">
-        <div class="modal-form" (click)="$event.stopPropagation()">
-          <!-- Modal header (icône / titre / sous-titre s'adaptent au rôle sélectionné) -->
-          <div class="mf-header" [ngClass]="!isEditing ? ('header-' + (form.keycloakRole || 'EMPLOYEE').toLowerCase()) : ''">
-            <div class="mf-icon">{{ isEditing ? '✏️' : getRoleIcon() }}</div>
-            <h3>{{ isEditing ? 'Modifier un employé' : ('Ajouter un ' + getRoleLabelShort()) }}</h3>
-            <p class="mf-sub">{{ isEditing ? 'Modifiez les informations ci-dessous' : getRoleSubtitle() }}</p>
+        <div class="modal modal--lg" role="dialog" aria-modal="true"
+             [attr.aria-label]="isEditing ? 'Modifier un employé' : 'Ajouter un employé'"
+             (click)="$event.stopPropagation()">
+          <!-- Modal header -->
+          <div class="modal__header">
+            <div>
+              <div class="modal__title">
+                <app-icon [name]="isEditing ? 'edit' : (form.keycloakRole === 'MANAGER' ? 'manager' : form.keycloakRole === 'HR_ADMIN' ? 'lock' : 'user')" [size]="20" />
+                {{ isEditing ? 'Modifier un employé' : ('Ajouter un ' + getRoleLabelShort()) }}
+              </div>
+              <div class="modal__sub">{{ isEditing ? 'Modifiez les informations ci-dessous' : getRoleSubtitle() }}</div>
+            </div>
+            <button class="icon-btn" aria-label="Fermer" (click)="showForm = false"><app-icon name="close" [size]="18" /></button>
           </div>
 
-          <div class="mf-body">
+          <div class="modal__body">
             <!-- Section: Informations personnelles -->
             <div class="section">
-              <div class="section-title"><span class="st-icon">📋</span> Informations personnelles</div>
+              <div class="section-title"><app-icon name="user" [size]="16" /> Informations personnelles</div>
               <div class="grid-2">
                 <div class="field">
-                  <label>Prénom</label>
-                  <input [(ngModel)]="form.firstName" placeholder="Prénom" />
+                  <label class="label" for="emp-firstname">Prénom</label>
+                  <input id="emp-firstname" class="input" [(ngModel)]="form.firstName" placeholder="Prénom" />
                 </div>
                 <div class="field">
-                  <label>Nom</label>
-                  <input [(ngModel)]="form.lastName" placeholder="Nom" />
+                  <label class="label" for="emp-lastname">Nom</label>
+                  <input id="emp-lastname" class="input" [(ngModel)]="form.lastName" placeholder="Nom" />
                 </div>
                 <div class="field">
-                  <label>Email</label>
-                  <input [(ngModel)]="form.email" placeholder="email@exemple.com" type="email" />
+                  <label class="label" for="emp-email">Email</label>
+                  <input id="emp-email" class="input" [(ngModel)]="form.email" placeholder="email@exemple.com" type="email" />
                 </div>
                 <div class="field">
-                  <label>Téléphone</label>
-                  <input [(ngModel)]="form.phone" placeholder="+216 XX XXX XXX" />
+                  <label class="label" for="emp-phone">Téléphone</label>
+                  <input id="emp-phone" class="input" [(ngModel)]="form.phone" placeholder="+216 XX XXX XXX" />
                 </div>
                 <div class="field">
-                  <label>Poste</label>
-                  <input [(ngModel)]="form.position" placeholder="Ex: Développeur" />
+                  <label class="label" for="emp-position">Poste</label>
+                  <input id="emp-position" class="input" [(ngModel)]="form.position" placeholder="Ex: Développeur" />
                 </div>
               </div>
             </div>
@@ -118,24 +135,26 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
             <!-- Section: Compte Keycloak / Rôle (création uniquement)
                  Placée tôt car le rôle conditionne les sections suivantes. -->
             <div class="section" *ngIf="!isEditing">
-              <div class="section-title"><span class="st-icon">🔐</span> Compte d'accès &amp; Rôle</div>
-              <div class="kc-info-banner">
-                <span class="kc-info-icon">ℹ️</span>
+              <div class="section-title"><app-icon name="lock" [size]="16" /> Compte d'accès &amp; Rôle</div>
+              <div class="alert alert--info">
+                <app-icon name="info" [size]="16" class="alert__icon" />
                 <span>Un email d'activation sera envoyé. Nom d'utilisateur généré automatiquement : <strong>prénom.nom</strong></span>
               </div>
               <div class="grid-2">
                 <div class="field">
-                  <label>Rôle Keycloak</label>
-                  <select [(ngModel)]="form.keycloakRole" (change)="onRoleChange()">
-                    <option value="EMPLOYEE">👤 Employé</option>
-                    <option value="MANAGER">👔 Manager (entretiens)</option>
-                    <option value="HR_ADMIN">🛡️ Administrateur RH</option>
+                  <label class="label" for="emp-role">Rôle Keycloak</label>
+                  <select id="emp-role" class="select" [(ngModel)]="form.keycloakRole" (change)="onRoleChange()">
+                    <option value="EMPLOYEE">Employé</option>
+                    <option value="MANAGER">Manager (entretiens)</option>
+                    <option value="HR_ADMIN">Administrateur RH</option>
                   </select>
                 </div>
               </div>
               <!-- Description visuelle du rôle sélectionné -->
               <div class="role-preview" [ngClass]="'role-' + (form.keycloakRole || 'EMPLOYEE').toLowerCase()">
-                <span class="rp-icon">{{ getRoleIcon() }}</span>
+                <span class="rp-icon">
+                  <app-icon [name]="form.keycloakRole === 'MANAGER' ? 'manager' : form.keycloakRole === 'HR_ADMIN' ? 'lock' : 'user'" [size]="22" />
+                </span>
                 <div class="rp-body">
                   <strong>{{ getRoleLabelLong() }}</strong>
                   <p>{{ getRoleDescription() }}</p>
@@ -146,24 +165,24 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
             <!-- Section: Affectation (libellé adapté au rôle) -->
             <div class="section" *ngIf="form.keycloakRole !== 'HR_ADMIN' || isEditing">
               <div class="section-title">
-                <span class="st-icon">🏗️</span>
+                <app-icon name="department" [size]="16" />
                 {{ form.keycloakRole === 'MANAGER' ? 'Rattachement hiérarchique' : 'Affectation' }}
               </div>
               <div class="grid-2">
                 <div class="field">
-                  <label>Date d'embauche</label>
-                  <input [(ngModel)]="form.hireDate" type="date" />
+                  <label class="label" for="emp-hiredate">Date d'embauche</label>
+                  <input id="emp-hiredate" class="input" [(ngModel)]="form.hireDate" type="date" />
                 </div>
                 <div class="field">
-                  <label>Département {{ form.keycloakRole === 'MANAGER' ? 'de rattachement' : '' }}</label>
-                  <select [(ngModel)]="form.departmentId" (change)="onDepartmentChange()">
+                  <label class="label" for="emp-dept">Département {{ form.keycloakRole === 'MANAGER' ? 'de rattachement' : '' }}</label>
+                  <select id="emp-dept" class="select" [(ngModel)]="form.departmentId" (change)="onDepartmentChange()">
                     <option value="">-- Sélectionner --</option>
                     <option *ngFor="let dept of departments" [value]="dept.id">{{ dept.name }}</option>
                   </select>
                 </div>
                 <div class="field">
-                  <label>Service</label>
-                  <select [(ngModel)]="form.serviceId" [disabled]="!form.departmentId">
+                  <label class="label" for="emp-service">Service</label>
+                  <select id="emp-service" class="select" [(ngModel)]="form.serviceId" [disabled]="!form.departmentId">
                     <option value="">-- Sélectionner --</option>
                     <option *ngFor="let svc of filteredServices" [value]="svc.id">{{ svc.name }}</option>
                   </select>
@@ -173,34 +192,34 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
 
             <!-- Section: Périmètre managérial (création + rôle MANAGER uniquement) -->
             <div class="section mgr-section" *ngIf="!isEditing && form.keycloakRole === 'MANAGER'">
-              <div class="section-title"><span class="st-icon">👔</span> Périmètre managérial</div>
-              <div class="mgr-info-banner">
-                <span class="kc-info-icon">ℹ️</span>
+              <div class="section-title"><app-icon name="manager" [size]="16" /> Périmètre managérial</div>
+              <div class="alert alert--warning">
+                <app-icon name="info" [size]="16" class="alert__icon" />
                 <span>Le manager validera les candidatures et planifiera les entretiens pour ce département. Un département ne peut avoir qu'un seul manager actif.</span>
               </div>
               <div class="grid-1">
                 <div class="field">
-                  <label>Département managé <span class="required-star">*</span></label>
-                  <select [(ngModel)]="form.managedDepartmentId">
+                  <label class="label" for="emp-managed-dept">Département managé <span class="req">*</span></label>
+                  <select id="emp-managed-dept" class="select" [(ngModel)]="form.managedDepartmentId">
                     <option [ngValue]="null">-- Sélectionner le département à manager --</option>
                     <option *ngFor="let dept of availableManagedDepartments()" [ngValue]="dept.id">
                       {{ dept.name }}
                     </option>
                   </select>
-                  <small class="field-hint warn" *ngIf="availableManagedDepartments().length === 0">
-                    ⚠️ Tous les départements ont déjà un manager. Libérez-en un avant de créer un nouveau manager.
-                  </small>
-                  <small class="field-hint" *ngIf="form.managedDepartmentId && departmentHasManager(form.managedDepartmentId)">
-                    ℹ️ Ce département est actuellement managé par <strong>{{ getCurrentManagerName(form.managedDepartmentId) }}</strong>.
-                  </small>
+                  <p class="field-error" *ngIf="availableManagedDepartments().length === 0">
+                    <app-icon name="warning" [size]="14" /> Tous les départements ont déjà un manager. Libérez-en un avant de créer un nouveau manager.
+                  </p>
+                  <p class="help" *ngIf="form.managedDepartmentId && departmentHasManager(form.managedDepartmentId)">
+                    <app-icon name="info" [size]="14" /> Ce département est actuellement managé par <strong>{{ getCurrentManagerName(form.managedDepartmentId) }}</strong>.
+                  </p>
                 </div>
               </div>
             </div>
 
             <!-- Section: HR_ADMIN banner (création + rôle HR_ADMIN) -->
             <div class="section admin-section" *ngIf="!isEditing && form.keycloakRole === 'HR_ADMIN'">
-              <div class="admin-info-banner">
-                <span class="kc-info-icon">🛡️</span>
+              <div class="alert alert--info">
+                <app-icon name="lock" [size]="16" class="alert__icon" />
                 <div>
                   <strong>Administrateur RH</strong>
                   <p>L'affectation département/service est optionnelle : ce rôle est transverse à l'organisation.</p>
@@ -211,26 +230,30 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
             <!-- Section: Extraction IA depuis CV (création + rôle EMPLOYEE uniquement)
                  Inutile pour Manager/Admin : ces rôles ne participent pas au matching skills. -->
             <div class="section" *ngIf="!isEditing && form.keycloakRole === 'EMPLOYEE'">
-              <div class="section-title"><span class="st-icon">🤖</span> Extraction IA des compétences</div>
+              <div class="section-title"><app-icon name="ai" [size]="16" /> Extraction IA des compétences</div>
               <div class="cv-zone">
                 <div class="cv-upload-row">
                   <label class="cv-file-label">
                     <input #cvInput type="file" accept=".pdf,.docx,.txt"
                            (change)="onCvSelected($event)" class="cv-file-input" />
-                    <span class="cv-file-btn">📎 Choisir un CV (PDF / DOCX / TXT)</span>
+                    <span class="cv-file-btn"><app-icon name="attach" [size]="16" /> Choisir un CV (PDF / DOCX / TXT)</span>
                     <span class="cv-file-name" *ngIf="cvFile">{{ cvFile.name }}</span>
                   </label>
-                  <button type="button" class="cv-extract-btn"
+                  <button type="button" class="btn btn--primary btn--sm"
                           [disabled]="!cvFile || cvExtracting"
                           (click)="extractCvSkills()">
-                    {{ cvExtracting ? '⏳ Analyse…' : '🤖 Extraire les compétences' }}
+                    @if (cvExtracting) {
+                      <span class="spinner spinner--light"></span> Analyse…
+                    } @else {
+                      <app-icon name="ai" [size]="16" /> Extraire les compétences
+                    }
                   </button>
                 </div>
-                <p class="cv-hint" *ngIf="!cvExtractResult && !cvError">
+                <p class="help cv-hint" *ngIf="!cvExtractResult && !cvError">
                   L'IA analysera le CV et proposera les compétences avec un niveau estimé.
                   Vous pourrez valider/ajuster avant de créer l'employé.
                 </p>
-                <div class="cv-error" *ngIf="cvError">⚠️ {{ cvError }}</div>
+                <div class="alert alert--danger cv-error" *ngIf="cvError"><app-icon name="warning" [size]="16" class="alert__icon" /> {{ cvError }}</div>
 
                 <!-- Résultats d'extraction -->
                 <div class="cv-result" *ngIf="cvExtractResult">
@@ -239,29 +262,29 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
                       <strong>{{ cvExtractResult.skills.length }}</strong> compétence(s) détectée(s)
                     </span>
                     <span class="cv-summary-item" *ngIf="cvExtractResult.estimatedYearsOfExperience">
-                      ⏱️ {{ cvExtractResult.estimatedYearsOfExperience }} ans d'expérience détectés
+                      <app-icon name="clock" [size]="14" /> {{ cvExtractResult.estimatedYearsOfExperience }} ans d'expérience détectés
                     </span>
                     <span class="cv-selected-count">
-                      ✅ {{ selectedExtractedCount() }} sélectionnée(s)
+                      <app-icon name="check" [size]="14" /> {{ selectedExtractedCount() }} sélectionnée(s)
                     </span>
                   </div>
 
                   <div class="cv-skill-row" *ngFor="let sk of cvExtractResult.skills">
                     <input type="checkbox" [(ngModel)]="sk.preselected"
                            [ngModelOptions]="{standalone: true}"
-                           class="cv-check" />
+                           class="cv-check" [attr.aria-label]="'Sélectionner ' + sk.skillName" />
                     <div class="cv-skill-info">
                       <div class="cv-skill-head">
                         <strong>{{ sk.skillName }}</strong>
-                        <span class="cv-skill-cat" *ngIf="sk.category">{{ sk.category }}</span>
+                        <span class="badge badge--neutral" *ngIf="sk.category">{{ sk.category }}</span>
                         <span class="cv-conf" [class.high]="sk.confidence >= 0.75"
                                               [class.mid]="sk.confidence >= 0.5 && sk.confidence < 0.75"
                                               [class.low]="sk.confidence < 0.5">
-                          {{ getConfidenceLabel(sk.confidence) }}
+                          {{ sk.confidence >= 0.75 ? 'Confiance haute' : sk.confidence >= 0.5 ? 'Confiance moyenne' : 'Confiance faible' }}
                         </span>
                       </div>
                       <div class="cv-evidence" *ngIf="sk.evidence">
-                        <span class="ev-icon">💬</span> {{ sk.evidence }}
+                        <app-icon name="message" [size]="13" /> {{ sk.evidence }}
                       </div>
                     </div>
                     <div class="level-picker cv-level">
@@ -287,11 +310,11 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
 
             <!-- Section: Contrat -->
             <div class="section">
-              <div class="section-title"><span class="st-icon">📄</span> Contrat</div>
+              <div class="section-title"><app-icon name="contract" [size]="16" /> Contrat</div>
               <div class="grid-2">
                 <div class="field">
-                  <label>Type de contrat</label>
-                  <select [(ngModel)]="form.contractType">
+                  <label class="label" for="emp-contract-type">Type de contrat</label>
+                  <select id="emp-contract-type" class="select" [(ngModel)]="form.contractType">
                     <option value="">-- Sélectionner --</option>
                     <option value="CDI">CDI</option>
                     <option value="CDD">CDD</option>
@@ -299,26 +322,30 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
                   </select>
                 </div>
                 <div class="field">
-                  <label>Salaire mensuel (DT)</label>
-                  <input [(ngModel)]="form.contractSalary" placeholder="Ex: 2500" type="number" />
+                  <label class="label" for="emp-salary">Salaire mensuel (DT)</label>
+                  <input id="emp-salary" class="input" [(ngModel)]="form.contractSalary" placeholder="Ex: 2500" type="number" />
                 </div>
                 <div class="field">
-                  <label>Date début</label>
-                  <input [(ngModel)]="form.contractStartDate" type="date" />
+                  <label class="label" for="emp-contract-start">Date début</label>
+                  <input id="emp-contract-start" class="input" [(ngModel)]="form.contractStartDate" type="date" />
                 </div>
                 <div class="field">
-                  <label>Date fin</label>
-                  <input [(ngModel)]="form.contractEndDate" type="date" />
+                  <label class="label" for="emp-contract-end">Date fin</label>
+                  <input id="emp-contract-end" class="input" [(ngModel)]="form.contractEndDate" type="date" />
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Footer actions -->
-          <div class="mf-footer">
-            <button class="btn-cancel" (click)="showForm = false">✕ Annuler</button>
-            <button class="btn-submit" (click)="saveEmployee()">
-              {{ isEditing ? '💾 Enregistrer' : '✅ Créer l\\'employé' }}
+          <div class="modal__footer">
+            <button class="btn btn--secondary" (click)="showForm = false"><app-icon name="close" [size]="16" /> Annuler</button>
+            <button class="btn btn--primary" (click)="saveEmployee()">
+              @if (isEditing) {
+                <app-icon name="save" [size]="16" /> Enregistrer
+              } @else {
+                <app-icon name="check" [size]="16" /> Créer l'employé
+              }
             </button>
           </div>
         </div>
@@ -326,54 +353,59 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
 
       <!-- ═══ Modal Compétences ═══ -->
       <div class="modal-overlay" *ngIf="showSkillModal" (click)="showSkillModal = false">
-        <div class="modal-form skill-modal" (click)="$event.stopPropagation()">
-          <div class="mf-header skill-header">
-            <div class="mf-icon">🎓</div>
-            <h3>Compétences</h3>
-            <p class="mf-sub">{{ skillEmployee?.firstName }} {{ skillEmployee?.lastName }}</p>
+        <div class="modal modal--lg" role="dialog" aria-modal="true" aria-label="Compétences de l'employé" (click)="$event.stopPropagation()">
+          <div class="modal__header">
+            <div>
+              <div class="modal__title"><app-icon name="skills" [size]="20" /> Compétences</div>
+              <div class="modal__sub">{{ skillEmployee?.firstName }} {{ skillEmployee?.lastName }}</div>
+            </div>
+            <button class="icon-btn" aria-label="Fermer" (click)="showSkillModal = false"><app-icon name="close" [size]="18" /></button>
           </div>
 
-          <div class="mf-body">
+          <div class="modal__body">
             <!-- Ajout d'une compétence -->
             <div class="add-skill-zone">
-              <div class="ask-title">➕ Ajouter une compétence</div>
-              <div class="ask-row">
-                <select [(ngModel)]="newSkillId" class="ask-select">
-                  <option [ngValue]="null">— Choisir une compétence —</option>
-                  <option *ngFor="let s of availableSkillsForAdd()" [ngValue]="s.id">
-                    {{ s.name }}{{ s.category ? ' (' + s.category + ')' : '' }}
-                  </option>
-                </select>
-                <div class="ask-levels">
-                  <button type="button"
-                          *ngFor="let lvl of [1,2,3,4,5]"
-                          class="lvl-btn"
-                          [class.active]="newSkillLevel === lvl"
-                          (click)="newSkillLevel = lvl"
-                          [title]="getLevelLabel(lvl)">
-                    {{ lvl }}
+              <div class="field">
+                <label class="label" for="skill-select"><app-icon name="add" [size]="16" /> Ajouter une compétence</label>
+                <div class="ask-row">
+                  <select id="skill-select" [(ngModel)]="newSkillId" class="select ask-select">
+                    <option [ngValue]="null">— Choisir une compétence —</option>
+                    <option *ngFor="let s of availableSkillsForAdd()" [ngValue]="s.id">
+                      {{ s.name }}{{ s.category ? ' (' + s.category + ')' : '' }}
+                    </option>
+                  </select>
+                  <div class="level-picker">
+                    <button type="button"
+                            *ngFor="let lvl of [1,2,3,4,5]"
+                            class="lvl-btn"
+                            [class.active]="newSkillLevel === lvl"
+                            (click)="newSkillLevel = lvl"
+                            [title]="getLevelLabel(lvl)">
+                      {{ lvl }}
+                    </button>
+                  </div>
+                  <button class="btn btn--success btn--sm" [disabled]="!newSkillId" (click)="addSkillToEmployee()">
+                    <app-icon name="add" [size]="16" /> Ajouter
                   </button>
                 </div>
-                <button class="ask-add" [disabled]="!newSkillId" (click)="addSkillToEmployee()">
-                  ✅ Ajouter
-                </button>
               </div>
-              <p class="ask-hint">{{ getLevelLabel(newSkillLevel) }} — utilisé par le matching IA</p>
+              <p class="help ask-hint">{{ getLevelLabel(newSkillLevel) }} — utilisé par le matching IA</p>
             </div>
 
             <!-- Liste des compétences actuelles -->
             <div class="current-skills">
-              <div class="cs-title">📋 Compétences actuelles ({{ employeeSkills.length }})</div>
+              <div class="cs-title"><app-icon name="list" [size]="16" /> Compétences actuelles ({{ employeeSkills.length }})</div>
 
-              <div class="cs-empty" *ngIf="employeeSkills.length === 0">
-                <p>Aucune compétence assignée.</p>
-                <p class="cs-empty-sub">L'employé n'apparaîtra pas dans le matching pour les offres nécessitant des compétences.</p>
+              <div class="empty-state" *ngIf="employeeSkills.length === 0">
+                <div class="empty-state__icon"><app-icon name="inbox" [size]="24" /></div>
+                <div class="empty-state__title">Aucune compétence assignée</div>
+                <div class="empty-state__text">L'employé n'apparaîtra pas dans le matching pour les offres nécessitant des compétences.</div>
               </div>
 
               <div class="cs-row" *ngFor="let sk of employeeSkills">
                 <div class="cs-info">
                   <strong>{{ sk.skillName }}</strong>
-                  <span class="cs-cat" *ngIf="sk.category">{{ sk.category }}</span>
+                  <span class="badge badge--neutral" *ngIf="sk.category">{{ sk.category }}</span>
                 </div>
                 <div class="level-picker">
                   <button type="button"
@@ -385,406 +417,145 @@ import { RecruitmentApiService } from '../../../services/recruitment-api.service
                   </button>
                 </div>
                 <span class="cs-label">{{ getLevelLabel(sk.level) }}</span>
-                <button class="cs-remove" (click)="removeSkill(sk)" title="Retirer">×</button>
+                <button class="icon-btn icon-btn--danger icon-btn--sm" aria-label="Retirer la compétence" (click)="removeSkill(sk)"><app-icon name="close" [size]="16" /></button>
               </div>
             </div>
           </div>
 
-          <div class="mf-footer">
-            <button class="btn-cancel" (click)="showSkillModal = false">Fermer</button>
+          <div class="modal__footer">
+            <button class="btn btn--secondary" (click)="showSkillModal = false">Fermer</button>
           </div>
         </div>
       </div>
 
       <!-- Modal Documents -->
       <div class="modal-overlay" *ngIf="showDocModal" (click)="showDocModal = false">
-        <div class="modal-form doc-modal" (click)="$event.stopPropagation()">
-          <div class="mf-header">
-            <div class="mf-icon">📎</div>
-            <h3>Documents</h3>
-            <p class="mf-sub">{{ docEmployee?.firstName }} {{ docEmployee?.lastName }}</p>
+        <div class="modal" role="dialog" aria-modal="true" aria-label="Documents de l'employé" (click)="$event.stopPropagation()">
+          <div class="modal__header">
+            <div>
+              <div class="modal__title"><app-icon name="document" [size]="20" /> Documents</div>
+              <div class="modal__sub">{{ docEmployee?.firstName }} {{ docEmployee?.lastName }}</div>
+            </div>
+            <button class="icon-btn" aria-label="Fermer" (click)="showDocModal = false"><app-icon name="close" [size]="18" /></button>
           </div>
-          <div class="mf-body">
+          <div class="modal__body">
             <div class="upload-zone">
-              <input type="file" #fileInput (change)="onFileSelected($event)" class="file-input" />
-              <button class="upload-btn" (click)="uploadFile()" [disabled]="!selectedFile">📤 Uploader</button>
+              <input type="file" #fileInput (change)="onFileSelected($event)" class="file-input" aria-label="Choisir un fichier" />
+              <button class="btn btn--primary btn--sm" (click)="uploadFile()" [disabled]="!selectedFile"><app-icon name="upload" [size]="16" /> Uploader</button>
             </div>
             <div class="doc-list">
               <div class="doc-item" *ngFor="let doc of documents">
-                <div class="doc-icon">{{ getFileIcon(doc.fileType) }}</div>
+                <div class="doc-icon"><app-icon name="document" [size]="20" /></div>
                 <div class="doc-info">
                   <div class="doc-name">{{ doc.fileName }}</div>
                   <div class="doc-meta">{{ doc.uploadDate }} &bull; {{ doc.fileType }}</div>
                 </div>
-                <div class="doc-actions">
-                  <button class="dl-btn" (click)="downloadDoc(doc)">📥</button>
-                  <button class="rm-btn" (click)="deleteDoc(doc.id)">🗑️</button>
+                <div class="cell-actions doc-actions">
+                  <button class="icon-btn" aria-label="Télécharger" title="Télécharger" (click)="downloadDoc(doc)"><app-icon name="download" [size]="16" /></button>
+                  <button class="icon-btn icon-btn--danger" aria-label="Supprimer" title="Supprimer" (click)="deleteDoc(doc.id)"><app-icon name="delete" [size]="16" /></button>
                 </div>
               </div>
-              <p *ngIf="documents.length === 0" class="empty-docs">Aucun document.</p>
+              <div class="empty-state" *ngIf="documents.length === 0">
+                <div class="empty-state__icon"><app-icon name="inbox" [size]="24" /></div>
+                <div class="empty-state__text">Aucun document.</div>
+              </div>
             </div>
           </div>
-          <div class="mf-footer">
-            <button class="btn-cancel" (click)="showDocModal = false">Fermer</button>
+          <div class="modal__footer">
+            <button class="btn btn--secondary" (click)="showDocModal = false">Fermer</button>
           </div>
         </div>
       </div>
     </div>
   `,
   styles: [`
-    .management { animation: fadeIn 0.4s ease; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    /* Bannières de page */
+    .page-alert { margin-bottom: var(--sp-4); }
+    .alert .alert__action { margin-left: auto; flex: none; }
+    .sb-title { font-weight: 650; color: var(--c-success-ink); font-size: var(--fs-14); margin-bottom: 2px; }
+    .sb-body { color: var(--c-success-ink); font-size: var(--fs-13); line-height: 1.6; }
+    .sb-username { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-xs); padding: 1px 7px; font-weight: 650; color: var(--c-ink); }
 
-    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px; }
-    .header-left { display:flex; align-items:center; gap:14px; }
-    .header-icon { font-size:2.2rem; }
-    .page-header h1 { margin:0; font-size:1.6rem; font-weight:800; background:linear-gradient(135deg,#1e3a5f,#3b82f6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-    .header-sub { margin:4px 0 0; color:#64748b; font-size:0.88rem; }
-    .add-btn { display:flex; align-items:center; gap:6px; padding:10px 22px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:white; border:none; border-radius:10px; cursor:pointer; font-size:0.9rem; font-weight:600; box-shadow:0 4px 12px rgba(37,99,235,0.25); transition:all 0.25s; }
-    .add-btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(37,99,235,0.35); }
-    .add-btn span { font-size:1.2rem; font-weight:700; }
+    /* Sections de formulaire (dans la modale) */
+    .section { display: flex; flex-direction: column; gap: var(--sp-3); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+    .grid-1 { display: grid; grid-template-columns: 1fr; gap: var(--sp-4); }
 
-    .table-container { background:white; border-radius:14px; overflow-x:auto; border:1px solid #e2e8f0; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
-    table { width:100%; border-collapse:collapse; }
-    th { background:#f8fafc; padding:14px 16px; text-align:left; color:#475569; font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #e2e8f0; }
-    td { padding:14px 16px; border-bottom:1px solid #f1f5f9; font-size:0.88rem; color:#334155; }
-    tr:hover { background:#f8fafc; }
-    .badge { padding:3px 12px; border-radius:20px; font-size:0.73rem; font-weight:700; }
-    .CDI { background:#dcfce7; color:#166534; } .CDD { background:#fef9c3; color:#854d0e; } .STAGE { background:#dbeafe; color:#1e40af; }
-    .actions { display:flex; gap:6px; }
-    .edit-btn,.delete-btn,.doc-btn,.skill-btn { border:none; background:none; cursor:pointer; font-size:1.05rem; padding:5px; border-radius:8px; transition:background 0.15s; }
-    .edit-btn:hover { background:#dbeafe; } .delete-btn:hover { background:#fee2e2; } .doc-btn:hover { background:#f0fdf4; }
-    .skill-btn:hover { background:#f3e8ff; }
+    /* Aperçu du rôle sélectionné (surfaces plates, pas de dégradé) */
+    .role-preview { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-md); border: 1px solid var(--c-border); background: var(--c-surface-2); }
+    .role-preview .rp-icon { flex: none; display: inline-flex; color: var(--c-ink-soft); }
+    .role-preview .rp-body strong { display: block; color: var(--c-ink); font-size: var(--fs-14); }
+    .role-preview .rp-body p { margin: 2px 0 0; color: var(--c-muted); font-size: var(--fs-13); line-height: 1.45; }
+    .role-employee  { background: var(--c-info-soft);    border-color: var(--c-border); }
+    .role-manager   { background: var(--c-warning-soft); border-color: var(--c-border); }
+    .role-hr_admin  { background: var(--c-accent-soft);  border-color: var(--c-border-strong); }
 
-    /* ══════════════ Modal Compétences ══════════════ */
-    .skill-modal { max-width:720px; }
-    .skill-header { background:linear-gradient(135deg,#f5f3ff,#ede9fe) !important; }
-    .add-skill-zone {
-      background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;
-      padding:14px 16px; margin-bottom:20px;
-    }
-    .ask-title { font-weight:700; color:#1e293b; font-size:0.9rem; margin-bottom:12px; }
-    .ask-row {
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-    }
-    .ask-select {
-      flex:1; min-width:200px;
-      padding:9px 12px; border:2px solid #e2e8f0; border-radius:10px;
-      font-size:0.88rem; outline:none; background:white;
-    }
-    .ask-select:focus { border-color:#8b5cf6; }
-    .ask-levels {
-      display:flex; gap:4px;
-      background:white; padding:3px; border-radius:8px;
-      border:1px solid #e2e8f0;
-    }
-    .lvl-btn {
-      width:30px; height:30px;
-      border:none; background:transparent;
-      border-radius:6px; cursor:pointer;
-      font-size:0.85rem; font-weight:600;
-      color:#64748b; transition:all 0.15s;
-    }
-    .lvl-btn:hover { background:#f1f5f9; color:#1e293b; }
-    .lvl-btn.active {
-      background:linear-gradient(135deg,#8b5cf6,#6366f1);
-      color:white;
-      box-shadow:0 2px 6px rgba(139,92,246,0.3);
-    }
-    .ask-add {
-      padding:9px 18px;
-      background:linear-gradient(135deg,#10b981,#059669);
-      color:white; border:none; border-radius:10px;
-      cursor:pointer; font-size:0.85rem; font-weight:700;
-      transition:all 0.2s;
-    }
-    .ask-add:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 10px rgba(16,185,129,0.3); }
-    .ask-add:disabled { opacity:0.4; cursor:not-allowed; }
-    .ask-hint {
-      margin:8px 0 0; font-size:0.78rem; color:#64748b;
-    }
-
-    .current-skills {}
-    .cs-title { font-weight:700; color:#1e293b; font-size:0.92rem; margin-bottom:12px; }
-    .cs-empty {
-      text-align:center; padding:32px 16px;
-      background:#fffbeb; border:1px dashed #fde68a;
-      border-radius:12px;
-    }
-    .cs-empty p { margin:4px 0; color:#92400e; font-weight:500; }
-    .cs-empty-sub { font-size:0.82rem; color:#a16207 !important; font-weight:400 !important; }
-    .cs-row {
-      display:flex; align-items:center; gap:12px;
-      padding:12px;
-      border-bottom:1px solid #f1f5f9;
-      transition:background 0.15s;
-    }
-    .cs-row:hover { background:#fafafa; }
-    .cs-info { flex:1; display:flex; flex-direction:column; gap:2px; }
-    .cs-info strong { color:#1e293b; font-size:0.9rem; }
-    .cs-cat {
-      font-size:0.72rem; color:#94a3b8;
-      background:#f1f5f9; padding:2px 8px;
-      border-radius:6px; align-self:flex-start;
-    }
-    .level-picker {
-      display:flex; gap:4px;
-      background:#f8fafc; padding:3px; border-radius:8px;
-      border:1px solid #e2e8f0;
-    }
-    .cs-label {
-      min-width:90px; text-align:right;
-      font-size:0.78rem; color:#64748b; font-weight:500;
-    }
-    .cs-remove {
-      width:28px; height:28px;
-      border:none; background:#fee2e2; color:#b91c1c;
-      border-radius:8px; cursor:pointer;
-      font-size:1rem; font-weight:700;
-    }
-    .cs-remove:hover { background:#fecaca; }
-
-    /* ══════════════ Extraction CV par IA ══════════════ */
-    .cv-zone {
-      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-      border: 1px solid #ddd6fe;
-      border-radius: 12px;
-      padding: 16px;
-    }
-    .cv-upload-row {
-      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-    }
-    .cv-file-label {
-      flex: 1; min-width: 200px;
-      display: flex; gap: 10px; align-items: center;
-      cursor: pointer;
-    }
+    /* Extraction CV par IA */
+    .cv-zone { background: var(--c-surface-2); border: 1px solid var(--c-border); border-radius: var(--r-md); padding: var(--sp-4); }
+    .cv-upload-row { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; }
+    .cv-file-label { flex: 1; min-width: 220px; display: flex; gap: var(--sp-2); align-items: center; cursor: pointer; flex-wrap: wrap; }
     .cv-file-input { display: none; }
-    .cv-file-btn {
-      padding: 10px 16px;
-      background: white; border: 2px dashed #8b5cf6;
-      border-radius: 10px;
-      color: #6d28d9; font-size: 0.85rem; font-weight: 600;
-      transition: all 0.2s;
-    }
-    .cv-file-label:hover .cv-file-btn {
-      background: #f5f3ff; border-color: #6d28d9;
-    }
-    .cv-file-name {
-      font-size: 0.82rem; color: #475569;
-      font-family: monospace; padding: 4px 10px;
-      background: white; border-radius: 6px;
-      border: 1px solid #e2e8f0;
-    }
-    .cv-extract-btn {
-      padding: 10px 20px;
-      background: linear-gradient(135deg, #8b5cf6, #6366f1);
-      color: white; border: none; border-radius: 10px;
-      cursor: pointer; font-size: 0.88rem; font-weight: 700;
-      box-shadow: 0 3px 10px rgba(139, 92, 246, 0.3);
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-    .cv-extract-btn:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 5px 14px rgba(139, 92, 246, 0.45);
-    }
-    .cv-extract-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
-    .cv-hint {
-      margin: 12px 0 0; font-size: 0.8rem; color: #6d28d9; font-style: italic;
-    }
-    .cv-error {
-      margin-top: 12px; padding: 10px 14px;
-      background: #fef2f2; border: 1px solid #fecaca;
-      border-radius: 8px; color: #991b1b; font-size: 0.85rem;
-    }
+    .cv-file-btn { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 9px 14px; background: var(--c-surface); border: 1px dashed var(--c-border-strong); border-radius: var(--r-sm); color: var(--c-ink-soft); font-size: var(--fs-13); font-weight: 600; transition: border-color var(--transition), background var(--transition), color var(--transition); }
+    .cv-file-label:hover .cv-file-btn { border-color: var(--c-brand); background: var(--c-brand-soft); color: var(--c-brand-ink); }
+    .cv-file-name { font-size: var(--fs-12); color: var(--c-muted); font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; padding: 3px 9px; background: var(--c-surface); border-radius: var(--r-xs); border: 1px solid var(--c-border); }
+    .cv-hint { margin-top: var(--sp-3); font-style: italic; }
+    .cv-error { margin-top: var(--sp-3); }
 
-    .cv-result {
-      margin-top: 16px; padding-top: 14px;
-      border-top: 1px solid #ddd6fe;
-    }
-    .cv-summary {
-      display: flex; gap: 18px; flex-wrap: wrap;
-      padding: 10px 14px; margin-bottom: 12px;
-      background: white; border-radius: 10px;
-      font-size: 0.83rem; color: #475569;
-    }
-    .cv-summary-item strong { color: #1e293b; font-weight: 700; }
-    .cv-selected-count {
-      margin-left: auto;
-      font-weight: 700; color: #15803d;
-    }
+    .cv-result { margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--c-border); }
+    .cv-summary { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center; padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-3); background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-sm); font-size: var(--fs-13); color: var(--c-muted); }
+    .cv-summary-item { display: inline-flex; align-items: center; gap: 6px; }
+    .cv-summary-item strong { color: var(--c-ink); font-weight: 700; }
+    .cv-selected-count { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-weight: 650; color: var(--c-success-ink); }
 
-    .cv-skill-row {
-      display: flex; gap: 10px; align-items: center;
-      padding: 10px 12px; margin-bottom: 8px;
-      background: white; border-radius: 10px;
-      border: 1px solid #e2e8f0;
-      transition: all 0.2s;
-    }
-    .cv-skill-row:hover { border-color: #c4b5fd; }
-    .cv-check {
-      width: 20px; height: 20px;
-      cursor: pointer; accent-color: #8b5cf6;
-      flex-shrink: 0;
-    }
+    .cv-skill-row { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-2); background: var(--c-surface); border-radius: var(--r-sm); border: 1px solid var(--c-border); transition: border-color var(--transition); }
+    .cv-skill-row:hover { border-color: var(--c-border-strong); }
+    .cv-check { width: 18px; height: 18px; cursor: pointer; accent-color: var(--c-brand); flex-shrink: 0; }
     .cv-skill-info { flex: 1; min-width: 0; }
-    .cv-skill-head {
-      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-    }
-    .cv-skill-head strong { color: #1e293b; font-size: 0.9rem; }
-    .cv-skill-cat {
-      font-size: 0.7rem; color: #6d28d9;
-      background: #ede9fe; padding: 2px 8px;
-      border-radius: 6px;
-    }
-    .cv-conf {
-      font-size: 0.7rem; font-weight: 600;
-      padding: 2px 8px; border-radius: 6px;
-    }
-    .cv-conf.high { background: #dcfce7; color: #166534; }
-    .cv-conf.mid { background: #fef9c3; color: #854d0e; }
-    .cv-conf.low { background: #f1f5f9; color: #64748b; }
-    .cv-evidence {
-      margin-top: 4px;
-      font-size: 0.74rem; color: #64748b;
-      font-style: italic; line-height: 1.4;
-    }
-    .ev-icon { opacity: 0.6; }
-    .cv-level {
-      flex-shrink: 0;
-    }
-    .cv-lvl-label {
-      min-width: 90px; text-align: right;
-      font-size: 0.75rem; color: #64748b; font-weight: 500;
-    }
-    .cv-empty {
-      text-align: center; padding: 24px;
-      background: white; border-radius: 10px;
-      color: #6d28d9; font-size: 0.85rem;
-    }
+    .cv-skill-head { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+    .cv-skill-head strong { color: var(--c-ink); font-size: var(--fs-14); }
+    .cv-conf { font-size: var(--fs-12); font-weight: 600; padding: 2px 8px; border-radius: var(--r-pill); background: var(--c-surface-3); color: var(--c-muted); }
+    .cv-conf.high { background: var(--c-success-soft); color: var(--c-success-ink); }
+    .cv-conf.mid  { background: var(--c-warning-soft); color: var(--c-warning-ink); }
+    .cv-conf.low  { background: var(--c-surface-3);    color: var(--c-muted); }
+    .cv-evidence { margin-top: 4px; display: flex; align-items: flex-start; gap: 6px; font-size: var(--fs-12); color: var(--c-muted); line-height: 1.45; }
+    .cv-level { flex-shrink: 0; }
+    .cv-lvl-label { min-width: 84px; text-align: right; font-size: var(--fs-12); color: var(--c-muted); font-weight: 500; }
+    .cv-empty { text-align: center; padding: var(--sp-5); background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-sm); color: var(--c-muted); font-size: var(--fs-13); }
 
-    /* ══════════════ Rôle preview ══════════════ */
-    .role-preview {
-      display:flex; align-items:center; gap:12px;
-      padding:12px 14px; margin-top:12px;
-      border-radius:10px;
-      border:1px solid #e2e8f0;
-      transition:all 0.25s ease;
-    }
-    .role-preview .rp-icon { font-size:1.7rem; line-height:1; flex-shrink:0; }
-    .role-preview .rp-body strong { display:block; color:#1e293b; font-size:0.9rem; }
-    .role-preview .rp-body p { margin:2px 0 0; color:#475569; font-size:0.8rem; line-height:1.4; }
-    .role-employee  { background:linear-gradient(135deg,#eff6ff,#dbeafe); border-color:#bfdbfe; }
-    .role-manager   { background:linear-gradient(135deg,#fefce8,#fef9c3); border-color:#fde68a; }
-    .role-hr_admin  { background:linear-gradient(135deg,#fdf4ff,#fae8ff); border-color:#f5d0fe; }
+    /* Sélecteur de niveau (1..5) */
+    .level-picker { display: inline-flex; gap: 3px; background: var(--c-surface-2); padding: 3px; border-radius: var(--r-sm); border: 1px solid var(--c-border); }
+    .lvl-btn { width: 28px; height: 28px; border: none; background: transparent; border-radius: var(--r-xs); cursor: pointer; font-size: var(--fs-13); font-weight: 600; color: var(--c-muted); transition: background var(--transition), color var(--transition); font-variant-numeric: tabular-nums; }
+    .lvl-btn:hover { background: var(--c-surface-3); color: var(--c-ink); }
+    .lvl-btn.active { background: var(--c-brand); color: #fff; }
 
-    /* ══════════════ Sections conditionnelles par rôle ══════════════ */
-    .mgr-section .section-title { color:#854d0e; border-bottom-color:#fef3c7; }
-    .mgr-info-banner {
-      display:flex; align-items:flex-start; gap:8px;
-      background:#fefce8; border:1px solid #fde68a;
-      border-radius:10px; padding:10px 14px;
-      margin-bottom:14px; font-size:0.83rem; color:#854d0e; line-height:1.45;
-    }
-    .admin-section .admin-info-banner {
-      display:flex; align-items:flex-start; gap:10px;
-      background:#fdf4ff; border:1px solid #f5d0fe;
-      border-radius:12px; padding:12px 14px;
-      color:#7c3aed; font-size:0.85rem;
-    }
-    .admin-info-banner strong { display:block; color:#581c87; font-size:0.92rem; margin-bottom:2px; }
-    .admin-info-banner p { margin:0; color:#7c3aed; line-height:1.4; }
+    /* Modale compétences */
+    .add-skill-zone { background: var(--c-surface-2); border: 1px solid var(--c-border); border-radius: var(--r-md); padding: var(--sp-4); }
+    .ask-row { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; }
+    .ask-select { flex: 1; min-width: 200px; }
+    .ask-hint { margin-top: var(--sp-2); }
+    .cs-title { display: flex; align-items: center; gap: var(--sp-2); font-weight: 650; color: var(--c-ink); font-size: var(--fs-14); margin-bottom: var(--sp-2); }
+    .cs-row { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3); border-bottom: 1px solid var(--c-border); }
+    .cs-row:last-child { border-bottom: none; }
+    .cs-info { flex: 1; display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; min-width: 0; }
+    .cs-info strong { color: var(--c-ink); font-size: var(--fs-14); }
+    .cs-label { min-width: 84px; text-align: right; font-size: var(--fs-12); color: var(--c-muted); font-weight: 500; }
 
-    .grid-1 { display:grid; grid-template-columns:1fr; gap:14px; }
+    /* Modale documents */
+    .upload-zone { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3) var(--sp-4); background: var(--c-surface-2); border: 1px dashed var(--c-border-strong); border-radius: var(--r-md); }
+    .file-input { flex: 1; font-size: var(--fs-13); color: var(--c-ink-soft); min-width: 0; }
+    .doc-list { display: flex; flex-direction: column; }
+    .doc-item { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3); border-bottom: 1px solid var(--c-border); }
+    .doc-item:last-child { border-bottom: none; }
+    .doc-icon { flex: none; width: 36px; height: 36px; border-radius: var(--r-sm); display: inline-flex; align-items: center; justify-content: center; background: var(--c-surface-3); color: var(--c-muted); }
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-name { font-weight: 600; color: var(--c-ink); font-size: var(--fs-14); }
+    .doc-meta { color: var(--c-muted); font-size: var(--fs-12); }
+    .doc-actions { flex: none; }
 
-    .required-star { color:#dc2626; font-weight:700; margin-left:2px; }
-    .field-hint { margin-top:6px; font-size:0.76rem; color:#64748b; line-height:1.4; }
-    .field-hint.warn { color:#b45309; }
-
-    /* Headers colorés par rôle (création seulement) */
-    .header-manager  { background:linear-gradient(135deg,#fefce8,#fef9c3) !important; }
-    .header-hr_admin { background:linear-gradient(135deg,#fdf4ff,#fae8ff) !important; }
-
-    /* Modal overlay */
-    .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:1000; animation:fadeIn 0.2s ease; }
-
-    /* Form modal */
-    .modal-form { background:white; border-radius:20px; width:94%; max-width:680px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 48px rgba(0,0,0,0.2); animation:modalIn 0.3s ease; }
-    @keyframes modalIn { from{opacity:0;transform:scale(0.95) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
-
-    .mf-header { text-align:center; padding:28px 24px 16px; background:linear-gradient(135deg,#eff6ff,#f8fafc); border-bottom:1px solid #e2e8f0; }
-    .mf-icon { font-size:2.2rem; margin-bottom:6px; }
-    .mf-header h3 { margin:0 0 4px; color:#1e293b; font-size:1.25rem; font-weight:800; }
-    .mf-sub { margin:0; color:#64748b; font-size:0.88rem; }
-
-    .mf-body { padding:24px; }
-
-    /* Sections */
-    .section { margin-bottom:24px; }
-    .section:last-child { margin-bottom:0; }
-    .section-title { display:flex; align-items:center; gap:8px; font-weight:700; color:#1e3a5f; font-size:0.95rem; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid #eff6ff; }
-    .st-icon { font-size:1.1rem; }
-
-    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    .field { display:flex; flex-direction:column; gap:5px; }
-    .field label { font-size:0.78rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.4px; }
-    .field input, .field select {
-      padding:11px 14px; border:2px solid #e2e8f0; border-radius:10px;
-      font-size:0.9rem; outline:none; font-family:inherit; background:white;
-      transition:all 0.2s; color:#1e293b;
-    }
-    .field input:focus, .field select:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
-    .field input::placeholder { color:#94a3b8; }
-    .field select:disabled { background:#f8fafc; color:#94a3b8; cursor:not-allowed; }
-
-    /* Footer */
-    .mf-footer { display:flex; justify-content:center; gap:14px; padding:20px 24px 28px; border-top:1px solid #f1f5f9; }
-    .btn-cancel { padding:11px 28px; border:2px solid #e2e8f0; background:white; border-radius:10px; cursor:pointer; font-size:0.9rem; font-weight:600; color:#64748b; transition:all 0.2s; }
-    .btn-cancel:hover { background:#f8fafc; border-color:#cbd5e1; }
-    .btn-submit { padding:11px 32px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:white; border:none; border-radius:10px; cursor:pointer; font-size:0.9rem; font-weight:700; box-shadow:0 4px 12px rgba(37,99,235,0.25); transition:all 0.25s; }
-    .btn-submit:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(37,99,235,0.35); }
-
-    /* Documents modal */
-    .doc-modal { max-width:620px; }
-    .upload-zone { display:flex; gap:12px; align-items:center; margin-bottom:18px; padding:14px; background:#f8fafc; border-radius:12px; border:2px dashed #cbd5e1; }
-    .file-input { flex:1; font-size:0.85rem; }
-    .upload-btn { padding:8px 18px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:600; transition:all 0.2s; }
-    .upload-btn:disabled { opacity:0.5; cursor:not-allowed; }
-    .doc-list { max-height:280px; overflow-y:auto; }
-    .doc-item { display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #f1f5f9; border-radius:8px; transition:background 0.15s; }
-    .doc-item:hover { background:#f8fafc; }
-    .doc-icon { font-size:1.5rem; }
-    .doc-info { flex:1; }
-    .doc-name { font-weight:600; color:#1e293b; font-size:0.88rem; }
-    .doc-meta { color:#94a3b8; font-size:0.75rem; }
-    .doc-actions { display:flex; gap:6px; }
-    .dl-btn,.rm-btn { border:none; background:none; cursor:pointer; font-size:1.1rem; padding:4px; border-radius:6px; transition:background 0.15s; }
-    .dl-btn:hover { background:#dbeafe; } .rm-btn:hover { background:#fee2e2; }
-    .empty-docs { color:#94a3b8; font-style:italic; text-align:center; padding:24px 0; }
-
-    /* Error banner */
-    .error-banner { display:flex; align-items:center; gap:12px; background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:14px 18px; margin-bottom:18px; color:#dc2626; font-size:0.88rem; }
-    .error-icon { font-size:1.2rem; flex-shrink:0; }
-    .retry-btn { margin-left:auto; padding:6px 16px; background:#dc2626; color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:600; flex-shrink:0; }
-    .retry-btn:hover { background:#b91c1c; }
-
-    /* Keycloak account section */
-    .kc-info-banner { display:flex; align-items:center; gap:8px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:0.85rem; color:#1e40af; }
-    .kc-info-icon { font-size:1rem; flex-shrink:0; }
-    .kc-info-banner strong { font-weight:700; }
-
-    /* Success banner */
-    .success-banner { background:#f0fdf4; border:1px solid #86efac; border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; align-items:flex-start; gap:12px; }
-    .success-banner .sb-icon { font-size:1.4rem; flex-shrink:0; margin-top:1px; }
-    .success-banner .sb-title { font-weight:700; color:#15803d; font-size:0.95rem; margin-bottom:4px; }
-    .success-banner .sb-body { color:#166534; font-size:0.85rem; line-height:1.6; }
-    .sb-username { font-family:monospace; background:#dcfce7; border:1px solid #86efac; border-radius:6px; padding:2px 8px; font-weight:700; }
-
-    @media (max-width:600px) {
-      .grid-2 { grid-template-columns:1fr; }
-      .mf-footer { flex-direction:column; }
-      .btn-cancel,.btn-submit { width:100%; text-align:center; }
+    @media (max-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .modal__footer { flex-direction: column-reverse; }
+      .modal__footer .btn { width: 100%; }
     }
   `]
 })
@@ -896,14 +667,6 @@ export class EmployeeManagementComponent implements OnInit {
     }
   }
 
-  getRoleIcon(): string {
-    switch (this.form.keycloakRole) {
-      case 'MANAGER': return '👔';
-      case 'HR_ADMIN': return '🛡️';
-      default: return '👤';
-    }
-  }
-
   getRoleLabelShort(): string {
     switch (this.form.keycloakRole) {
       case 'MANAGER': return 'manager';
@@ -995,12 +758,6 @@ export class EmployeeManagementComponent implements OnInit {
   selectedExtractedCount(): number {
     if (!this.cvExtractResult?.skills) return 0;
     return this.cvExtractResult.skills.filter((s: any) => s.preselected).length;
-  }
-
-  getConfidenceLabel(confidence: number): string {
-    if (confidence >= 0.75) return '🟢 Haute';
-    if (confidence >= 0.5) return '🟡 Moyenne';
-    return '⚪ Faible';
   }
 
   editEmployee(emp: any): void {
@@ -1159,14 +916,8 @@ export class EmployeeManagementComponent implements OnInit {
     }
   }
 
-  getFileIcon(fileType: string): string {
-    if (fileType?.includes('pdf')) return '\uD83D\uDCC4';
-    if (fileType?.includes('image')) return '\uD83D\uDDBC\uFE0F';
-    if (fileType?.includes('word') || fileType?.includes('document')) return '\uD83D\uDCC3';
-    return '\uD83D\uDCCE';
-  }
 
-  // \u2500\u2500\u2500 Comp\u00E9tences (matching IA) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ─── Compétences (matching IA) ────────────────────────
 
   openSkills(emp: any): void {
     this.skillEmployee = emp;
@@ -1184,7 +935,7 @@ export class EmployeeManagementComponent implements OnInit {
     });
   }
 
-  /** Liste des comp\u00E9tences disponibles (= toutes - celles d\u00E9j\u00E0 assign\u00E9es) */
+  /** Liste des compétences disponibles (= toutes - celles déjà assignées) */
   availableSkillsForAdd(): any[] {
     const assignedIds = new Set(this.employeeSkills.map(s => s.skillId));
     return this.allSkills.filter(s => !assignedIds.has(s.id));
@@ -1205,7 +956,7 @@ export class EmployeeManagementComponent implements OnInit {
         this.newSkillLevel = 3;
         this.loadEmployeeSkills();
       },
-      error: (err) => alert('Erreur ajout comp\u00E9tence : ' + (err.error?.message || err.message))
+      error: (err) => alert('Erreur ajout compétence : ' + (err.error?.message || err.message))
     });
   }
 
@@ -1213,12 +964,12 @@ export class EmployeeManagementComponent implements OnInit {
     if (sk.level === level) return;
     this.employeeApi.updateEmployeeSkillLevel(this.skillEmployee.matricule, sk.skillId, level).subscribe({
       next: () => { sk.level = level; },
-      error: (err) => alert('Erreur mise \u00E0 jour : ' + (err.error?.message || err.message))
+      error: (err) => alert('Erreur mise à jour : ' + (err.error?.message || err.message))
     });
   }
 
   removeSkill(sk: any): void {
-    if (!confirm(`Retirer la comp\u00E9tence "${sk.skillName}" ?`)) return;
+    if (!confirm(`Retirer la compétence "${sk.skillName}" ?`)) return;
     this.employeeApi.removeEmployeeSkill(this.skillEmployee.matricule, sk.skillId).subscribe({
       next: () => this.loadEmployeeSkills()
     });
@@ -1226,8 +977,8 @@ export class EmployeeManagementComponent implements OnInit {
 
   getLevelLabel(level: number): string {
     const labels: { [k: number]: string } = {
-      1: 'D\u00E9butant', 2: 'Notions', 3: 'Interm\u00E9diaire', 4: 'Avanc\u00E9', 5: 'Expert'
+      1: 'Débutant', 2: 'Notions', 3: 'Intermédiaire', 4: 'Avancé', 5: 'Expert'
     };
-    return labels[level] || '\u2014';
+    return labels[level] || '—';
   }
 }

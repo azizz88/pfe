@@ -1,248 +1,261 @@
-<div class="management">
+<div class="recruitment page role-admin">
   <!-- Header -->
   <div class="page-header">
-    <div class="header-left">
-      <div class="header-icon">🎯</div>
-      <div>
-        <h1>Gestion du Recrutement</h1>
-        <p class="header-sub">Gérez vos offres d'emploi et suivez les candidatures</p>
-      </div>
+    <div class="page-header__title">
+      <h1>Gestion du recrutement</h1>
+      <span class="page-header__sub">Gérez vos offres d'emploi et suivez les candidatures</span>
     </div>
-    <button class="add-btn" (click)="showOfferForm = true; resetOfferForm()">
-      <span>+</span> Nouvelle Offre
-    </button>
+    <div class="page-header__actions">
+      <button class="btn btn--primary" (click)="showOfferForm = true; resetOfferForm()">
+        <app-icon name="add" [size]="18" /> Nouvelle offre
+      </button>
+    </div>
   </div>
 
   <!-- KPI Summary -->
-  <div class="kpi-row">
-    <div class="kpi-card" style="--accent: #3b82f6; --accent-light: #eff6ff; --delay: 0">
-      <div class="kpi-icon-wrap" style="background: linear-gradient(135deg, #3b82f6, #6366f1)">
-        <span class="kpi-icon">📋</span>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-value">{{ offers.length }}</span>
-        <span class="kpi-label">Total Offres</span>
+  <div class="grid grid--kpi recruitment__kpis">
+    <div class="stat">
+      <span class="stat__icon"><app-icon name="job" [size]="20" /></span>
+      <div class="stat__body">
+        <span class="stat__value">{{ offers.length }}</span>
+        <span class="stat__label">Total offres</span>
       </div>
     </div>
-    <div class="kpi-card" style="--accent: #22c55e; --accent-light: #f0fdf4; --delay: 1">
-      <div class="kpi-icon-wrap" style="background: linear-gradient(135deg, #22c55e, #10b981)">
-        <span class="kpi-icon">✅</span>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-value">{{ activeOffers }}</span>
-        <span class="kpi-label">Offres Actives</span>
+    <div class="stat">
+      <span class="stat__icon stat__icon--success"><app-icon name="approve" [size]="20" /></span>
+      <div class="stat__body">
+        <span class="stat__value">{{ activeOffers }}</span>
+        <span class="stat__label">Offres actives</span>
       </div>
     </div>
-    <div class="kpi-card" style="--accent: #64748b; --accent-light: #f8fafc; --delay: 2">
-      <div class="kpi-icon-wrap" style="background: linear-gradient(135deg, #94a3b8, #64748b)">
-        <span class="kpi-icon">🔒</span>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-value">{{ closedOffers }}</span>
-        <span class="kpi-label">Offres Clôturées</span>
+    <div class="stat">
+      <span class="stat__icon stat__icon--muted"><app-icon name="lock" [size]="20" /></span>
+      <div class="stat__body">
+        <span class="stat__value">{{ closedOffers }}</span>
+        <span class="stat__label">Offres clôturées</span>
       </div>
     </div>
   </div>
 
-  <!-- Tabs + Search -->
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab" [class.is-active]="activeTab === 'offers'" (click)="switchTab('offers')">
+      <app-icon name="job" [size]="16" /> Offres
+      <span class="tab__count">{{ offers.length }}</span>
+    </button>
+    <button class="tab" [class.is-active]="activeTab === 'applications'" (click)="switchTab('applications')">
+      <app-icon name="employees" [size]="16" /> Candidatures
+      <span class="tab__count" *ngIf="applications.length">{{ applications.length }}</span>
+    </button>
+    <button class="tab" [class.is-active]="activeTab === 'pipeline'" (click)="switchTab('pipeline')">
+      <app-icon name="layers" [size]="16" /> Pipeline
+    </button>
+  </div>
+
+  <!-- Search + filters -->
   <div class="toolbar">
-    <div class="tabs">
-      <button [class.active]="activeTab === 'offers'" (click)="switchTab('offers')">
-        <span class="tab-icon">📋</span> Offres
-        <span class="tab-count">{{ offers.length }}</span>
-      </button>
-      <button [class.active]="activeTab === 'applications'" (click)="switchTab('applications')">
-        <span class="tab-icon">👥</span> Candidatures
-        <span class="tab-count" *ngIf="applications.length">{{ applications.length }}</span>
-      </button>
-      <button [class.active]="activeTab === 'pipeline'" (click)="switchTab('pipeline')">
-        <span class="tab-icon">🚀</span> Pipeline
-      </button>
-    </div>
-    <div class="search-bar">
-      <span class="search-icon">🔍</span>
-      <input type="text" [(ngModel)]="searchQuery"
+    <div class="input-icon toolbar__search">
+      <app-icon name="search" [size]="16" />
+      <input class="input" type="text" [(ngModel)]="searchQuery"
              [placeholder]="activeTab === 'offers' ? 'Rechercher une offre…' : 'Rechercher un candidat…'" />
     </div>
-    <select class="filter-select" [(ngModel)]="statusFilter" *ngIf="activeTab === 'offers'">
+    <select class="select toolbar__filter" [(ngModel)]="statusFilter" *ngIf="activeTab === 'offers'">
       <option value="">Tous les statuts</option>
       <option value="ACTIVE">Active</option>
       <option value="CLOSED">Clôturée</option>
     </select>
-    <select class="filter-select" [(ngModel)]="statusFilter" *ngIf="activeTab === 'applications'">
+    <select class="select toolbar__filter" [(ngModel)]="statusFilter" *ngIf="activeTab === 'applications'">
       <option value="">Tous les statuts</option>
       <option *ngFor="let s of statuses" [value]="s">{{ getStatusLabel(s) }}</option>
     </select>
   </div>
 
   <!-- ═══ OFFRES ═══ -->
-  <div *ngIf="activeTab === 'offers'" class="content-area">
-    <div class="offer-card" *ngFor="let offer of filteredOffers; let i = index"
-         [style.animation-delay.ms]="i * 60">
-      <div class="offer-top">
-        <div class="offer-info">
-          <h3 class="offer-title">{{ offer.title }}</h3>
-          <div class="offer-meta">
-            <span class="meta-item"><span class="meta-icon">🏢</span> {{ offer.department }}</span>
-            <span class="meta-divider">•</span>
-            <span class="meta-item"><span class="meta-icon">📅</span> {{ offer.publishDate }}</span>
-            <span class="meta-divider" *ngIf="offer.deadline">•</span>
-            <span class="meta-item deadline" *ngIf="offer.deadline">
-              <span class="meta-icon">⏰</span> Expire le {{ offer.deadline }}
+  <div *ngIf="activeTab === 'offers'" class="card-list">
+    <div class="card offer" *ngFor="let offer of filteredOffers">
+      <div class="card__body">
+        <div class="offer__head">
+          <div class="offer__id">
+            <h3 class="offer__title">{{ offer.title }}</h3>
+            <div class="offer__meta">
+              <span class="offer__meta-item"><app-icon name="building" [size]="14" /> {{ offer.department }}</span>
+              <span class="offer__meta-sep">•</span>
+              <span class="offer__meta-item"><app-icon name="date" [size]="14" /> {{ offer.publishDate }}</span>
+              <span class="offer__meta-sep" *ngIf="offer.deadline">•</span>
+              <span class="offer__meta-item offer__meta-item--deadline" *ngIf="offer.deadline">
+                <app-icon name="clock" [size]="14" /> Expire le {{ offer.deadline }}
+              </span>
+            </div>
+          </div>
+          <span class="badge"
+                [class.badge--success]="offer.status === 'ACTIVE'"
+                [class.badge--neutral]="offer.status === 'CLOSED'">
+            <span class="badge__dot"></span>
+            {{ offer.status === 'ACTIVE' ? 'Active' : 'Clôturée' }}
+          </span>
+        </div>
+
+        <p class="offer__desc" *ngIf="offer.description">{{ offer.description }}</p>
+
+        <div class="offer__skills" *ngIf="offer.skills?.length">
+          <span class="u-eyebrow">Compétences requises</span>
+          <div class="chips">
+            <span class="chip" *ngFor="let s of offer.skills">
+              {{ s.name }}
+              <span class="chip__lvl" *ngIf="offer.skillLevels?.[s.id]">· Niv. {{ offer.skillLevels[s.id] }}/5</span>
             </span>
           </div>
         </div>
-        <span class="status-badge" [ngClass]="offer.status">
-          <span class="badge-dot"></span>
-          {{ offer.status === 'ACTIVE' ? 'Active' : 'Clôturée' }}
-        </span>
       </div>
 
-      <p class="offer-desc" *ngIf="offer.description">{{ offer.description }}</p>
-
-      <div class="skills-row" *ngIf="offer.skills?.length">
-        <span class="skills-label">Compétences requises</span>
-        <div class="skills-chips">
-          <span class="skill-chip" *ngFor="let s of offer.skills">
-            {{ s.name }}
-            <span class="skill-chip-level" *ngIf="offer.skillLevels?.[s.id]">
-              · Niv. {{ offer.skillLevels[s.id] }}/5
-            </span>
-          </span>
-        </div>
-      </div>
-
-      <div class="offer-footer">
-        <div class="offer-actions">
-          <button class="action-btn match" (click)="runMatching(offer)" title="Lancer le matching IA des candidats">
-            <span>🤖</span> Matching IA
+      <div class="card__footer offer__footer">
+        <div class="offer__actions">
+          <button class="btn btn--primary btn--sm" (click)="runMatching(offer)" title="Lancer le matching IA des candidats">
+            <app-icon name="ai" [size]="16" /> Matching IA
           </button>
-          <button class="action-btn edit" (click)="editOffer(offer)" title="Modifier">
-            <span>✏️</span> Modifier
+          <button class="btn btn--secondary btn--sm" (click)="editOffer(offer)">
+            <app-icon name="edit" [size]="16" /> Modifier
           </button>
-          <button *ngIf="offer.status === 'ACTIVE'" class="action-btn close" (click)="closeOffer(offer.id)" title="Clôturer">
-            <span>🔒</span> Clôturer
+          <button *ngIf="offer.status === 'ACTIVE'" class="btn btn--secondary btn--sm" (click)="closeOffer(offer.id)">
+            <app-icon name="lock" [size]="16" /> Clôturer
           </button>
-          <button class="action-btn view" (click)="viewApplications(offer)" title="Voir les candidatures">
-            <span>👥</span> Candidatures
+          <button class="btn btn--secondary btn--sm" (click)="viewApplications(offer)">
+            <app-icon name="employees" [size]="16" /> Candidatures
           </button>
         </div>
-        <button class="action-btn-icon delete" (click)="deleteOffer(offer.id)" title="Supprimer">🗑️</button>
+        <button class="icon-btn icon-btn--danger" (click)="deleteOffer(offer.id)" aria-label="Supprimer l'offre">
+          <app-icon name="delete" [size]="18" />
+        </button>
       </div>
     </div>
 
     <div class="empty-state" *ngIf="filteredOffers.length === 0">
-      <div class="empty-icon">📭</div>
-      <p class="empty-title">Aucune offre trouvée</p>
-      <p class="empty-sub">{{ searchQuery ? 'Essayez avec d\'autres mots-clés' : 'Créez votre première offre d\'emploi' }}</p>
+      <span class="empty-state__icon"><app-icon name="inbox" [size]="26" /></span>
+      <div class="empty-state__title">Aucune offre trouvée</div>
+      <p class="empty-state__text">{{ searchQuery ? 'Essayez avec d\'autres mots-clés' : 'Créez votre première offre d\'emploi' }}</p>
     </div>
   </div>
 
   <!-- ═══ CANDIDATURES ═══ -->
-  <div *ngIf="activeTab === 'applications'" class="content-area">
-    <div class="app-card" *ngFor="let app of filteredApplications; let i = index"
-         [style.animation-delay.ms]="i * 60">
-      <div class="app-top">
-        <div class="app-avatar">{{ app.applicantName?.charAt(0) || '?' }}</div>
-        <div class="app-info">
-          <h3 class="app-name">{{ app.applicantName }}</h3>
-          <div class="app-meta">
-            <span class="meta-item"><span class="meta-icon">📋</span> {{ app.jobOfferTitle }}</span>
-            <span class="meta-divider">•</span>
-            <span class="meta-item"><span class="meta-icon">📅</span> {{ app.applicationDate }}</span>
+  <div *ngIf="activeTab === 'applications'" class="card-list">
+    <div class="card app" *ngFor="let app of filteredApplications">
+      <div class="card__body">
+        <div class="app__head">
+          <span class="avatar">{{ app.applicantName?.charAt(0) || '?' }}</span>
+          <div class="app__id">
+            <h3 class="app__name">{{ app.applicantName }}</h3>
+            <div class="offer__meta">
+              <span class="offer__meta-item"><app-icon name="job" [size]="14" /> {{ app.jobOfferTitle }}</span>
+              <span class="offer__meta-sep">•</span>
+              <span class="offer__meta-item"><app-icon name="date" [size]="14" /> {{ app.applicationDate }}</span>
+            </div>
+          </div>
+          <span class="badge"
+                [class.badge--warning]="app.status === 'EN_ATTENTE'"
+                [class.badge--info]="app.status === 'ENTRETIEN'"
+                [class.badge--success]="app.status === 'RETENU'"
+                [class.badge--danger]="app.status === 'REFUSE'">
+            {{ getStatusLabel(app.status) }}
+          </span>
+        </div>
+
+        <div class="cover" *ngIf="app.coverLetter">
+          <span class="u-eyebrow cover__label"><app-icon name="message" [size]="14" /> Lettre de motivation</span>
+          <p class="cover__text">{{ app.coverLetter }}</p>
+        </div>
+
+        <!-- Status workflow -->
+        <div class="workflow">
+          <span class="u-eyebrow workflow__label">Changer le statut</span>
+          <div class="workflow__steps">
+            <button *ngFor="let s of adminAllowedStatuses"
+                    class="btn btn--sm btn--secondary wf-btn"
+                    [ngClass]="s"
+                    [class.current]="app.status === s"
+                    [disabled]="app.status === s"
+                    (click)="changeStatus(app.id, s)">
+              <app-icon [name]="s === 'EN_ATTENTE' ? 'pending' : 'interview'" [size]="15" />
+              {{ getStatusLabel(s) }}
+            </button>
+          </div>
+          <div class="alert alert--warning workflow__hint">
+            <app-icon class="alert__icon" name="lock" [size]="16" />
+            <span>Retenu / Refusé sont décidés par le manager à l'issue de l'entretien.</span>
           </div>
         </div>
-        <span class="status-badge" [ngClass]="app.status">
-          <span class="badge-dot"></span>
-          {{ getStatusLabel(app.status) }}
-        </span>
-      </div>
-
-      <div class="cover-letter-section" *ngIf="app.coverLetter">
-        <div class="cl-label">💬 Lettre de motivation</div>
-        <p class="cover-letter">{{ app.coverLetter }}</p>
-      </div>
-
-      <!-- Status workflow -->
-      <div class="workflow-section">
-        <div class="workflow-label">Changer le statut :</div>
-        <div class="workflow-steps">
-          <button *ngFor="let s of adminAllowedStatuses"
-                  class="workflow-btn"
-                  [ngClass]="s"
-                  [class.current]="app.status === s"
-                  [disabled]="app.status === s"
-                  (click)="changeStatus(app.id, s)">
-            <span class="wf-icon">{{ getStatusIcon(s) }}</span>
-            <span class="wf-text">{{ getStatusLabel(s) }}</span>
-          </button>
-        </div>
-        <p class="workflow-hint">🔒 Retenu / Refusé sont décidés par le manager à l'issue de l'entretien.</p>
       </div>
     </div>
 
     <div class="empty-state" *ngIf="filteredApplications.length === 0">
-      <div class="empty-icon">📭</div>
-      <p class="empty-title">Aucune candidature</p>
-      <p class="empty-sub">{{ searchQuery ? 'Essayez avec d\'autres mots-clés' : 'Les candidatures apparaîtront ici' }}</p>
+      <span class="empty-state__icon"><app-icon name="inbox" [size]="26" /></span>
+      <div class="empty-state__title">Aucune candidature</div>
+      <p class="empty-state__text">{{ searchQuery ? 'Essayez avec d\'autres mots-clés' : 'Les candidatures apparaîtront ici' }}</p>
     </div>
   </div>
 
   <!-- ═══ PIPELINE (Kanban post-matching) ═══ -->
-  <div *ngIf="activeTab === 'pipeline'" class="content-area pipeline-view">
-    <div class="pipeline-header">
-      <div class="pipeline-title">
-        <span class="pt-icon">🚀</span>
+  <div *ngIf="activeTab === 'pipeline'" class="pipeline">
+    <div class="pipeline__header">
+      <div class="section-title pipeline__title">
+        <app-icon name="layers" [size]="18" />
         <div>
-          <h2>Pipeline de Recrutement</h2>
-          <p>Workflow des candidatures par statut · les décisions IA sont reflétées ici</p>
+          <div class="pipeline__title-main">Pipeline de recrutement</div>
+          <div class="pipeline__title-sub">Workflow des candidatures par statut · les décisions IA sont reflétées ici</div>
         </div>
       </div>
-      <select class="filter-select" [(ngModel)]="pipelineOfferFilter">
+      <select class="select pipeline__filter" [(ngModel)]="pipelineOfferFilter">
         <option value="">Toutes les offres</option>
         <option *ngFor="let o of offers" [value]="o.id">{{ o.title }}</option>
       </select>
     </div>
 
     <!-- Stats résumé -->
-    <div class="pipeline-stats">
-      <div class="pstat pending">
-        <div class="pstat-icon">⏳</div>
-        <div class="pstat-val">{{ pipelineStats().EN_ATTENTE }}</div>
-        <div class="pstat-lbl">En attente</div>
+    <div class="pipeline__stats">
+      <div class="stat">
+        <span class="stat__icon stat__icon--warning"><app-icon name="pending" [size]="20" /></span>
+        <div class="stat__body">
+          <span class="stat__value">{{ pipelineStats().EN_ATTENTE }}</span>
+          <span class="stat__label">En attente</span>
+        </div>
       </div>
-      <div class="pstat interview">
-        <div class="pstat-icon">🗣️</div>
-        <div class="pstat-val">{{ pipelineStats().ENTRETIEN }}</div>
-        <div class="pstat-lbl">En entretien</div>
+      <div class="stat">
+        <span class="stat__icon stat__icon--info"><app-icon name="interview" [size]="20" /></span>
+        <div class="stat__body">
+          <span class="stat__value">{{ pipelineStats().ENTRETIEN }}</span>
+          <span class="stat__label">En entretien</span>
+        </div>
       </div>
-      <div class="pstat hired">
-        <div class="pstat-icon">✅</div>
-        <div class="pstat-val">{{ pipelineStats().RETENU }}</div>
-        <div class="pstat-lbl">Retenus</div>
+      <div class="stat">
+        <span class="stat__icon stat__icon--success"><app-icon name="approve" [size]="20" /></span>
+        <div class="stat__body">
+          <span class="stat__value">{{ pipelineStats().RETENU }}</span>
+          <span class="stat__label">Retenus</span>
+        </div>
       </div>
-      <div class="pstat rejected">
-        <div class="pstat-icon">❌</div>
-        <div class="pstat-val">{{ pipelineStats().REFUSE }}</div>
-        <div class="pstat-lbl">Refusés</div>
+      <div class="stat">
+        <span class="stat__icon stat__icon--danger"><app-icon name="reject" [size]="20" /></span>
+        <div class="stat__body">
+          <span class="stat__value">{{ pipelineStats().REFUSE }}</span>
+          <span class="stat__label">Refusés</span>
+        </div>
       </div>
     </div>
 
     <!-- Kanban 4 colonnes -->
     <div class="kanban">
       <!-- EN_ATTENTE -->
-      <div class="kcol col-pending">
-        <div class="kcol-head">
-          <span class="kcol-title">⏳ En attente</span>
-          <span class="kcol-count">{{ pipelineByStatus('EN_ATTENTE').length }}</span>
+      <div class="kcol kcol--pending">
+        <div class="kcol__head">
+          <span class="kcol__title"><app-icon name="pending" [size]="15" /> En attente</span>
+          <span class="kcol__count">{{ pipelineByStatus('EN_ATTENTE').length }}</span>
         </div>
         <div class="kcards">
           <div class="kcard" *ngFor="let app of pipelineByStatus('EN_ATTENTE')">
-            <div class="kcard-name">{{ app.applicantName }}</div>
-            <div class="kcard-offer">{{ app.jobOfferTitle }}</div>
-            <div class="kcard-meta">
+            <div class="kcard__name">{{ app.applicantName }}</div>
+            <div class="kcard__offer">{{ app.jobOfferTitle }}</div>
+            <div class="kcard__meta">
               <span class="km-matricule">{{ app.employeeMatricule }}</span>
-              <span class="km-date">📅 {{ app.applicationDate }}</span>
+              <span class="kcard__date"><app-icon name="date" [size]="13" /> {{ app.applicationDate }}</span>
             </div>
           </div>
           <p class="kempty" *ngIf="pipelineByStatus('EN_ATTENTE').length === 0">Aucune candidature</p>
@@ -250,66 +263,71 @@
       </div>
 
       <!-- ENTRETIEN -->
-      <div class="kcol col-interview">
-        <div class="kcol-head">
-          <span class="kcol-title">🗣️ Entretien</span>
-          <span class="kcol-count">{{ pipelineByStatus('ENTRETIEN').length }}</span>
+      <div class="kcol kcol--interview">
+        <div class="kcol__head">
+          <span class="kcol__title"><app-icon name="interview" [size]="15" /> Entretien</span>
+          <span class="kcol__count">{{ pipelineByStatus('ENTRETIEN').length }}</span>
         </div>
         <div class="kcards">
           <div class="kcard" *ngFor="let app of pipelineByStatus('ENTRETIEN')"
                [class.training]="app.matchingCategory === 'TRAINING'">
-            <div class="kcard-top">
+            <div class="kcard__top">
               <div>
-                <div class="kcard-name">{{ app.applicantName }}</div>
-                <div class="kcard-offer">{{ app.jobOfferTitle }}</div>
+                <div class="kcard__name">{{ app.applicantName }}</div>
+                <div class="kcard__offer">{{ app.jobOfferTitle }}</div>
               </div>
-              <span class="kcard-score" *ngIf="app.matchingScore != null">
-                {{ app.matchingScore }}
-              </span>
+              <span class="kcard__score" *ngIf="app.matchingScore != null">{{ app.matchingScore }}</span>
             </div>
-            <div class="kcard-cat" *ngIf="app.matchingCategory">
+            <div class="kcard__cat" *ngIf="app.matchingCategory">
               <span class="cat-pill" [ngClass]="app.matchingCategory">
-                {{ getCategoryIcon(app.matchingCategory) }} {{ getCategoryLabel(app.matchingCategory) }}
+                <app-icon [name]="app.matchingCategory === 'IDEAL' ? 'approve' : app.matchingCategory === 'TRAINING' ? 'formation' : 'external'" [size]="13" />
+                {{ getCategoryLabel(app.matchingCategory) }}
               </span>
-              <span class="training-flag" *ngIf="app.trainingRecommended">📚 Formation envoyée</span>
+              <span class="train-flag" *ngIf="app.trainingRecommended">
+                <app-icon name="formation" [size]="13" /> Formation envoyée
+              </span>
             </div>
-            <div class="kcard-meta">
+            <div class="kcard__meta">
               <span class="km-matricule">{{ app.employeeMatricule }}</span>
             </div>
             <!-- Pas encore d'entretien → bouton d'affectation -->
-            <!-- Dès qu'un entretien existe (même REJECTED_BY_MANAGER), on n'affiche plus le bouton :
-                 le manager a déjà donné son avis (acceptation, refus d'affectation, résultat d'entretien). -->
-            <button class="kcard-schedule-btn"
+            <button class="btn btn--secondary btn--sm btn--block kcard__schedule"
                     *ngIf="!app.latestInterview"
                     (click)="openScheduleInterview(app)">
-              📨 Affecter au manager
+              <app-icon name="send" [size]="15" /> Affecter au manager
             </button>
 
-            <!-- Entretien déjà affecté / refusé / réalisé → on affiche l'état (et plus jamais le bouton) -->
-            <div class="kcard-interview-state"
+            <!-- Entretien déjà affecté / refusé / réalisé -->
+            <div class="kis"
                  *ngIf="app.latestInterview"
                  [attr.data-status]="app.latestInterview.status">
-              <div class="kis-row">
-                <span class="kis-icon">👤</span>
-                <span class="kis-mgr">{{ app.latestInterview.managerName || app.latestInterview.managerUsername }}</span>
+              <div class="kis__row">
+                <app-icon name="profile" [size]="14" />
+                <span class="kis__mgr">{{ app.latestInterview.managerName || app.latestInterview.managerUsername }}</span>
               </div>
-              <div class="kis-row">
-                <span class="kis-status-pill" [attr.data-status]="app.latestInterview.status">
+              <div class="kis__row">
+                <span class="badge"
+                      [class.badge--warning]="app.latestInterview.status === 'PENDING_SCHEDULING'"
+                      [class.badge--info]="app.latestInterview.status === 'SCHEDULED'"
+                      [class.badge--success]="app.latestInterview.status === 'COMPLETED'"
+                      [class.badge--danger]="app.latestInterview.status === 'REJECTED_BY_MANAGER'"
+                      [class.badge--neutral]="app.latestInterview.status === 'CANCELLED'">
                   {{ interviewStatusLabel(app.latestInterview.status) }}
                 </span>
-                <span class="kis-result"
+                <span class="badge"
                       *ngIf="app.latestInterview.result"
-                      [class.pos]="app.latestInterview.result === 'POSITIF'"
-                      [class.neg]="app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF'"
-                      [class.mid]="app.latestInterview.result === 'EN_COURS'">
-                  {{ interviewResultLabel(app.latestInterview.result) }}
+                      [class.badge--success]="app.latestInterview.result === 'POSITIF'"
+                      [class.badge--danger]="app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF'"
+                      [class.badge--warning]="app.latestInterview.result === 'EN_COURS'">
+                  <app-icon [name]="app.latestInterview.result === 'POSITIF' ? 'approve' : (app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF') ? 'reject' : 'pending'" [size]="13" />
+                  {{ app.latestInterview.result === 'POSITIF' ? 'Positif' : (app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF') ? 'Négatif' : 'En cours' }}
                 </span>
               </div>
-              <div class="kis-locked" *ngIf="app.latestInterview.status === 'COMPLETED'">
-                🔒 Entretien finalisé
+              <div class="kis__locked" *ngIf="app.latestInterview.status === 'COMPLETED'">
+                <app-icon name="lock" [size]="14" /> Entretien finalisé
               </div>
-              <div class="kis-locked" *ngIf="app.latestInterview.status === 'REJECTED_BY_MANAGER'">
-                🚫 Affectation refusée par le manager
+              <div class="kis__locked" *ngIf="app.latestInterview.status === 'REJECTED_BY_MANAGER'">
+                <app-icon name="blocked" [size]="14" /> Affectation refusée par le manager
               </div>
             </div>
           </div>
@@ -318,45 +336,47 @@
       </div>
 
       <!-- RETENU -->
-      <div class="kcol col-hired">
-        <div class="kcol-head">
-          <span class="kcol-title">✅ Retenu</span>
-          <span class="kcol-count">{{ pipelineByStatus('RETENU').length }}</span>
+      <div class="kcol kcol--hired">
+        <div class="kcol__head">
+          <span class="kcol__title"><app-icon name="approve" [size]="15" /> Retenu</span>
+          <span class="kcol__count">{{ pipelineByStatus('RETENU').length }}</span>
         </div>
         <div class="kcards">
           <div class="kcard hired" *ngFor="let app of pipelineByStatus('RETENU')">
-            <div class="kcard-top">
+            <div class="kcard__top">
               <div>
-                <div class="kcard-name">{{ app.applicantName }}</div>
-                <div class="kcard-offer">{{ app.jobOfferTitle }}</div>
+                <div class="kcard__name">{{ app.applicantName }}</div>
+                <div class="kcard__offer">{{ app.jobOfferTitle }}</div>
               </div>
-              <span class="kcard-score" *ngIf="app.matchingScore != null">
-                {{ app.matchingScore }}
-              </span>
+              <span class="kcard__score" *ngIf="app.matchingScore != null">{{ app.matchingScore }}</span>
             </div>
-            <div class="kcard-cat" *ngIf="app.matchingCategory">
+            <div class="kcard__cat" *ngIf="app.matchingCategory">
               <span class="cat-pill" [ngClass]="app.matchingCategory">
-                {{ getCategoryIcon(app.matchingCategory) }} {{ getCategoryLabel(app.matchingCategory) }}
+                <app-icon [name]="app.matchingCategory === 'IDEAL' ? 'approve' : app.matchingCategory === 'TRAINING' ? 'formation' : 'external'" [size]="13" />
+                {{ getCategoryLabel(app.matchingCategory) }}
               </span>
             </div>
-            <div class="kcard-meta">
+            <div class="kcard__meta">
               <span class="km-matricule">{{ app.employeeMatricule }}</span>
             </div>
             <!-- Détail entretien validant -->
-            <div class="kcard-interview-state" *ngIf="app.latestInterview"
+            <div class="kis" *ngIf="app.latestInterview"
                  [attr.data-status]="app.latestInterview.status">
-              <div class="kis-row">
-                <span class="kis-icon">👤</span>
-                <span class="kis-mgr">{{ app.latestInterview.managerName || app.latestInterview.managerUsername }}</span>
-                <span class="kis-result"
+              <div class="kis__row">
+                <app-icon name="profile" [size]="14" />
+                <span class="kis__mgr">{{ app.latestInterview.managerName || app.latestInterview.managerUsername }}</span>
+                <span class="badge"
                       *ngIf="app.latestInterview.result"
-                      [class.pos]="app.latestInterview.result === 'POSITIF'"
-                      [class.neg]="app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF'"
-                      [class.mid]="app.latestInterview.result === 'EN_COURS'">
-                  {{ interviewResultLabel(app.latestInterview.result) }}
+                      [class.badge--success]="app.latestInterview.result === 'POSITIF'"
+                      [class.badge--danger]="app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF'"
+                      [class.badge--warning]="app.latestInterview.result === 'EN_COURS'">
+                  <app-icon [name]="app.latestInterview.result === 'POSITIF' ? 'approve' : (app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF') ? 'reject' : 'pending'" [size]="13" />
+                  {{ app.latestInterview.result === 'POSITIF' ? 'Positif' : (app.latestInterview.result === 'NEGATIF' || app.latestInterview.result === 'NÉGATIF') ? 'Négatif' : 'En cours' }}
                 </span>
               </div>
-              <div class="kis-locked">🎯 Affecté au poste « {{ app.jobOfferTitle }} »</div>
+              <div class="kis__locked">
+                <app-icon name="target" [size]="14" /> Affecté au poste « {{ app.jobOfferTitle }} »
+              </div>
             </div>
           </div>
           <p class="kempty" *ngIf="pipelineByStatus('RETENU').length === 0">Aucun candidat retenu</p>
@@ -364,32 +384,31 @@
       </div>
 
       <!-- REFUSE -->
-      <div class="kcol col-rejected">
-        <div class="kcol-head">
-          <span class="kcol-title">❌ Refusé</span>
-          <span class="kcol-count">{{ pipelineByStatus('REFUSE').length }}</span>
+      <div class="kcol kcol--rejected">
+        <div class="kcol__head">
+          <span class="kcol__title"><app-icon name="reject" [size]="15" /> Refusé</span>
+          <span class="kcol__count">{{ pipelineByStatus('REFUSE').length }}</span>
         </div>
         <div class="kcards">
           <div class="kcard rejected" *ngFor="let app of pipelineByStatus('REFUSE')">
-            <div class="kcard-top">
+            <div class="kcard__top">
               <div>
-                <div class="kcard-name">{{ app.applicantName }}</div>
-                <div class="kcard-offer">{{ app.jobOfferTitle }}</div>
+                <div class="kcard__name">{{ app.applicantName }}</div>
+                <div class="kcard__offer">{{ app.jobOfferTitle }}</div>
               </div>
-              <span class="kcard-score" *ngIf="app.matchingScore != null">
-                {{ app.matchingScore }}
-              </span>
+              <span class="kcard__score" *ngIf="app.matchingScore != null">{{ app.matchingScore }}</span>
             </div>
-            <div class="kcard-cat" *ngIf="app.matchingCategory">
+            <div class="kcard__cat" *ngIf="app.matchingCategory">
               <span class="cat-pill" [ngClass]="app.matchingCategory">
-                {{ getCategoryIcon(app.matchingCategory) }} {{ getCategoryLabel(app.matchingCategory) }}
+                <app-icon [name]="app.matchingCategory === 'IDEAL' ? 'approve' : app.matchingCategory === 'TRAINING' ? 'formation' : 'external'" [size]="13" />
+                {{ getCategoryLabel(app.matchingCategory) }}
               </span>
             </div>
-            <div class="kcard-meta">
+            <div class="kcard__meta">
               <span class="km-matricule">{{ app.employeeMatricule }}</span>
             </div>
-            <div class="kcard-reco" *ngIf="app.matchingCategory === 'EXTERNAL'">
-              🌐 Envisager recrutement externe
+            <div class="kcard__reco" *ngIf="app.matchingCategory === 'EXTERNAL'">
+              <app-icon name="external" [size]="14" /> Envisager recrutement externe
             </div>
           </div>
           <p class="kempty" *ngIf="pipelineByStatus('REFUSE').length === 0">Aucun refus</p>
@@ -400,67 +419,76 @@
 
   <!-- ═══ MODAL OFFRE ═══ -->
   <div class="modal-overlay" *ngIf="showOfferForm" (click)="showOfferForm = false">
-    <div class="modal-form" (click)="$event.stopPropagation()">
-      <div class="mf-header">
-        <div class="mf-icon">{{ isEditingOffer ? '✏️' : '📋' }}</div>
-        <h3>{{ isEditingOffer ? 'Modifier' : 'Créer' }} une offre</h3>
-        <p class="mf-sub">{{ isEditingOffer ? 'Modifiez les informations ci-dessous' : 'Remplissez les détails de la nouvelle offre' }}</p>
+    <div class="modal modal--lg" role="dialog" aria-modal="true"
+         [attr.aria-label]="isEditingOffer ? 'Modifier une offre' : 'Créer une offre'"
+         (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title">
+            <app-icon [name]="isEditingOffer ? 'edit' : 'job'" [size]="20" />
+            {{ isEditingOffer ? 'Modifier' : 'Créer' }} une offre
+          </div>
+          <div class="modal__sub">{{ isEditingOffer ? 'Modifiez les informations ci-dessous' : 'Remplissez les détails de la nouvelle offre' }}</div>
+        </div>
+        <button class="icon-btn" aria-label="Fermer" (click)="showOfferForm = false">
+          <app-icon name="close" [size]="18" />
+        </button>
       </div>
 
-      <div class="mf-body">
-        <div class="section">
-          <div class="section-title"><span class="st-icon">📝</span> Détails de l'offre</div>
-          <div class="grid-2">
+      <div class="modal__body">
+        <div class="form-section">
+          <div class="section-title"><app-icon name="document" [size]="16" /> Détails de l'offre</div>
+          <div class="grid grid--2">
             <div class="field">
-              <label>Titre du poste</label>
-              <input [(ngModel)]="offerForm.title" placeholder="Ex: Développeur Java Senior" />
+              <label class="label" for="offer-title">Titre du poste</label>
+              <input id="offer-title" class="input" [(ngModel)]="offerForm.title" placeholder="Ex : Développeur Java Senior" />
             </div>
             <div class="field">
-              <label>Département</label>
-              <input [(ngModel)]="offerForm.department" placeholder="Ex: Informatique" />
+              <label class="label" for="offer-dept">Département</label>
+              <input id="offer-dept" class="input" [(ngModel)]="offerForm.department" placeholder="Ex : Informatique" />
             </div>
           </div>
-          <div class="field" style="margin-top: 14px">
-            <label>Description du poste</label>
-            <textarea [(ngModel)]="offerForm.description" placeholder="Décrivez les responsabilités et les exigences du poste…" rows="4"></textarea>
+          <div class="field">
+            <label class="label" for="offer-desc">Description du poste</label>
+            <textarea id="offer-desc" class="textarea" [(ngModel)]="offerForm.description"
+                      placeholder="Décrivez les responsabilités et les exigences du poste…" rows="4"></textarea>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-title"><span class="st-icon">🛠️</span> Compétences requises & niveau</div>
+        <div class="form-section">
+          <div class="section-title"><app-icon name="skills" [size]="16" /> Compétences requises &amp; niveau</div>
           <div class="skills-picker">
             <input type="text" class="skill-search"
                    [(ngModel)]="skillSearch"
                    placeholder="Rechercher ou ajouter une compétence…"
                    (focus)="skillsOpen = true" />
             <div class="skill-options" *ngIf="skillsOpen">
-              <div class="skill-options-list">
+              <div class="skill-options__list">
                 <div *ngFor="let s of filteredSkillOptions"
                      class="skill-option"
                      [class.selected]="selectedSkillIds.has(s.id)"
                      (click)="toggleSkill(s.id)">
-                  <span class="check">{{ selectedSkillIds.has(s.id) ? '✓' : '+' }}</span>
+                  <span class="skill-option__check">
+                    <app-icon [name]="selectedSkillIds.has(s.id) ? 'check' : 'add'" [size]="13" />
+                  </span>
                   {{ s.name }}
-                  <span class="opt-cat" *ngIf="s.category">· {{ s.category }}</span>
+                  <span class="skill-option__cat" *ngIf="s.category">· {{ s.category }}</span>
                 </div>
                 <div *ngIf="filteredSkillOptions.length === 0" class="empty-opt">
                   Aucune compétence ne correspond.
                 </div>
               </div>
-              <button type="button" class="close-dropdown" (click)="skillsOpen = false">Fermer</button>
+              <button type="button" class="btn btn--ghost btn--sm skill-options__close" (click)="skillsOpen = false">Fermer</button>
             </div>
 
             <!-- Liste des compétences sélectionnées avec sélecteur de niveau -->
             <div class="selected-skills" *ngIf="selectedSkillIds.size > 0">
-              <div class="ss-header">
-                <span class="ss-title">Niveau requis (1–5) par compétence</span>
-                <span class="ss-hint">Utilisé pour le matching IA</span>
+              <div class="selected-skills__head">
+                <span class="selected-skills__title">Niveau requis (1–5) par compétence</span>
+                <span class="help">Utilisé pour le matching IA</span>
               </div>
               <div class="ss-row" *ngFor="let id of selectedSkillIds">
-                <div class="ss-name">
-                  <span class="ss-bullet">●</span>
-                  {{ getSkillNameById(id) }}
-                </div>
+                <span class="ss-name">{{ getSkillNameById(id) }}</span>
                 <div class="level-picker">
                   <button type="button"
                           *ngFor="let lvl of [1,2,3,4,5]"
@@ -472,25 +500,28 @@
                   </button>
                 </div>
                 <span class="ss-label">{{ getLevelLabel(skillLevels[id] || 3) }}</span>
-                <button type="button" class="ss-remove" (click)="toggleSkill(id)" title="Retirer">×</button>
+                <button type="button" class="icon-btn icon-btn--danger icon-btn--sm" (click)="toggleSkill(id)" aria-label="Retirer la compétence">
+                  <app-icon name="close" [size]="16" />
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-title"><span class="st-icon">📅</span> Échéance</div>
+        <div class="form-section">
+          <div class="section-title"><app-icon name="calendar" [size]="16" /> Échéance</div>
           <div class="field">
-            <label>Date limite de candidature</label>
-            <input [(ngModel)]="offerForm.deadline" type="date" />
+            <label class="label" for="offer-deadline">Date limite de candidature</label>
+            <input id="offer-deadline" class="input" [(ngModel)]="offerForm.deadline" type="date" />
           </div>
         </div>
       </div>
 
-      <div class="mf-footer">
-        <button class="btn-cancel" (click)="showOfferForm = false">✕ Annuler</button>
-        <button class="btn-submit" (click)="saveOffer()">
-          {{ isEditingOffer ? '💾 Enregistrer' : '🚀 Publier l\'offre' }}
+      <div class="modal__footer">
+        <button class="btn btn--ghost" (click)="showOfferForm = false">Annuler</button>
+        <button class="btn btn--primary" (click)="saveOffer()">
+          <app-icon [name]="isEditingOffer ? 'save' : 'send'" [size]="16" />
+          {{ isEditingOffer ? 'Enregistrer' : 'Publier l\'offre' }}
         </button>
       </div>
     </div>
@@ -498,284 +529,304 @@
 
   <!-- ═══ MODAL MATCHING IA ═══ -->
   <div class="modal-overlay" *ngIf="showMatchingModal" (click)="closeMatching()">
-    <div class="match-modal" (click)="$event.stopPropagation()">
+    <div class="modal modal--xl" role="dialog" aria-modal="true" aria-label="Matching IA des candidats"
+         (click)="$event.stopPropagation()">
       <!-- Header -->
-      <div class="match-header">
-        <div class="match-header-left">
-          <div class="match-icon">🤖</div>
-          <div>
-            <h3>Matching IA — {{ matchingOffer?.title }}</h3>
-            <p class="match-sub">Candidats classés par score selon compétences + ancienneté</p>
-          </div>
+      <div class="modal__header">
+        <div>
+          <div class="modal__title"><app-icon name="ai" [size]="20" /> Matching IA — {{ matchingOffer?.title }}</div>
+          <div class="modal__sub">Candidats classés par score selon compétences + ancienneté</div>
         </div>
-        <button class="match-close" (click)="closeMatching()">✕</button>
+        <button class="icon-btn" aria-label="Fermer" (click)="closeMatching()">
+          <app-icon name="close" [size]="18" />
+        </button>
       </div>
 
-      <!-- Loading -->
-      <div class="match-loading" *ngIf="matchingLoading">
-        <div class="spinner"></div>
-        <p>Analyse des candidats en cours…</p>
-      </div>
+      <div class="modal__body">
+        <!-- Loading -->
+        <div class="loading-row" *ngIf="matchingLoading">
+          <span class="spinner"></span> Analyse des candidats en cours…
+        </div>
 
-      <!-- Error -->
-      <div class="match-error" *ngIf="matchingError">
-        <span>⚠️</span> {{ matchingError }}
-      </div>
+        <!-- Error -->
+        <div class="alert alert--danger" *ngIf="matchingError">
+          <app-icon class="alert__icon" name="warning" [size]="18" /> {{ matchingError }}
+        </div>
 
-      <!-- Résumé par catégorie -->
-      <div class="match-summary" *ngIf="!matchingLoading && !matchingError && matchingResults.length > 0">
-        <div class="summary-card ideal">
-          <div class="summary-icon">✅</div>
-          <div>
-            <div class="summary-value">{{ countByCategory('IDEAL') }}</div>
-            <div class="summary-label">Candidats idéaux</div>
+        <!-- Résumé par catégorie -->
+        <div class="grid grid--3 match__summary" *ngIf="!matchingLoading && !matchingError && matchingResults.length > 0">
+          <div class="stat">
+            <span class="stat__icon stat__icon--success"><app-icon name="approve" [size]="20" /></span>
+            <div class="stat__body">
+              <span class="stat__value">{{ countByCategory('IDEAL') }}</span>
+              <span class="stat__label">Candidats idéaux</span>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="stat__icon stat__icon--warning"><app-icon name="formation" [size]="20" /></span>
+            <div class="stat__body">
+              <span class="stat__value">{{ countByCategory('TRAINING') }}</span>
+              <span class="stat__label">À former</span>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="stat__icon stat__icon--muted"><app-icon name="external" [size]="20" /></span>
+            <div class="stat__body">
+              <span class="stat__value">{{ countByCategory('EXTERNAL') }}</span>
+              <span class="stat__label">Recrutement externe</span>
+            </div>
           </div>
         </div>
-        <div class="summary-card training">
-          <div class="summary-icon">🎓</div>
-          <div>
-            <div class="summary-value">{{ countByCategory('TRAINING') }}</div>
-            <div class="summary-label">À former</div>
-          </div>
-        </div>
-        <div class="summary-card external">
-          <div class="summary-icon">🌐</div>
-          <div>
-            <div class="summary-value">{{ countByCategory('EXTERNAL') }}</div>
-            <div class="summary-label">Recrutement externe</div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Résultats détaillés -->
-      <div class="match-results" *ngIf="!matchingLoading && !matchingError && matchingResults.length > 0">
-        <div class="result-card" *ngFor="let r of matchingResults; let i = index"
-             [style.animation-delay.ms]="i * 60"
-             [ngClass]="r.category">
-          <div class="result-top">
-            <div class="result-rank">#{{ i + 1 }}</div>
-            <div class="result-info">
-              <h4 class="result-name">{{ r.applicantName }}</h4>
-              <span class="result-matricule">{{ r.employeeMatricule }}</span>
-            </div>
-            <div class="result-score-wrap">
-              <div class="result-score">{{ r.score }}<span class="score-out">/100</span></div>
-              <span class="category-badge" [ngClass]="r.category">
-                {{ getCategoryIcon(r.category) }} {{ getCategoryLabel(r.category) }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Sous-scores -->
-          <div class="sub-scores">
-            <div class="sub-score">
-              <span class="sub-label">🛠️ Compétences</span>
-              <div class="sub-bar"><div class="sub-fill skills" [style.width.%]="r.skillsScore"></div></div>
-              <span class="sub-val">{{ r.skillsScore }}</span>
-            </div>
-            <div class="sub-score">
-              <span class="sub-label">⏱️ Ancienneté</span>
-              <div class="sub-bar"><div class="sub-fill seniority" [style.width.%]="r.seniorityScore"></div></div>
-              <span class="sub-val">{{ r.seniorityScore }}</span>
-            </div>
-          </div>
-
-          <!-- Skill gaps -->
-          <div class="gaps-section" *ngIf="r.gaps?.length > 0">
-            <div class="gaps-label">
-              {{ r.category === 'TRAINING' ? '🎓 Formation recommandée sur :' : '⚠️ Compétences manquantes ou insuffisantes :' }}
-            </div>
-            <div class="gaps-list">
-              <span class="gap-chip" *ngFor="let g of r.gaps">
-                <strong>{{ g.skillName }}</strong>
-                <span class="gap-detail">
-                  requis Niv. {{ g.requiredLevel }} ·
-                  <span *ngIf="g.actualLevel != null">actuel Niv. {{ g.actualLevel }}</span>
-                  <span *ngIf="g.actualLevel == null" class="missing">absent</span>
+        <!-- Résultats détaillés -->
+        <div class="results" *ngIf="!matchingLoading && !matchingError && matchingResults.length > 0">
+          <div class="result" *ngFor="let r of matchingResults; let i = index" [ngClass]="r.category">
+            <div class="result__top">
+              <span class="result__rank">#{{ i + 1 }}</span>
+              <div class="result__id">
+                <h4 class="result__name">{{ r.applicantName }}</h4>
+                <span class="result__matricule">{{ r.employeeMatricule }}</span>
+              </div>
+              <div class="result__score-wrap">
+                <div class="result__score">{{ r.score }}<span class="result__score-out">/100</span></div>
+                <span class="cat-pill" [ngClass]="r.category">
+                  <app-icon [name]="r.category === 'IDEAL' ? 'approve' : r.category === 'TRAINING' ? 'formation' : 'external'" [size]="13" />
+                  {{ getCategoryLabel(r.category) }}
                 </span>
-              </span>
+              </div>
+            </div>
+
+            <!-- Sous-scores -->
+            <div class="subscores">
+              <div class="subscore">
+                <span class="subscore__label"><app-icon name="skills" [size]="15" /> Compétences</span>
+                <div class="subscore__bar"><div class="subscore__fill subscore__fill--skills" [style.width.%]="r.skillsScore"></div></div>
+                <span class="subscore__val">{{ r.skillsScore }}</span>
+              </div>
+              <div class="subscore">
+                <span class="subscore__label"><app-icon name="clock" [size]="15" /> Ancienneté</span>
+                <div class="subscore__bar"><div class="subscore__fill subscore__fill--seniority" [style.width.%]="r.seniorityScore"></div></div>
+                <span class="subscore__val">{{ r.seniorityScore }}</span>
+              </div>
+            </div>
+
+            <!-- Skill gaps -->
+            <div class="gaps" *ngIf="r.gaps?.length > 0">
+              <div class="gaps__label">
+                <app-icon [name]="r.category === 'TRAINING' ? 'formation' : 'warning'" [size]="15" />
+                {{ r.category === 'TRAINING' ? 'Formation recommandée sur :' : 'Compétences manquantes ou insuffisantes :' }}
+              </div>
+              <div class="gaps__list">
+                <span class="gap" *ngFor="let g of r.gaps">
+                  <strong>{{ g.skillName }}</strong>
+                  <span class="gap__detail">
+                    requis Niv. {{ g.requiredLevel }} ·
+                    <span *ngIf="g.actualLevel != null">actuel Niv. {{ g.actualLevel }}</span>
+                    <span *ngIf="g.actualLevel == null" class="missing">absent</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Recommandation contextuelle -->
+            <div class="reco" *ngIf="r.category === 'EXTERNAL'">
+              <app-icon name="external" [size]="15" /> Score insuffisant — envisager un recrutement externe (LinkedIn / scraping).
+            </div>
+
+            <!-- ═══ Décision de statut (validation RH) ═══ -->
+            <div class="decision">
+              <div class="decision__info">
+                <span class="decision__label">Statut actuel :</span>
+                <span class="badge"
+                      [class.badge--warning]="r.currentStatus === 'EN_ATTENTE'"
+                      [class.badge--info]="r.currentStatus === 'ENTRETIEN'"
+                      [class.badge--success]="r.currentStatus === 'RETENU'"
+                      [class.badge--danger]="r.currentStatus === 'REFUSE'">
+                  {{ getStatusLabel(r.currentStatus) }}
+                </span>
+              </div>
+              <div class="decision__info" *ngIf="r.proposedStatus">
+                <span class="decision__label">Proposé par l'IA :</span>
+                <span class="badge badge--proposed"
+                      [class.badge--warning]="r.proposedStatus === 'EN_ATTENTE'"
+                      [class.badge--info]="r.proposedStatus === 'ENTRETIEN'"
+                      [class.badge--success]="r.proposedStatus === 'RETENU'"
+                      [class.badge--danger]="r.proposedStatus === 'REFUSE'">
+                  {{ getStatusLabel(r.proposedStatus) }}
+                </span>
+              </div>
+              <div class="decision__info" *ngIf="!r.proposedStatus">
+                <span class="decision__label decision__label--muted">
+                  <app-icon name="info" [size]="14" /> Décision déjà prise — pas de proposition
+                </span>
+              </div>
+              <div class="decision__action" *ngIf="r.proposedStatus">
+                <label class="decision__label" [attr.for]="'dec-' + r.applicationId">Décision RH :</label>
+                <select class="select decision__select"
+                        [attr.id]="'dec-' + r.applicationId"
+                        [ngModel]="decisions[r.applicationId] || 'SKIP'"
+                        (ngModelChange)="setDecision(r.applicationId, $event)">
+                  <option value="SKIP">— Ne rien changer —</option>
+                  <option *ngFor="let s of adminAllowedStatuses" [value]="s">{{ getStatusLabel(s) }}</option>
+                </select>
+                <span class="dec-hint"><app-icon name="lock" [size]="13" /> Retenu / Refusé seront décidés par le manager après l'entretien</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state actionnable (avec diagnostic backend) -->
+        <div class="match-empty" *ngIf="!matchingLoading && !matchingError && matchingResults.length === 0">
+          <div class="empty-state">
+            <span class="empty-state__icon"><app-icon name="inbox" [size]="26" /></span>
+            <p class="empty-state__title">{{ getDiagnosticReason(matchingDiagnostic?.reason) }}</p>
+          </div>
+
+          <!-- Diagnostic détaillé -->
+          <div class="diag-grid" *ngIf="matchingDiagnostic">
+            <div class="diag-item" [class.ok]="matchingDiagnostic.skillRequirementsCount > 0"
+                                   [class.ko]="matchingDiagnostic.skillRequirementsCount === 0">
+              <app-icon [name]="matchingDiagnostic.skillRequirementsCount > 0 ? 'approve' : 'reject'" [size]="20" />
+              <div>
+                <div class="diag-item__label">Compétences requises sur l'offre</div>
+                <div class="diag-item__value">{{ matchingDiagnostic.skillRequirementsCount }}</div>
+              </div>
+            </div>
+            <div class="diag-item" [class.ok]="matchingDiagnostic.applicationsCount > 0"
+                                   [class.ko]="matchingDiagnostic.applicationsCount === 0">
+              <app-icon [name]="matchingDiagnostic.applicationsCount > 0 ? 'approve' : 'reject'" [size]="20" />
+              <div>
+                <div class="diag-item__label">Candidatures reçues</div>
+                <div class="diag-item__value">{{ matchingDiagnostic.applicationsCount }}</div>
+              </div>
+            </div>
+            <div class="diag-item" [class.ok]="matchingDiagnostic.profilesLoaded > 0"
+                                   [class.ko]="matchingDiagnostic.profilesLoaded === 0 && matchingDiagnostic.applicationsCount > 0">
+              <app-icon [name]="matchingDiagnostic.profilesLoaded > 0 ? 'approve' : (matchingDiagnostic.applicationsCount > 0 ? 'reject' : 'info')" [size]="20" />
+              <div>
+                <div class="diag-item__label">Profils employés chargés</div>
+                <div class="diag-item__value">{{ matchingDiagnostic.profilesLoaded }}</div>
+              </div>
+            </div>
+            <div class="diag-item" [class.warn]="matchingDiagnostic.candidatesWithSkills === 0 && matchingDiagnostic.profilesLoaded > 0">
+              <app-icon [name]="matchingDiagnostic.candidatesWithSkills > 0 ? 'approve' : 'warning'" [size]="20" />
+              <div>
+                <div class="diag-item__label">Candidats avec compétences</div>
+                <div class="diag-item__value">{{ matchingDiagnostic.candidatesWithSkills }}</div>
+              </div>
             </div>
           </div>
 
-          <!-- Recommandation contextuelle -->
-          <div class="reco" *ngIf="r.category === 'EXTERNAL'">
-            🌐 Score insuffisant — envisager un recrutement externe (LinkedIn / scraping).
-          </div>
-
-          <!-- ═══ Décision de statut (validation RH) ═══ -->
-          <div class="decision-row">
-            <div class="decision-info">
-              <span class="dec-label">Statut actuel :</span>
-              <span class="status-pill" [ngClass]="r.currentStatus">
-                {{ getStatusIcon(r.currentStatus) }} {{ getStatusLabel(r.currentStatus) }}
-              </span>
-            </div>
-            <div class="decision-info" *ngIf="r.proposedStatus">
-              <span class="dec-label">Proposé par l'IA :</span>
-              <span class="status-pill proposed" [ngClass]="r.proposedStatus">
-                {{ getStatusIcon(r.proposedStatus) }} {{ getStatusLabel(r.proposedStatus) }}
-              </span>
-            </div>
-            <div class="decision-info" *ngIf="!r.proposedStatus">
-              <span class="dec-label dec-info">ℹ️ Décision déjà prise — pas de proposition</span>
-            </div>
-            <div class="decision-action" *ngIf="r.proposedStatus">
-              <label class="dec-label">Décision RH :</label>
-              <select class="decision-select"
-                      [ngModel]="decisions[r.applicationId] || 'SKIP'"
-                      (ngModelChange)="setDecision(r.applicationId, $event)">
-                <option value="SKIP">— Ne rien changer —</option>
-                <option *ngFor="let s of adminAllowedStatuses" [value]="s">
-                  {{ getStatusIcon(s) }} {{ getStatusLabel(s) }}
-                </option>
-              </select>
-              <span class="dec-hint">🔒 Retenu / Refusé seront décidés par le manager après l'entretien</span>
+          <!-- Actions correctives -->
+          <div class="alert alert--info diag-actions" *ngIf="matchingDiagnostic">
+            <div>
+              <div class="diag-actions__title"><app-icon name="settings" [size]="16" /> Comment corriger ?</div>
+              <ul class="diag-actions__list">
+                <li *ngIf="matchingDiagnostic.reason === 'NO_SKILLS_ON_OFFER'">
+                  Édite l'offre <strong>{{ matchingDiagnostic.offerTitle }}</strong> et ajoute des compétences requises avec leur niveau.
+                </li>
+                <li *ngIf="matchingDiagnostic.reason === 'NO_APPLICATIONS'">
+                  Aucun employé n'a postulé. Vérifie que l'offre est <strong>active</strong> et que des employés l'ont vue dans leur espace.
+                </li>
+                <li *ngIf="matchingDiagnostic.reason === 'NO_CANDIDATE_PROFILES'">
+                  Les matricules des candidatures ne correspondent à aucun employé en base. Vérifie la cohérence des données.
+                </li>
+                <li *ngIf="matchingDiagnostic.applicationsCount > 0 && matchingDiagnostic.candidatesWithSkills === 0">
+                  Va dans <strong>Gestion Employés</strong> → onglet compétences sur chaque candidat → ajoute leurs compétences avec niveau.
+                </li>
+              </ul>
             </div>
           </div>
         </div>
       </div>
 
       <!-- ═══ Footer : Appliquer les statuts ═══ -->
-      <div class="apply-footer" *ngIf="!matchingLoading && !matchingError && matchingResults.length > 0">
-        <div class="apply-info">
-          <span class="apply-count">
-            <strong>{{ pendingDecisionsCount() }}</strong> changement(s) en attente
-          </span>
-          <span class="apply-hint">Les statuts seront appliqués uniquement après validation</span>
+      <div class="modal__footer apply-bar" *ngIf="!matchingLoading && !matchingError && matchingResults.length > 0">
+        <div class="apply-bar__info">
+          <span class="apply-bar__count"><strong>{{ pendingDecisionsCount() }}</strong> changement(s) en attente</span>
+          <span class="apply-bar__hint">Les statuts seront appliqués uniquement après validation</span>
         </div>
-        <button class="apply-btn"
+        <button class="btn btn--success"
                 [disabled]="pendingDecisionsCount() === 0 || applyingStatuses"
                 (click)="applyMatchingStatuses()">
-          {{ applyingStatuses ? '⏳ Application...' : '✅ Appliquer les statuts validés' }}
+          <app-icon [name]="applyingStatuses ? 'pending' : 'approve'" [size]="16" />
+          {{ applyingStatuses ? 'Application…' : 'Appliquer les statuts validés' }}
         </button>
-      </div>
-
-      <!-- Empty state actionnable (avec diagnostic backend) -->
-      <div class="match-empty" *ngIf="!matchingLoading && !matchingError && matchingResults.length === 0">
-        <div class="empty-icon">📭</div>
-        <p class="diag-reason">{{ getDiagnosticReason(matchingDiagnostic?.reason) }}</p>
-
-        <!-- Diagnostic détaillé -->
-        <div class="diag-grid" *ngIf="matchingDiagnostic">
-          <div class="diag-item" [class.ok]="matchingDiagnostic.skillRequirementsCount > 0"
-                                 [class.ko]="matchingDiagnostic.skillRequirementsCount === 0">
-            <span class="diag-icon">{{ matchingDiagnostic.skillRequirementsCount > 0 ? '✅' : '❌' }}</span>
-            <div>
-              <div class="diag-label">Compétences requises sur l'offre</div>
-              <div class="diag-value">{{ matchingDiagnostic.skillRequirementsCount }}</div>
-            </div>
-          </div>
-          <div class="diag-item" [class.ok]="matchingDiagnostic.applicationsCount > 0"
-                                 [class.ko]="matchingDiagnostic.applicationsCount === 0">
-            <span class="diag-icon">{{ matchingDiagnostic.applicationsCount > 0 ? '✅' : '❌' }}</span>
-            <div>
-              <div class="diag-label">Candidatures reçues</div>
-              <div class="diag-value">{{ matchingDiagnostic.applicationsCount }}</div>
-            </div>
-          </div>
-          <div class="diag-item" [class.ok]="matchingDiagnostic.profilesLoaded > 0"
-                                 [class.ko]="matchingDiagnostic.profilesLoaded === 0 && matchingDiagnostic.applicationsCount > 0">
-            <span class="diag-icon">{{ matchingDiagnostic.profilesLoaded > 0 ? '✅' : (matchingDiagnostic.applicationsCount > 0 ? '❌' : '⚪') }}</span>
-            <div>
-              <div class="diag-label">Profils employés chargés</div>
-              <div class="diag-value">{{ matchingDiagnostic.profilesLoaded }}</div>
-            </div>
-          </div>
-          <div class="diag-item" [class.warn]="matchingDiagnostic.candidatesWithSkills === 0 && matchingDiagnostic.profilesLoaded > 0">
-            <span class="diag-icon">{{ matchingDiagnostic.candidatesWithSkills > 0 ? '✅' : '⚠️' }}</span>
-            <div>
-              <div class="diag-label">Candidats avec compétences</div>
-              <div class="diag-value">{{ matchingDiagnostic.candidatesWithSkills }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Actions correctives -->
-        <div class="diag-actions" *ngIf="matchingDiagnostic">
-          <div class="diag-action-title">🛠️ Comment corriger ?</div>
-          <ul class="diag-action-list">
-            <li *ngIf="matchingDiagnostic.reason === 'NO_SKILLS_ON_OFFER'">
-              Édite l'offre <strong>{{ matchingDiagnostic.offerTitle }}</strong> et ajoute des compétences requises avec leur niveau.
-            </li>
-            <li *ngIf="matchingDiagnostic.reason === 'NO_APPLICATIONS'">
-              Aucun employé n'a postulé. Vérifie que l'offre est <strong>active</strong> et que des employés l'ont vue dans leur espace.
-            </li>
-            <li *ngIf="matchingDiagnostic.reason === 'NO_CANDIDATE_PROFILES'">
-              Les matricules des candidatures ne correspondent à aucun employé en base. Vérifie la cohérence des données.
-            </li>
-            <li *ngIf="matchingDiagnostic.applicationsCount > 0 && matchingDiagnostic.candidatesWithSkills === 0">
-              Va dans <strong>Gestion Employés</strong> → 🎓 sur chaque candidat → ajoute leurs compétences avec niveau.
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ═══════════ Modal Affectation à un manager (phase 1) ═══════════ -->
-<div class="modal-overlay" *ngIf="showScheduleModal" (click)="closeScheduleModal()">
-  <div class="modal-form schedule-modal" (click)="$event.stopPropagation()">
-    <div class="mf-header">
-      <div class="mf-icon">📨</div>
-      <h3>Affecter à un manager</h3>
-      <p class="mf-sub" *ngIf="scheduleApp">{{ scheduleApp.applicantName }} — {{ scheduleApp.jobOfferTitle }}</p>
-    </div>
-
-    <div class="mf-body">
-      <div class="assign-info-banner">
-        <span class="aib-icon">ℹ️</span>
-        <span>
-          Vous affectez ce candidat à un manager. Le manager recevra un email et fixera lui-même
-          la date, l'heure et le lieu depuis son dashboard. Le candidat sera notifié à la planification définitive.
-        </span>
+  <!-- ═══════════ Modal Affectation à un manager (phase 1) ═══════════ -->
+  <div class="modal-overlay" *ngIf="showScheduleModal" (click)="closeScheduleModal()">
+    <div class="modal modal--lg" role="dialog" aria-modal="true" aria-label="Affecter à un manager"
+         (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title"><app-icon name="send" [size]="20" /> Affecter à un manager</div>
+          <div class="modal__sub" *ngIf="scheduleApp">{{ scheduleApp.applicantName }} — {{ scheduleApp.jobOfferTitle }}</div>
+        </div>
+        <button class="icon-btn" aria-label="Fermer" (click)="closeScheduleModal()">
+          <app-icon name="close" [size]="18" />
+        </button>
       </div>
 
-      <div class="grid-2">
-        <div class="field">
-          <label>Manager assigné <span class="req">*</span></label>
-          <select [(ngModel)]="scheduleForm.managerUsername">
-            <option value="">-- Sélectionner --</option>
-            <option *ngFor="let m of managers" [value]="m.username">
-              {{ m.firstName }} {{ m.lastName }} ({{ m.username }})
-            </option>
-          </select>
-          <p class="hint" *ngIf="managers.length === 0">
-            ⚠️ Aucun manager configuré. Crée un employé avec le rôle <strong>MANAGER</strong>.
-          </p>
+      <div class="modal__body">
+        <div class="alert alert--info">
+          <app-icon class="alert__icon" name="info" [size]="18" />
+          <span>
+            Vous affectez ce candidat à un manager. Le manager recevra un email et fixera lui-même
+            la date, l'heure et le lieu depuis son dashboard. Le candidat sera notifié à la planification définitive.
+          </span>
         </div>
-        <div class="field">
-          <label>Type candidat</label>
-          <select [(ngModel)]="scheduleForm.candidateType">
-            <option value="INTERNAL">🏢 Interne</option>
-            <option value="EXTERNAL">🌐 Externe</option>
-          </select>
-        </div>
-        <div class="field full">
-          <label>
-            Email candidat
-            <span *ngIf="scheduleForm.candidateType === 'EXTERNAL'" class="req">*</span>
-            <span *ngIf="scheduleForm.candidateType === 'INTERNAL'" class="opt">(auto-résolu si vide)</span>
-          </label>
-          <input type="email" [(ngModel)]="scheduleForm.candidateEmail"
-                 [placeholder]="scheduleForm.candidateType === 'EXTERNAL' ? 'jean.dupont@exemple.com (obligatoire)' : 'Laisser vide pour résolution auto via le matricule'" />
-        </div>
-        <div class="field full">
-          <label>Note pour le manager <span class="opt">(optionnel)</span></label>
-          <textarea [(ngModel)]="scheduleForm.rhNote" rows="3"
-                    placeholder="Ex: Profil senior, prévoir test technique. Préférer un créneau matinal."></textarea>
-        </div>
-        <div class="email-notice full">
-          📧 Le manager recevra un email pour planifier. Le candidat recevra un email « pre-shortlist » rassurant.
+
+        <div class="grid grid--2">
+          <div class="field">
+            <label class="label" for="sched-mgr">Manager assigné <span class="req">*</span></label>
+            <select id="sched-mgr" class="select" [(ngModel)]="scheduleForm.managerUsername">
+              <option value="">-- Sélectionner --</option>
+              <option *ngFor="let m of managers" [value]="m.username">
+                {{ m.firstName }} {{ m.lastName }} ({{ m.username }})
+              </option>
+            </select>
+            <p class="help help--warn" *ngIf="managers.length === 0">
+              <app-icon name="warning" [size]="14" /> Aucun manager configuré. Crée un employé avec le rôle <strong>MANAGER</strong>.
+            </p>
+          </div>
+          <div class="field">
+            <label class="label" for="sched-type">Type candidat</label>
+            <select id="sched-type" class="select" [(ngModel)]="scheduleForm.candidateType">
+              <option value="INTERNAL">Interne</option>
+              <option value="EXTERNAL">Externe</option>
+            </select>
+          </div>
+          <div class="field field--full">
+            <label class="label" for="sched-email">
+              Email candidat
+              <span *ngIf="scheduleForm.candidateType === 'EXTERNAL'" class="req">*</span>
+              <span *ngIf="scheduleForm.candidateType === 'INTERNAL'" class="opt">(auto-résolu si vide)</span>
+            </label>
+            <input id="sched-email" class="input" type="email" [(ngModel)]="scheduleForm.candidateEmail"
+                   [placeholder]="scheduleForm.candidateType === 'EXTERNAL' ? 'jean.dupont@exemple.com (obligatoire)' : 'Laisser vide pour résolution auto via le matricule'" />
+          </div>
+          <div class="field field--full">
+            <label class="label" for="sched-note">Note pour le manager <span class="opt">(optionnel)</span></label>
+            <textarea id="sched-note" class="textarea" [(ngModel)]="scheduleForm.rhNote" rows="3"
+                      placeholder="Ex : Profil senior, prévoir test technique. Préférer un créneau matinal."></textarea>
+          </div>
+          <div class="alert alert--success field--full">
+            <app-icon class="alert__icon" name="email" [size]="18" />
+            <span>Le manager recevra un email pour planifier. Le candidat recevra un email « pre-shortlist » rassurant.</span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="mf-footer">
-      <button class="btn-cancel" (click)="closeScheduleModal()">Annuler</button>
-      <button class="btn-submit" [disabled]="scheduleSaving" (click)="submitInterview()">
-        {{ scheduleSaving ? '⏳ Affectation…' : '📨 Affecter au manager' }}
-      </button>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" (click)="closeScheduleModal()">Annuler</button>
+        <button class="btn btn--primary" [disabled]="scheduleSaving" (click)="submitInterview()">
+          <app-icon [name]="scheduleSaving ? 'pending' : 'send'" [size]="16" />
+          {{ scheduleSaving ? 'Affectation…' : 'Affecter au manager' }}
+        </button>
+      </div>
     </div>
   </div>
 </div>
