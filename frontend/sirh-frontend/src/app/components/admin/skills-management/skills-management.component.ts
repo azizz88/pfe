@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RecruitmentApiService } from '../../../services/recruitment-api.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 interface Skill {
   id?: number;
@@ -16,68 +17,87 @@ interface Skill {
 @Component({
   selector: 'app-skills-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   template: `
-    <div class="management">
-      <div class="header">
-        <div>
-          <h1>🎓 Gestion des Compétences</h1>
-          <p class="subtitle">
+    <div class="skills-mgmt">
+      <div class="page-header">
+        <div class="page-header__title">
+          <h1>Gestion des compétences</h1>
+          <span class="page-header__sub">
             Catalogue des compétences utilisées dans les offres d'emploi.
-          </p>
+          </span>
         </div>
-        <button class="add-btn" (click)="openCreateForm()">+ Nouvelle compétence</button>
+        <div class="page-header__actions">
+          <button class="btn btn--primary" (click)="openCreateForm()">
+            <app-icon name="add" [size]="16" />
+            Nouvelle compétence
+          </button>
+        </div>
       </div>
 
       <!-- Recherche + filtres -->
       <div class="toolbar">
-        <input
-          type="text"
-          class="search"
-          placeholder="🔍 Rechercher une compétence (nom ou catégorie)…"
-          [(ngModel)]="searchTerm"
-        />
-        <span class="count-badge">{{ filteredSkills.length }} / {{ skills.length }}</span>
-      </div>
-
-      <!-- Liste vide -->
-      <div class="empty-state" *ngIf="skills.length === 0 && !loading">
-        <div class="empty-icon">🎓</div>
-        <h3>Aucune compétence enregistrée</h3>
-        <p>Commencez par ajouter les compétences les plus demandées dans votre organisation.</p>
-        <button class="add-btn" (click)="openCreateForm()">+ Ajouter la première</button>
+        <div class="input-icon search-field">
+          <app-icon name="search" [size]="16" />
+          <input
+            type="text"
+            class="input"
+            placeholder="Rechercher une compétence (nom ou catégorie)…"
+            [(ngModel)]="searchTerm"
+          />
+        </div>
+        <span class="badge badge--neutral u-mono">{{ filteredSkills.length }} / {{ skills.length }}</span>
       </div>
 
       <!-- Loading -->
-      <div class="loading" *ngIf="loading">Chargement…</div>
+      <div class="loading-row" *ngIf="loading">
+        <span class="spinner"></span> Chargement…
+      </div>
+
+      <!-- Liste vide -->
+      <div class="card card--flat" *ngIf="skills.length === 0 && !loading">
+        <div class="empty-state">
+          <div class="empty-state__icon"><app-icon name="skills" [size]="26" /></div>
+          <div class="empty-state__title">Aucune compétence enregistrée</div>
+          <p class="empty-state__text">Commencez par ajouter les compétences les plus demandées dans votre organisation.</p>
+          <button class="btn btn--primary" (click)="openCreateForm()">
+            <app-icon name="add" [size]="16" />
+            Ajouter la première
+          </button>
+        </div>
+      </div>
 
       <!-- Tableau des compétences -->
-      <div class="table-card" *ngIf="!loading && skills.length > 0">
-        <table>
+      <div class="table-wrap" *ngIf="!loading && skills.length > 0">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Nom</th>
               <th>Catégorie</th>
               <th>Description</th>
               <th>Ajoutée le</th>
-              <th class="actions-col">Actions</th>
+              <th class="cell-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let s of filteredSkills">
-              <td><span class="skill-chip">{{ s.name }}</span></td>
+              <td><span class="chip">{{ s.name }}</span></td>
               <td>
-                <span *ngIf="s.category" class="category">{{ s.category }}</span>
-                <span *ngIf="!s.category" class="muted">—</span>
+                <span *ngIf="s.category" class="badge badge--neutral">{{ s.category }}</span>
+                <span *ngIf="!s.category" class="u-faint">—</span>
               </td>
               <td class="desc-cell">
                 <span *ngIf="s.description">{{ s.description }}</span>
-                <span *ngIf="!s.description" class="muted">—</span>
+                <span *ngIf="!s.description" class="u-faint">—</span>
               </td>
-              <td class="muted">{{ formatDate(s.createdAt) }}</td>
-              <td class="actions-cell">
-                <button class="icon-btn edit" (click)="openEditForm(s)" title="Modifier">✏️</button>
-                <button class="icon-btn delete" (click)="deleteSkill(s)" title="Supprimer">🗑️</button>
+              <td class="u-muted">{{ formatDate(s.createdAt) }}</td>
+              <td class="cell-actions">
+                <button class="icon-btn" (click)="openEditForm(s)" aria-label="Modifier la compétence">
+                  <app-icon name="edit" [size]="16" />
+                </button>
+                <button class="icon-btn icon-btn--danger" (click)="deleteSkill(s)" aria-label="Supprimer la compétence">
+                  <app-icon name="delete" [size]="16" />
+                </button>
               </td>
             </tr>
           </tbody>
@@ -89,50 +109,68 @@ interface Skill {
 
       <!-- Modal création / édition -->
       <div class="modal-overlay" *ngIf="showForm" (click)="showForm = false">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3>{{ editingId ? 'Modifier' : 'Ajouter' }} une compétence</h3>
-
-          <div class="field">
-            <label>Nom <span class="required">*</span></label>
-            <input
-              type="text"
-              [(ngModel)]="form.name"
-              placeholder="Ex : Java, Management, Anglais…"
-              maxlength="120"
-              [class.error]="errorMessage && !form.name"
-            />
+        <div class="modal modal--sm" role="dialog" aria-modal="true"
+             [attr.aria-label]="(editingId ? 'Modifier' : 'Ajouter') + ' une compétence'"
+             (click)="$event.stopPropagation()">
+          <div class="modal__header">
+            <div class="modal__title">{{ editingId ? 'Modifier' : 'Ajouter' }} une compétence</div>
+            <button class="icon-btn" (click)="showForm = false" aria-label="Fermer la fenêtre">
+              <app-icon name="close" [size]="18" />
+            </button>
           </div>
 
-          <div class="field">
-            <label>Catégorie <span class="optional">(optionnel)</span></label>
-            <input
-              type="text"
-              [(ngModel)]="form.category"
-              placeholder="Ex : Technique, Soft skill, Langue…"
-              maxlength="80"
-              list="categories"
-            />
-            <datalist id="categories">
-              <option *ngFor="let c of existingCategories" [value]="c"></option>
-            </datalist>
+          <div class="modal__body">
+            <div class="field">
+              <label class="label" for="skill-name">Nom <span class="req">*</span></label>
+              <input
+                id="skill-name"
+                type="text"
+                class="input"
+                [(ngModel)]="form.name"
+                placeholder="Ex : Java, Management, Anglais…"
+                maxlength="120"
+                [class.input--invalid]="errorMessage && !form.name"
+              />
+            </div>
+
+            <div class="field">
+              <label class="label" for="skill-category">Catégorie <span class="optional">(optionnel)</span></label>
+              <input
+                id="skill-category"
+                type="text"
+                class="input"
+                [(ngModel)]="form.category"
+                placeholder="Ex : Technique, Soft skill, Langue…"
+                maxlength="80"
+                list="categories"
+              />
+              <datalist id="categories">
+                <option *ngFor="let c of existingCategories" [value]="c"></option>
+              </datalist>
+            </div>
+
+            <div class="field">
+              <label class="label" for="skill-description">Description <span class="optional">(optionnel)</span></label>
+              <textarea
+                id="skill-description"
+                class="textarea"
+                [(ngModel)]="form.description"
+                placeholder="Précisez le niveau attendu, les outils…"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="field-error" *ngIf="errorMessage">
+              <app-icon name="alert" [size]="14" /> {{ errorMessage }}
+            </div>
           </div>
 
-          <div class="field">
-            <label>Description <span class="optional">(optionnel)</span></label>
-            <textarea
-              [(ngModel)]="form.description"
-              placeholder="Précisez le niveau attendu, les outils…"
-              rows="3"
-            ></textarea>
-          </div>
-
-          <div class="error-msg" *ngIf="errorMessage">{{ errorMessage }}</div>
-
-          <div class="modal-actions">
-            <button class="cancel-btn" (click)="showForm = false">Annuler</button>
-            <button class="submit-btn"
+          <div class="modal__footer">
+            <button class="btn btn--secondary" (click)="showForm = false">Annuler</button>
+            <button class="btn btn--primary"
                     [disabled]="!form.name?.trim() || submitting"
                     (click)="saveSkill()">
+              <app-icon name="save" [size]="16" />
               {{ editingId ? 'Enregistrer' : 'Créer' }}
             </button>
           </div>
@@ -141,241 +179,22 @@ interface Skill {
     </div>
   `,
   styles: [`
-    .management { color: #0f172a; }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 24px;
-      gap: 16px;
-    }
-    .header h1 {
-      color: #1e3a5f;
-      margin: 0 0 6px 0;
-      font-size: 1.6rem;
-    }
-    .subtitle { color: #64748b; margin: 0; font-size: 0.9rem; }
-    .add-btn {
-      padding: 10px 20px;
-      background: #1e3a5f;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: background 0.15s;
-      white-space: nowrap;
-    }
-    .add-btn:hover { background: #17304f; }
+    :host { display: block; }
 
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .search {
-      flex: 1;
-      padding: 10px 14px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      background: white;
-      outline: none;
-    }
-    .search:focus { border-color: #1e3a5f; box-shadow: 0 0 0 3px rgba(30,58,95,0.1); }
-    .count-badge {
-      padding: 6px 14px;
-      background: #e2e8f0;
-      border-radius: 999px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #334155;
-    }
+    .search-field { flex: 1; min-width: 240px; }
 
-    .empty-state {
-      text-align: center;
-      padding: 64px 24px;
-      background: white;
-      border: 1px dashed #cbd5e1;
-      border-radius: 12px;
-    }
-    .empty-icon { font-size: 48px; margin-bottom: 12px; }
-    .empty-state h3 { color: #1e293b; margin: 0 0 8px 0; }
-    .empty-state p { color: #64748b; margin: 0 0 20px 0; }
+    .optional { font-weight: 400; color: var(--c-faint); font-size: var(--fs-12); }
 
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: #94a3b8;
-    }
-
-    .table-card {
-      background: white;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
-    }
-    table { width: 100%; border-collapse: collapse; }
-    thead {
-      background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    th {
-      text-align: left;
-      padding: 12px 16px;
-      font-weight: 600;
-      font-size: 0.8rem;
-      color: #475569;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    td {
-      padding: 14px 16px;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: 0.9rem;
-      color: #334155;
-      vertical-align: middle;
-    }
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: #f8fafc; }
-
-    .skill-chip {
-      display: inline-block;
-      padding: 4px 12px;
-      background: #eff6ff;
-      color: #1e3a5f;
-      border-radius: 999px;
-      font-weight: 600;
-      font-size: 0.85rem;
-    }
-    .category {
-      padding: 3px 10px;
-      background: #f1f5f9;
-      border-radius: 6px;
-      font-size: 0.78rem;
-      color: #475569;
-    }
-    .muted { color: #94a3b8; font-style: italic; font-size: 0.85rem; }
     .desc-cell { max-width: 320px; line-height: 1.4; }
-
-    .actions-col, .actions-cell { width: 110px; white-space: nowrap; }
-    .actions-cell { text-align: right; }
-    .icon-btn {
-      background: transparent;
-      border: 1px solid #e2e8f0;
-      padding: 6px 10px;
-      margin-left: 4px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.15s;
-    }
-    .icon-btn.edit:hover {
-      border-color: #3b82f6;
-      background: #eff6ff;
-    }
-    .icon-btn.delete:hover {
-      border-color: #ef4444;
-      background: #fef2f2;
-    }
 
     .empty-filter {
       text-align: center;
-      padding: 32px;
-      color: #94a3b8;
+      padding: var(--sp-7);
+      color: var(--c-muted);
       font-style: italic;
       margin: 0;
+      border-top: 1px solid var(--c-border);
     }
-
-    /* Modal */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15,23,42,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 20px;
-    }
-    .modal {
-      background: white;
-      border-radius: 12px;
-      padding: 28px;
-      width: 100%;
-      max-width: 480px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-    }
-    .modal h3 {
-      margin: 0 0 20px 0;
-      color: #0f172a;
-      font-size: 1.15rem;
-    }
-    .field { margin-bottom: 16px; }
-    .field label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #334155;
-      margin-bottom: 6px;
-    }
-    .required { color: #ef4444; }
-    .optional { color: #94a3b8; font-weight: 400; font-size: 0.75rem; }
-    .field input, .field textarea {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      box-sizing: border-box;
-      outline: none;
-      font-family: inherit;
-    }
-    .field input:focus, .field textarea:focus {
-      border-color: #1e3a5f;
-      box-shadow: 0 0 0 3px rgba(30,58,95,0.1);
-    }
-    .field input.error { border-color: #ef4444; }
-    .error-msg {
-      padding: 10px 14px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #991b1b;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      margin-bottom: 16px;
-    }
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 20px;
-    }
-    .cancel-btn {
-      padding: 9px 16px;
-      border: 1px solid #cbd5e1;
-      background: white;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      color: #334155;
-    }
-    .cancel-btn:hover { background: #f1f5f9; }
-    .submit-btn {
-      padding: 9px 16px;
-      background: #1e3a5f;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    .submit-btn:hover:not(:disabled) { background: #17304f; }
-    .submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
   `]
 })
 export class SkillsManagementComponent implements OnInit {

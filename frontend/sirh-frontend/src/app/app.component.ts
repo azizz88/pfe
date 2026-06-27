@@ -1,289 +1,278 @@
-import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { Component, signal } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { KeycloakService } from './services/keycloak.service';
+import { IconComponent } from './shared/icon/icon.component';
 
 // Routes publiques (pas de sidebar, pas de Keycloak init).
 const PUBLIC_ROUTE_PREFIXES = ['/forgot-password'];
 
+interface NavItem { label: string; icon: string; link: string; }
+interface NavSection { title: string; items: NavItem[]; }
+
 /**
  * Composant racine de l'application SIRH.
- * Affiche la barre de navigation avec les liens selon le rôle de l'utilisateur.
+ * Coque applicative : barre latérale de navigation contextuelle au rôle
+ * (RH / Manager / Employé) + zone de contenu.
  */
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
   template: `
-    <ng-container *ngIf="!isPublicRoute; else publicLayout">
-    <div class="app-container">
-      <!-- Barre de navigation -->
-      <nav class="sidebar">
-        <div class="sidebar-header">
-          <h2>🏢 SIRH</h2>
-          <p class="user-info">{{ keycloakService.getFullName() }}</p>
-          <span class="user-role">{{ roleLabel }}</span>
-        </div>
-
-        <!-- ============================================ -->
-        <!-- SIDEBAR MANAGER (visible si MANAGER, non-admin) -->
-        <!-- ============================================ -->
-        <ng-container *ngIf="keycloakService.isManager() && !keycloakService.isHrAdmin()">
-          <div class="nav-section">
-            <h3>🎙️ Espace Manager</h3>
-            <a routerLink="/manager/dashboard" routerLinkActive="active">
-              <span>🏠</span> Mon Dashboard
-            </a>
-            <a routerLink="/manager/profile" routerLinkActive="active">
-              <span>👤</span> Mon Profil
-            </a>
-            <a routerLink="/manager/interviews" routerLinkActive="active">
-              <span>📅</span> Mes Entretiens
-            </a>
-            <a routerLink="/manager/formation" routerLinkActive="active">
-              <span>🎓</span> Formations
-            </a>
-            <a routerLink="/manager/organigramme" routerLinkActive="active">
-              <span>🌳</span> Organigramme
-            </a>
-          </div>
-        </ng-container>
-
-        <!-- ============================================ -->
-        <!-- SIDEBAR EMPLOYÉ (visible uniquement pour EMPLOYEE non-manager) -->
-        <!-- ============================================ -->
-        <ng-container *ngIf="!keycloakService.isHrAdmin() && !keycloakService.isManager()">
-          <div class="nav-section">
-            <h3>📋 Espace Employé</h3>
-            <a routerLink="/employee/dashboard" routerLinkActive="active">
-              <span>🏠</span> Mon Dashboard
-            </a>
-            <a routerLink="/employee/profile" routerLinkActive="active">
-              <span>👤</span> Mon Profil
-            </a>
-            <a routerLink="/employee/directory" routerLinkActive="active">
-              <span>📖</span> Annuaire
-            </a>
-            <a routerLink="/employee/applications" routerLinkActive="active">
-              <span>💼</span> Offres d'emploi
-            </a>
-            <a routerLink="/employee/formation" routerLinkActive="active">
-              <span>🎓</span> Ma Formation
-            </a>
-          </div>
-        </ng-container>
-
-        <!-- ============================================ -->
-        <!-- SIDEBAR RH ADMIN (visible uniquement pour HR_ADMIN) -->
-        <!-- ============================================ -->
-        <ng-container *ngIf="keycloakService.isHrAdmin()">
-          <div class="nav-section">
-            <h3>🏢 Administration RH</h3>
-            <a routerLink="/admin/dashboard" routerLinkActive="active">
-              <span>📊</span> Dashboard Stats
-            </a>
-            <a routerLink="/admin/employees" routerLinkActive="active">
-              <span>👥</span> Gestion Employés
-            </a>
-            <a routerLink="/admin/departments" routerLinkActive="active">
-              <span>🏗️</span> Départements
-            </a>
-            <a routerLink="/admin/contracts" routerLinkActive="active">
-              <span>📄</span> Contrats
-            </a>
-            <a routerLink="/admin/organigramme" routerLinkActive="active">
-              <span>🌳</span> Organigramme
-            </a>
-          </div>
-
-          <div class="nav-section">
-            <h3>🎯 Recrutement</h3>
-            <a routerLink="/admin/recruitment" routerLinkActive="active">
-              <span>🎯</span> Offres & candidatures
-            </a>
-            <a routerLink="/admin/external-candidates" routerLinkActive="active">
-              <span>🌐</span> Candidats externes
-            </a>
-            <a routerLink="/admin/skills" routerLinkActive="active">
-              <span>🎓</span> Compétences
-            </a>
-            <a routerLink="/admin/training-providers" routerLinkActive="active">
-              <span>🏫</span> Organismes de formation
-            </a>
-          </div>
-        </ng-container>
-
-        <!-- Bouton déconnexion -->
-        <div class="nav-section logout-section">
-          <button class="logout-btn" (click)="keycloakService.logout()">
-            🚪 Déconnexion
+    @if (!isPublicRoute) {
+      <div class="shell" [class]="roleClass">
+        <!-- Barre supérieure mobile -->
+        <header class="topbar">
+          <button class="topbar__menu" type="button" (click)="toggleMobile()"
+                  [attr.aria-expanded]="mobileOpen()" aria-label="Ouvrir le menu de navigation">
+            <app-icon [name]="mobileOpen() ? 'close' : 'menu'" [size]="20" />
           </button>
-        </div>
-      </nav>
+          <span class="topbar__brand">SIRH</span>
+        </header>
 
-      <!-- Contenu principal -->
-      <main class="main-content">
-        <router-outlet></router-outlet>
-      </main>
-    </div>
-    </ng-container>
+        @if (mobileOpen()) {
+          <div class="scrim" (click)="closeMobile()" aria-hidden="true"></div>
+        }
 
-    <!-- Layout pour les pages publiques (forgot-password, etc.) -->
-    <ng-template #publicLayout>
+        <!-- Navigation latérale -->
+        <nav class="sidebar" [class.is-open]="mobileOpen()" aria-label="Navigation principale">
+          <div class="brand">
+            <span class="brand__mark" aria-hidden="true">
+              <app-icon name="team" [size]="20" />
+            </span>
+            <span class="brand__text">
+              <span class="brand__name">SIRH</span>
+              <span class="brand__tag">Ressources Humaines</span>
+            </span>
+          </div>
+
+          <div class="nav">
+            @for (section of navSections; track section.title) {
+              <div class="nav__section">
+                <p class="nav__heading">{{ section.title }}</p>
+                @for (item of section.items; track item.link) {
+                  <a [routerLink]="item.link" routerLinkActive="is-active" (click)="closeMobile()">
+                    <app-icon [name]="item.icon" [size]="18" />
+                    <span>{{ item.label }}</span>
+                  </a>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="nav__foot">
+            <div class="usercard">
+              <span class="avatar avatar--round" aria-hidden="true">{{ initials }}</span>
+              <span class="usercard__id">
+                <span class="usercard__name">{{ keycloakService.getFullName() || keycloakService.getUserName() }}</span>
+                <span class="usercard__role">{{ roleLabel }}</span>
+              </span>
+            </div>
+            <button class="logout" type="button" (click)="keycloakService.logout()">
+              <app-icon name="logout" [size]="18" />
+              <span>Déconnexion</span>
+            </button>
+          </div>
+        </nav>
+
+        <main class="content">
+          <router-outlet></router-outlet>
+        </main>
+      </div>
+    } @else {
       <router-outlet></router-outlet>
-    </ng-template>
+    }
   `,
   styles: [`
-    .app-container {
-      display: flex;
-      min-height: 100vh;
-      font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
+    .shell { display: flex; min-height: 100vh; }
 
+    /* ---- Sidebar ---- */
     .sidebar {
-      width: 270px;
-      background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-      color: white;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow-y: auto;
+      width: 256px; flex: none;
+      background: var(--c-nav-bg);
+      color: var(--c-nav-text);
+      display: flex; flex-direction: column;
+      position: sticky; top: 0; height: 100vh;
+      border-right: 1px solid rgba(0,0,0,.2);
     }
 
-    .sidebar-header {
-      padding: 28px 24px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      text-align: center;
-      background: rgba(255, 255, 255, 0.02);
+    .brand {
+      display: flex; align-items: center; gap: 11px;
+      padding: 20px 20px 18px;
+      border-bottom: 1px solid var(--c-nav-border);
     }
-
-    .sidebar-header h2 {
-      margin: 0 0 10px 0;
-      font-size: 1.6rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #60a5fa, #a78bfa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .brand__mark {
+      width: 38px; height: 38px; border-radius: 9px; flex: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--c-accent); color: #fff;
     }
+    .brand__text { display: flex; flex-direction: column; line-height: 1.15; }
+    .brand__name { font-size: 1.15rem; font-weight: 700; color: #fff; letter-spacing: .02em; }
+    .brand__tag { font-size: .68rem; color: var(--c-nav-text-dim); letter-spacing: .04em; }
 
-    .user-info {
-      margin: 0;
-      font-size: 0.9rem;
-      opacity: 0.85;
-      font-weight: 500;
+    .nav { flex: 1; overflow-y: auto; padding: 14px 12px; }
+    .nav__section { padding: 6px 0 12px; }
+    .nav__section + .nav__section { border-top: 1px solid var(--c-nav-border); padding-top: 12px; }
+    .nav__heading {
+      font-size: .66rem; font-weight: 650; text-transform: uppercase; letter-spacing: .11em;
+      color: var(--c-nav-text-dim); padding: 0 10px; margin-bottom: 6px;
     }
-
-    .user-role {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 4px 14px;
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.25));
-      border: 1px solid rgba(96, 165, 250, 0.2);
-      border-radius: 20px;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-weight: 600;
+    .nav a {
+      display: flex; align-items: center; gap: 11px;
+      padding: 9px 10px; border-radius: 7px;
+      color: var(--c-nav-text); font-size: .875rem; font-weight: 500;
+      text-decoration: none; position: relative;
+      transition: background .15s ease, color .15s ease;
     }
-
-    .nav-section {
-      padding: 16px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    .nav a:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .nav a.is-active { background: var(--c-nav-bg-2); color: #fff; font-weight: 600; }
+    .nav a.is-active::before {
+      content: ""; position: absolute; left: -12px; top: 7px; bottom: 7px; width: 3px;
+      border-radius: 0 3px 3px 0; background: var(--c-accent);
     }
+    .nav a app-icon { color: var(--c-nav-text-dim); transition: color .15s ease; }
+    .nav a:hover app-icon, .nav a.is-active app-icon { color: #fff; }
 
-    .nav-section h3 {
-      padding: 0 24px;
-      margin: 0 0 10px 0;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      opacity: 0.4;
-      font-weight: 600;
+    .nav__foot { border-top: 1px solid var(--c-nav-border); padding: 12px; }
+    .usercard { display: flex; align-items: center; gap: 10px; padding: 6px 8px 12px; }
+    .usercard .avatar { background: rgba(255,255,255,.1); color: #fff; }
+    .usercard__id { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+    .usercard__name { font-size: .85rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .usercard__role { font-size: .72rem; color: var(--c-nav-text-dim); }
+    .logout {
+      width: 100%; display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px; border-radius: 7px; border: 1px solid var(--c-nav-border);
+      background: transparent; color: var(--c-nav-text); cursor: pointer;
+      font-size: .85rem; font-weight: 500; transition: background .15s ease, color .15s ease, border-color .15s ease;
     }
+    .logout:hover { background: rgba(210,69,69,.14); border-color: rgba(210,69,69,.3); color: #f0a3a3; }
+    .logout:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,.18); }
 
-    .nav-section a {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 11px 24px;
-      color: rgba(255, 255, 255, 0.65);
-      text-decoration: none;
-      font-size: 0.88rem;
-      font-weight: 500;
-      transition: all 0.2s ease;
-      border-left: 3px solid transparent;
-      position: relative;
-    }
+    /* ---- Contenu ---- */
+    .content { flex: 1; min-width: 0; padding: 28px 32px 48px; }
 
-    .nav-section a:hover {
-      background: rgba(255, 255, 255, 0.06);
-      color: white;
-      border-left-color: rgba(96, 165, 250, 0.4);
-    }
+    /* ---- Topbar (mobile) ---- */
+    .topbar { display: none; }
+    .scrim { display: none; }
 
-    .nav-section a.active {
-      background: linear-gradient(90deg, rgba(59, 130, 246, 0.15), transparent);
-      color: white;
-      border-left-color: #60a5fa;
-      font-weight: 600;
-    }
+    @media (max-width: 960px) {
+      .topbar {
+        display: flex; align-items: center; gap: 12px;
+        position: sticky; top: 0; z-index: 40;
+        height: 56px; padding: 0 16px;
+        background: var(--c-nav-bg); color: #fff;
+        border-bottom: 1px solid rgba(0,0,0,.2);
+      }
+      .topbar__menu {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 38px; height: 38px; border-radius: 7px;
+        border: 1px solid var(--c-nav-border); background: transparent; color: #fff; cursor: pointer;
+      }
+      .topbar__brand { font-size: 1.05rem; font-weight: 700; letter-spacing: .02em; }
 
-    .nav-section a span {
-      font-size: 1.05rem;
-      width: 22px;
-      text-align: center;
-    }
-
-    .logout-section {
-      margin-top: auto;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      border-bottom: none;
-      padding: 8px 0;
-    }
-
-    .logout-btn {
-      width: 100%;
-      padding: 14px 24px;
-      background: transparent;
-      color: rgba(248, 113, 113, 0.8);
-      border: none;
-      cursor: pointer;
-      font-size: 0.88rem;
-      font-weight: 500;
-      text-align: left;
-      transition: all 0.2s ease;
-    }
-
-    .logout-btn:hover {
-      background: rgba(248, 113, 113, 0.08);
-      color: #f87171;
-    }
-
-    .main-content {
-      flex: 1;
-      background: #f1f5f9;
-      padding: 28px 32px;
-      overflow-y: auto;
-      min-height: 100vh;
+      .shell { flex-direction: column; }
+      .sidebar {
+        position: fixed; top: 0; left: 0; z-index: 60; height: 100vh;
+        transform: translateX(-100%); transition: transform .2s ease;
+        box-shadow: var(--sh-lg);
+      }
+      .sidebar.is-open { transform: translateX(0); }
+      .scrim { display: block; position: fixed; inset: 0; z-index: 50; background: rgba(10,16,28,.5); }
+      .content { padding: 20px 18px 40px; }
     }
   `]
 })
 export class AppComponent {
-  constructor(public keycloakService: KeycloakService, private router: Router) {}
+  readonly mobileOpen = signal(false);
+
+  constructor(public keycloakService: KeycloakService, private router: Router) {
+    // Ferme le menu mobile à chaque navigation.
+    this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe(() => this.mobileOpen.set(false));
+  }
 
   get isPublicRoute(): boolean {
     return PUBLIC_ROUTE_PREFIXES.some(prefix => this.router.url.startsWith(prefix));
   }
 
+  get roleClass(): string {
+    if (this.keycloakService.isHrAdmin()) return 'role-admin';
+    if (this.keycloakService.isManager()) return 'role-manager';
+    return 'role-employee';
+  }
+
   get roleLabel(): string {
-    if (this.keycloakService.isHrAdmin()) return 'RH Admin';
+    if (this.keycloakService.isHrAdmin()) return 'Administration RH';
     if (this.keycloakService.isManager()) return 'Manager';
     return 'Employé';
   }
+
+  get initials(): string {
+    const name = this.keycloakService.getFullName() || this.keycloakService.getUserName() || '';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '–';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  get navSections(): NavSection[] {
+    const kc = this.keycloakService;
+
+    if (kc.isHrAdmin()) {
+      return [
+        {
+          title: 'Administration RH',
+          items: [
+            { label: 'Tableau de bord', icon: 'dashboard',  link: '/admin/dashboard' },
+            { label: 'Employés',        icon: 'employees',  link: '/admin/employees' },
+            { label: 'Départements',    icon: 'department', link: '/admin/departments' },
+            { label: 'Contrats',        icon: 'contract',   link: '/admin/contracts' },
+            { label: 'Organigramme',    icon: 'org-chart',  link: '/admin/organigramme' },
+          ],
+        },
+        {
+          title: 'Recrutement & talents',
+          items: [
+            { label: 'Offres & candidatures', icon: 'recruitment',       link: '/admin/recruitment' },
+            { label: 'Candidats externes',    icon: 'external',          link: '/admin/external-candidates' },
+            { label: 'Compétences',           icon: 'skills',            link: '/admin/skills' },
+            { label: 'Organismes de formation', icon: 'training-provider', link: '/admin/training-providers' },
+          ],
+        },
+      ];
+    }
+
+    if (kc.isManager()) {
+      return [
+        {
+          title: 'Espace manager',
+          items: [
+            { label: 'Tableau de bord', icon: 'dashboard',  link: '/manager/dashboard' },
+            { label: 'Mon profil',      icon: 'profile',    link: '/manager/profile' },
+            { label: 'Entretiens',      icon: 'interview',  link: '/manager/interviews' },
+            { label: 'Formations',      icon: 'formation',  link: '/manager/formation' },
+            { label: 'Organigramme',    icon: 'org-chart',  link: '/manager/organigramme' },
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        title: 'Espace employé',
+        items: [
+          { label: 'Tableau de bord', icon: 'dashboard', link: '/employee/dashboard' },
+          { label: 'Mon profil',      icon: 'profile',   link: '/employee/profile' },
+          { label: 'Annuaire',        icon: 'directory', link: '/employee/directory' },
+          { label: "Offres d'emploi", icon: 'job',       link: '/employee/applications' },
+          { label: 'Ma formation',    icon: 'formation', link: '/employee/formation' },
+        ],
+      },
+    ];
+  }
+
+  toggleMobile() { this.mobileOpen.update(v => !v); }
+  closeMobile() { this.mobileOpen.set(false); }
 }

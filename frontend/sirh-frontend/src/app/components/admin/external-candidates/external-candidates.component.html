@@ -1,69 +1,90 @@
-<div class="management">
+<div class="external-candidates fade-in">
   <div class="page-header">
-    <div class="header-left">
-      <div class="header-icon">🌐</div>
-      <div>
-        <h1>Candidats externes</h1>
-        <p class="header-sub">Pool de candidats LinkedIn / cooptation — évalué par le même modèle IA que les internes</p>
-      </div>
+    <div class="page-header__title">
+      <h1>Candidats externes</h1>
+      <p class="page-header__sub">Pool de candidats LinkedIn / cooptation — évalué par le même modèle IA que les internes</p>
     </div>
-    <button class="add-btn" (click)="openCreate()">
-      <span>+</span> Nouveau candidat
-    </button>
+    <div class="page-header__actions">
+      <button class="btn btn--primary" (click)="openCreate()">
+        <app-icon name="add" [size]="16" /> Nouveau candidat
+      </button>
+    </div>
   </div>
 
   <!-- Tabs -->
   <div class="tabs">
-    <button [class.active]="activeTab === 'pool'" (click)="activeTab = 'pool'">
-      <span class="tab-icon">👥</span> Pool ({{ candidates.length }})
+    <button class="tab" [class.is-active]="activeTab === 'pool'" (click)="activeTab = 'pool'">
+      <app-icon name="employees" [size]="16" /> Pool
+      <span class="tab__count">{{ candidates.length }}</span>
     </button>
-    <button [class.active]="activeTab === 'matching'" (click)="activeTab = 'matching'">
-      <span class="tab-icon">🤖</span> Matching IA
+    <button class="tab" [class.is-active]="activeTab === 'matching'" (click)="activeTab = 'matching'">
+      <app-icon name="ai" [size]="16" /> Matching IA
     </button>
   </div>
 
   <!-- ════════════════ Onglet POOL ════════════════ -->
   <div *ngIf="activeTab === 'pool'" class="content-area">
-    <div class="error-banner" *ngIf="loadError">
-      <span class="error-icon">⚠️</span>{{ loadError }}
+    <div class="alert alert--danger" *ngIf="loadError">
+      <app-icon class="alert__icon" name="warning" [size]="16" /> {{ loadError }}
     </div>
 
     <div class="empty-state" *ngIf="!loadError && candidates.length === 0">
-      <div class="empty-icon">🌐</div>
-      <p>Aucun candidat externe pour l'instant.</p>
-      <p class="empty-sub">Ajoute des profils LinkedIn/CV pour les inclure dans le matching IA.</p>
+      <div class="empty-state__icon"><app-icon name="external" [size]="26" /></div>
+      <div class="empty-state__title">Aucun candidat externe</div>
+      <div class="empty-state__text">Ajoutez des profils LinkedIn / CV pour les inclure dans le matching IA.</div>
     </div>
 
     <div class="candidates-grid" *ngIf="candidates.length > 0">
-      <div class="candidate-card" *ngFor="let c of candidates">
-        <div class="cc-head">
-          <div class="cc-avatar">{{ (c.firstName?.[0] || '?') + (c.lastName?.[0] || '') }}</div>
-          <div class="cc-id">
-            <div class="cc-name">{{ c.firstName }} {{ c.lastName }}</div>
-            <div class="cc-pos">{{ c.currentPosition || 'Poste non précisé' }}</div>
+      <div class="card candidate-card" *ngFor="let c of candidates">
+        <div class="candidate-card__head">
+          <div class="avatar avatar--lg avatar--round">{{ (c.firstName?.[0] || '?') + (c.lastName?.[0] || '') }}</div>
+          <div class="candidate-card__id">
+            <div class="candidate-card__name">{{ c.firstName }} {{ c.lastName }}</div>
+            <div class="candidate-card__pos">{{ c.currentPosition || 'Poste non précisé' }}</div>
           </div>
-          <span class="src-badge" [attr.data-src]="c.source">
-            {{ c.source === 'LINKEDIN' ? '💼 LinkedIn' : c.source === 'MANUAL' ? '✍️ Manuel' : '📥 Autre' }}
+          <span class="badge"
+                [ngClass]="{
+                  'badge--info': c.source === 'LINKEDIN',
+                  'badge--warning': c.source === 'MANUAL',
+                  'badge--neutral': c.source !== 'LINKEDIN' && c.source !== 'MANUAL'
+                }">
+            <app-icon [name]="c.source === 'LINKEDIN' ? 'job' : c.source === 'MANUAL' ? 'edit' : 'download'" [size]="13" />
+            {{ c.source === 'LINKEDIN' ? 'LinkedIn' : c.source === 'MANUAL' ? 'Manuel' : 'Autre' }}
           </span>
         </div>
-        <div class="cc-body">
-          <div class="cc-row"><span>📧</span><a [href]="'mailto:' + c.email">{{ c.email }}</a></div>
-          <div class="cc-row" *ngIf="c.phone"><span>📞</span>{{ c.phone }}</div>
-          <div class="cc-row" *ngIf="c.linkedinUrl">
-            <span>🔗</span><a [href]="c.linkedinUrl" target="_blank" rel="noopener">Profil LinkedIn</a>
+
+        <div class="candidate-card__body">
+          <div class="candidate-card__row">
+            <app-icon name="email" [size]="15" /><a [href]="'mailto:' + c.email">{{ c.email }}</a>
           </div>
-          <div class="cc-row" *ngIf="c.yearsOfExperience"><span>⏱️</span>{{ c.yearsOfExperience }} ans d'expérience</div>
+          <div class="candidate-card__row" *ngIf="c.phone">
+            <app-icon name="phone" [size]="15" />{{ c.phone }}
+          </div>
+          <div class="candidate-card__row" *ngIf="c.linkedinUrl">
+            <app-icon name="link" [size]="15" /><a [href]="c.linkedinUrl" target="_blank" rel="noopener noreferrer">Profil LinkedIn</a>
+          </div>
+          <div class="candidate-card__row" *ngIf="c.yearsOfExperience">
+            <app-icon name="clock" [size]="15" />{{ c.yearsOfExperience }} ans d'expérience
+          </div>
         </div>
-        <div class="cc-skills">
-          <span class="cc-skill-count">🎓 {{ (c.skills || []).length }} compétence(s)</span>
-          <span class="skill-chip" *ngFor="let s of (c.skills || []).slice(0, 4)">
-            {{ s.skillName }} <span class="lvl">{{ s.level }}</span>
+
+        <div class="candidate-card__skills">
+          <span class="candidate-card__skill-count">
+            <app-icon name="skills" [size]="14" /> {{ (c.skills || []).length }} compétence(s)
           </span>
-          <span class="more-chip" *ngIf="(c.skills || []).length > 4">+{{ c.skills.length - 4 }}</span>
+          <span class="chip skill-chip" *ngFor="let s of (c.skills || []).slice(0, 4)">
+            {{ s.skillName }} <span class="skill-chip__lvl">{{ s.level }}</span>
+          </span>
+          <span class="chip skill-chip skill-chip--more" *ngIf="(c.skills || []).length > 4">+{{ c.skills.length - 4 }}</span>
         </div>
-        <div class="cc-actions">
-          <button class="btn-edit" (click)="openEdit(c)">✏️ Modifier</button>
-          <button class="btn-delete" (click)="deleteCandidate(c.id)">🗑️</button>
+
+        <div class="candidate-card__actions">
+          <button class="btn btn--secondary btn--sm" (click)="openEdit(c)">
+            <app-icon name="edit" [size]="15" /> Modifier
+          </button>
+          <button class="icon-btn icon-btn--danger" (click)="deleteCandidate(c.id)" aria-label="Supprimer le candidat">
+            <app-icon name="delete" [size]="16" />
+          </button>
         </div>
       </div>
     </div>
@@ -71,68 +92,84 @@
 
   <!-- ════════════════ Onglet MATCHING IA ════════════════ -->
   <div *ngIf="activeTab === 'matching'" class="content-area">
-    <div class="matching-bar">
-      <div class="field">
-        <label>Offre à pourvoir</label>
-        <select [(ngModel)]="selectedOfferId">
+    <div class="card matching-bar">
+      <div class="field matching-bar__field">
+        <label class="label" for="ext-offer">Offre à pourvoir</label>
+        <select id="ext-offer" class="select" [(ngModel)]="selectedOfferId">
           <option [ngValue]="null">-- Sélectionner --</option>
           <option *ngFor="let o of offers" [ngValue]="o.id">{{ o.title }}{{ o.department ? ' (' + o.department + ')' : '' }}</option>
         </select>
       </div>
-      <button class="btn-run" [disabled]="!selectedOfferId || matchingLoading" (click)="runMatching()">
-        {{ matchingLoading ? '⏳ Analyse…' : '🤖 Lancer le matching IA' }}
+      <button class="btn btn--primary" [disabled]="!selectedOfferId || matchingLoading" (click)="runMatching()">
+        <app-icon [name]="matchingLoading ? 'pending' : 'ai'" [size]="16" />
+        {{ matchingLoading ? 'Analyse…' : 'Lancer le matching IA' }}
       </button>
     </div>
 
-    <div class="info-banner">
-      ℹ️ Le matching utilise <strong>exactement</strong> le même algorithme que pour les candidats internes :
-      score = 75% compétences (vs niveau requis sur l'offre) + 25% séniorité (années d'expérience).
+    <div class="alert alert--info matching-info">
+      <app-icon class="alert__icon" name="info" [size]="16" />
+      <span>
+        Le matching utilise <strong>exactement</strong> le même algorithme que pour les candidats internes :
+        score = 75 % compétences (vs niveau requis sur l'offre) + 25 % séniorité (années d'expérience).
+      </span>
     </div>
 
-    <div class="error-banner" *ngIf="matchingError">
-      <span class="error-icon">⚠️</span>{{ matchingError }}
+    <div class="alert alert--danger" *ngIf="matchingError">
+      <app-icon class="alert__icon" name="warning" [size]="16" /> {{ matchingError }}
     </div>
 
-    <div class="diag" *ngIf="matchingDiagnostic && matchingResults.length === 0 && !matchingLoading">
-      <p>
-        Aucun résultat —
+    <div class="empty-state" *ngIf="matchingDiagnostic && matchingResults.length === 0 && !matchingLoading">
+      <div class="empty-state__icon"><app-icon name="search" [size]="26" /></div>
+      <div class="empty-state__title">Aucun résultat</div>
+      <div class="empty-state__text">
         <ng-container [ngSwitch]="matchingDiagnostic.reason">
-          <span *ngSwitchCase="'NO_SKILLS_ON_OFFER'">L'offre n'a aucune compétence requise. Édite-la d'abord.</span>
-          <span *ngSwitchCase="'NO_APPLICATIONS'">Aucun candidat externe dans le pool. Ajoute des profils d'abord.</span>
+          <span *ngSwitchCase="'NO_SKILLS_ON_OFFER'">L'offre n'a aucune compétence requise. Éditez-la d'abord.</span>
+          <span *ngSwitchCase="'NO_APPLICATIONS'">Aucun candidat externe dans le pool. Ajoutez des profils d'abord.</span>
           <span *ngSwitchDefault>Aucun candidat n'a pu être scoré.</span>
         </ng-container>
-      </p>
+      </div>
     </div>
 
     <div class="results" *ngIf="matchingResults.length > 0">
-      <div class="result-card" *ngFor="let r of matchingResults" [class]="r.category">
-        <div class="rc-head">
-          <div class="rc-rank">
-            <div class="score-badge">{{ r.score }}<span>/100</span></div>
-            <span class="cat-pill" [ngClass]="r.category">
-              {{ getCategoryIcon(r.category) }} {{ getCategoryLabel(r.category) }}
+      <div class="card result-card" *ngFor="let r of matchingResults" [class]="r.category">
+        <div class="result-card__head">
+          <div class="result-card__rank">
+            <div class="score-num">{{ r.score }}<span>/100</span></div>
+            <span class="badge"
+                  [ngClass]="{
+                    'badge--success': r.category === 'IDEAL',
+                    'badge--warning': r.category === 'TRAINING',
+                    'badge--neutral': r.category === 'EXTERNAL'
+                  }">
+              <app-icon [name]="getCategoryIcon(r.category)" [size]="13" /> {{ getCategoryLabel(r.category) }}
             </span>
           </div>
-          <div class="rc-name">
-            <div class="name">{{ r.applicantName }}</div>
-            <div class="email">{{ r.candidateEmail }}</div>
+          <div class="result-card__id">
+            <div class="result-card__name">{{ r.applicantName }}</div>
+            <div class="result-card__email">{{ r.candidateEmail }}</div>
           </div>
-          <button class="btn-schedule"
+          <button class="btn btn--primary btn--sm"
                   [disabled]="r.category === 'EXTERNAL'"
                   (click)="openSchedule(r)"
                   [title]="r.category === 'EXTERNAL' ? 'Score trop faible — recommandé de ne pas convoquer' : 'Affecter à un manager pour entretien'">
-            📨 Affecter
+            <app-icon name="email" [size]="15" /> Affecter
           </button>
         </div>
-        <div class="rc-scores">
-          <div class="sub-score"><span class="lbl">Compétences</span><span class="val">{{ r.skillsScore }}/100</span></div>
-          <div class="sub-score"><span class="lbl">Séniorité</span><span class="val">{{ r.seniorityScore }}/100</span></div>
+
+        <div class="score-bar">
+          <div class="score-bar__fill" [style.width.%]="r.score"></div>
         </div>
-        <div class="rc-gaps" *ngIf="r.gaps?.length > 0">
+
+        <div class="result-card__scores">
+          <div class="sub-score"><span class="sub-score__lbl">Compétences</span><span class="sub-score__val">{{ r.skillsScore }}/100</span></div>
+          <div class="sub-score"><span class="sub-score__lbl">Séniorité</span><span class="sub-score__val">{{ r.seniorityScore }}/100</span></div>
+        </div>
+
+        <div class="result-card__gaps" *ngIf="r.gaps?.length > 0">
           <strong>Compétences manquantes :</strong>
-          <span class="gap-chip" *ngFor="let g of r.gaps">
+          <span class="chip gap-chip" *ngFor="let g of r.gaps">
             {{ g.skillName }}
-            <span class="gap-detail">requis {{ g.requiredLevel }}{{ g.actualLevel != null ? ' / acquis ' + g.actualLevel : ' / absent' }}</span>
+            <span class="gap-chip__detail">requis {{ g.requiredLevel }}{{ g.actualLevel != null ? ' / acquis ' + g.actualLevel : ' / absent' }}</span>
           </span>
         </div>
       </div>
@@ -141,76 +178,85 @@
 
   <!-- ════════════════ Modal Create/Edit ════════════════ -->
   <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
-    <div class="modal-form" (click)="$event.stopPropagation()">
-      <div class="mf-header">
-        <div class="mf-icon">{{ isEditing ? '✏️' : '🌐' }}</div>
-        <h3>{{ isEditing ? 'Modifier' : 'Ajouter' }} un candidat externe</h3>
-        <p class="mf-sub">{{ isEditing ? 'Mets à jour les informations' : 'Profil + compétences pour le matching IA' }}</p>
+    <div class="modal modal--lg" role="dialog" aria-modal="true"
+         [attr.aria-label]="(isEditing ? 'Modifier' : 'Ajouter') + ' un candidat externe'"
+         (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title">
+            <app-icon [name]="isEditing ? 'edit' : 'external'" [size]="18" />
+            {{ isEditing ? 'Modifier' : 'Ajouter' }} un candidat externe
+          </div>
+          <div class="modal__sub">{{ isEditing ? 'Mets à jour les informations' : 'Profil + compétences pour le matching IA' }}</div>
+        </div>
+        <button class="icon-btn" (click)="closeForm()" aria-label="Fermer">
+          <app-icon name="close" [size]="18" />
+        </button>
       </div>
 
-      <div class="mf-body">
+      <div class="modal__body">
         <!-- Informations -->
-        <div class="section">
-          <div class="section-title"><span class="st-icon">👤</span> Informations</div>
-          <div class="grid-2">
+        <div class="form-section">
+          <div class="section-title"><app-icon name="profile" [size]="15" /> Informations</div>
+          <div class="form-grid">
             <div class="field">
-              <label>Prénom *</label>
-              <input [(ngModel)]="form.firstName" />
+              <label class="label" for="ec-firstName">Prénom <span class="req">*</span></label>
+              <input id="ec-firstName" class="input" [(ngModel)]="form.firstName" />
             </div>
             <div class="field">
-              <label>Nom *</label>
-              <input [(ngModel)]="form.lastName" />
+              <label class="label" for="ec-lastName">Nom <span class="req">*</span></label>
+              <input id="ec-lastName" class="input" [(ngModel)]="form.lastName" />
             </div>
             <div class="field">
-              <label>Email *</label>
-              <input type="email" [(ngModel)]="form.email" />
+              <label class="label" for="ec-email">Email <span class="req">*</span></label>
+              <input id="ec-email" class="input" type="email" [(ngModel)]="form.email" />
             </div>
             <div class="field">
-              <label>Téléphone</label>
-              <input [(ngModel)]="form.phone" />
+              <label class="label" for="ec-phone">Téléphone</label>
+              <input id="ec-phone" class="input" [(ngModel)]="form.phone" />
             </div>
-            <div class="field full">
-              <label>URL LinkedIn (optionnel)</label>
-              <input [(ngModel)]="form.linkedinUrl" placeholder="https://linkedin.com/in/…" />
+            <div class="field field--full">
+              <label class="label" for="ec-linkedin">URL LinkedIn (optionnel)</label>
+              <input id="ec-linkedin" class="input" [(ngModel)]="form.linkedinUrl" placeholder="https://linkedin.com/in/…" />
             </div>
             <div class="field">
-              <label>Source</label>
-              <select [(ngModel)]="form.source">
-                <option value="LINKEDIN">💼 LinkedIn</option>
-                <option value="MANUAL">✍️ Manuel</option>
-                <option value="OTHER">📥 Autre</option>
+              <label class="label" for="ec-source">Source</label>
+              <select id="ec-source" class="select" [(ngModel)]="form.source">
+                <option value="LINKEDIN">LinkedIn</option>
+                <option value="MANUAL">Manuel</option>
+                <option value="OTHER">Autre</option>
               </select>
             </div>
             <div class="field">
-              <label>Années d'expérience</label>
-              <input type="number" min="0" max="40" [(ngModel)]="form.yearsOfExperience" />
+              <label class="label" for="ec-years">Années d'expérience</label>
+              <input id="ec-years" class="input" type="number" min="0" max="40" [(ngModel)]="form.yearsOfExperience" />
             </div>
-            <div class="field full">
-              <label>Poste recherché / titre</label>
-              <input [(ngModel)]="form.currentPosition" placeholder="Ex: Senior Backend Engineer" />
+            <div class="field field--full">
+              <label class="label" for="ec-position">Poste recherché / titre</label>
+              <input id="ec-position" class="input" [(ngModel)]="form.currentPosition" placeholder="Ex: Senior Backend Engineer" />
             </div>
-            <div class="field full">
-              <label>Notes</label>
-              <textarea [(ngModel)]="form.notes" rows="2" placeholder="Disponibilité, prétentions, contexte…"></textarea>
+            <div class="field field--full">
+              <label class="label" for="ec-notes">Notes</label>
+              <textarea id="ec-notes" class="textarea" [(ngModel)]="form.notes" rows="2" placeholder="Disponibilité, prétentions, contexte…"></textarea>
             </div>
           </div>
         </div>
 
         <!-- CV extraction (création uniquement) -->
-        <div class="section" *ngIf="!isEditing">
-          <div class="section-title"><span class="st-icon">🤖</span> Extraction IA depuis CV (optionnel)</div>
+        <div class="form-section" *ngIf="!isEditing">
+          <div class="section-title"><app-icon name="ai" [size]="15" /> Extraction IA depuis CV (optionnel)</div>
           <div class="cv-zone">
-            <div class="cv-upload-row">
-              <label class="cv-file-label">
-                <input type="file" accept=".pdf,.docx,.txt" (change)="onCvSelected($event)" class="cv-file-input" />
-                <span class="cv-file-btn">📎 Choisir un CV (PDF / DOCX / TXT)</span>
-                <span class="cv-file-name" *ngIf="cvFile">{{ cvFile.name }}</span>
+            <div class="cv-zone__row">
+              <label class="cv-file">
+                <input type="file" accept=".pdf,.docx,.txt" (change)="onCvSelected($event)" class="cv-file__input" />
+                <span class="btn btn--secondary btn--sm"><app-icon name="attach" [size]="15" /> Choisir un CV (PDF / DOCX / TXT)</span>
+                <span class="cv-file__name" *ngIf="cvFile">{{ cvFile.name }}</span>
               </label>
-              <button type="button" class="cv-extract-btn" [disabled]="!cvFile || cvExtracting" (click)="extractCv()">
-                {{ cvExtracting ? '⏳' : '🤖 Extraire' }}
+              <button type="button" class="btn btn--primary btn--sm" [disabled]="!cvFile || cvExtracting" (click)="extractCv()">
+                <app-icon [name]="cvExtracting ? 'pending' : 'ai'" [size]="15" /> {{ cvExtracting ? 'Extraction…' : 'Extraire' }}
               </button>
             </div>
-            <p class="cv-error" *ngIf="cvError">⚠️ {{ cvError }}</p>
+            <p class="cv-error" *ngIf="cvError"><app-icon name="warning" [size]="14" /> {{ cvError }}</p>
             <div class="cv-result" *ngIf="cvExtractResult">
               <div class="cv-summary">
                 <strong>{{ cvExtractResult.skills.length }}</strong> compétence(s) détectée(s) —
@@ -221,29 +267,31 @@
               </div>
               <div class="cv-skill-line" *ngFor="let sk of cvExtractResult.skills">
                 <input type="checkbox" [(ngModel)]="sk.preselected" [ngModelOptions]="{standalone: true}" />
-                <span class="csl-name">{{ sk.skillName }}</span>
-                <span class="csl-cat" *ngIf="sk.category">{{ sk.category }}</span>
-                <div class="csl-levels">
+                <span class="cv-skill-line__name">{{ sk.skillName }}</span>
+                <span class="badge badge--accent" *ngIf="sk.category">{{ sk.category }}</span>
+                <div class="lvl-picker">
                   <button type="button" *ngFor="let lvl of [1,2,3,4,5]"
                           class="lvl-btn" [class.active]="sk.level === lvl" (click)="sk.level = lvl">{{ lvl }}</button>
                 </div>
               </div>
-              <button class="cv-import" *ngIf="cvExtractResult.skills.length > 0" (click)="importExtractedSkills()">
-                ⬇️ Importer les compétences sélectionnées dans la liste ci-dessous
+              <button class="btn btn--success btn--sm cv-import" *ngIf="cvExtractResult.skills.length > 0" (click)="importExtractedSkills()">
+                <app-icon name="download" [size]="15" /> Importer les compétences sélectionnées dans la liste ci-dessous
               </button>
             </div>
           </div>
         </div>
 
         <!-- Compétences (manuelles + importées) -->
-        <div class="section">
-          <div class="section-title">
-            <span class="st-icon">🎓</span> Compétences ({{ form.skillRows.length }})
-            <button class="add-row" (click)="addSkillRow()">+ Ajouter</button>
+        <div class="form-section">
+          <div class="form-section__head">
+            <div class="section-title"><app-icon name="skills" [size]="15" /> Compétences ({{ form.skillRows.length }})</div>
+            <button type="button" class="btn btn--secondary btn--sm" (click)="addSkillRow()">
+              <app-icon name="add" [size]="15" /> Ajouter
+            </button>
           </div>
-          <p class="hint" *ngIf="form.skillRows.length === 0">Aucune compétence — le matching ne pourra pas scorer ce candidat.</p>
+          <p class="help" *ngIf="form.skillRows.length === 0">Aucune compétence — le matching ne pourra pas scorer ce candidat.</p>
           <div class="skill-row" *ngFor="let row of form.skillRows; let i = index">
-            <select [(ngModel)]="row.skillId" (change)="onSkillChange(row)">
+            <select class="select" [(ngModel)]="row.skillId" (change)="onSkillChange(row)">
               <option [ngValue]="null">-- Compétence --</option>
               <option *ngFor="let s of availableSkillsForRow(row)" [ngValue]="s.id">
                 {{ s.name }}{{ s.category ? ' (' + s.category + ')' : '' }}
@@ -253,42 +301,50 @@
               <button type="button" *ngFor="let lvl of [1,2,3,4,5]"
                       class="lvl-btn" [class.active]="row.level === lvl" (click)="row.level = lvl">{{ lvl }}</button>
             </div>
-            <span class="lvl-label">{{ getLevelLabel(row.level) }}</span>
-            <button class="rm-row" (click)="removeSkillRow(i)">×</button>
+            <span class="skill-row__lvl">{{ getLevelLabel(row.level) }}</span>
+            <button type="button" class="icon-btn icon-btn--danger icon-btn--sm" (click)="removeSkillRow(i)" aria-label="Retirer la compétence">
+              <app-icon name="close" [size]="15" />
+            </button>
           </div>
         </div>
       </div>
 
-      <div class="mf-footer">
-        <button class="btn-cancel" (click)="closeForm()">✕ Annuler</button>
-        <button class="btn-submit" (click)="saveCandidate()">{{ isEditing ? '💾 Enregistrer' : '✅ Créer' }}</button>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" (click)="closeForm()">Annuler</button>
+        <button class="btn btn--primary" (click)="saveCandidate()">
+          <app-icon [name]="isEditing ? 'save' : 'approve'" [size]="16" /> {{ isEditing ? 'Enregistrer' : 'Créer' }}
+        </button>
       </div>
     </div>
   </div>
 
   <!-- ════════════════ Modal Affectation au manager (externe) ════════════════ -->
   <div class="modal-overlay" *ngIf="showScheduleModal" (click)="closeSchedule()">
-    <div class="modal-form schedule-modal" (click)="$event.stopPropagation()">
-      <div class="mf-header">
-        <div class="mf-icon">📨</div>
-        <h3>Affecter à un manager</h3>
-        <p class="mf-sub" *ngIf="scheduleCandidate">
-          {{ scheduleCandidate.applicantName }} — Score : <strong>{{ scheduleCandidate.score }}/100</strong>
-        </p>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Affecter à un manager" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title"><app-icon name="email" [size]="18" /> Affecter à un manager</div>
+          <div class="modal__sub" *ngIf="scheduleCandidate">
+            {{ scheduleCandidate.applicantName }} — Score : <strong>{{ scheduleCandidate.score }}/100</strong>
+          </div>
+        </div>
+        <button class="icon-btn" (click)="closeSchedule()" aria-label="Fermer">
+          <app-icon name="close" [size]="18" />
+        </button>
       </div>
-      <div class="mf-body">
-        <div class="assign-info-banner">
-          <span>ℹ️</span>
+      <div class="modal__body">
+        <div class="alert alert--info">
+          <app-icon class="alert__icon" name="info" [size]="16" />
           <span>
             Vous affectez ce candidat externe à un manager. Le manager recevra un email et fixera lui-même
             la date, l'heure et le lieu. Le candidat sera notifié immédiatement (pre-shortlist) puis à la
             planification définitive (convocation + <code>.ics</code>).
           </span>
         </div>
-        <div class="grid-2">
+        <div class="form-grid">
           <div class="field">
-            <label>Manager assigné <span class="req">*</span></label>
-            <select [(ngModel)]="scheduleForm.managerUsername">
+            <label class="label" for="sch-manager">Manager assigné <span class="req">*</span></label>
+            <select id="sch-manager" class="select" [(ngModel)]="scheduleForm.managerUsername">
               <option value="">-- Sélectionner --</option>
               <option *ngFor="let m of managers" [value]="m.username">
                 {{ m.firstName }} {{ m.lastName }} ({{ m.username }})
@@ -296,20 +352,21 @@
             </select>
           </div>
           <div class="field">
-            <label>Email candidat <span class="req">*</span></label>
-            <input type="email" [(ngModel)]="scheduleForm.candidateEmail" placeholder="candidat@exemple.com" />
+            <label class="label" for="sch-email">Email candidat <span class="req">*</span></label>
+            <input id="sch-email" class="input" type="email" [(ngModel)]="scheduleForm.candidateEmail" placeholder="candidat@exemple.com" />
           </div>
-          <div class="field full">
-            <label>Note pour le manager <span class="opt">(optionnel)</span></label>
-            <textarea [(ngModel)]="scheduleForm.rhNote" rows="3"
+          <div class="field field--full">
+            <label class="label" for="sch-note">Note pour le manager <span class="label-opt">(optionnel)</span></label>
+            <textarea id="sch-note" class="textarea" [(ngModel)]="scheduleForm.rhNote" rows="3"
                       placeholder="Ex: Profil senior à valider sur stack X, score IA: {{ scheduleCandidate?.score }}/100"></textarea>
           </div>
         </div>
       </div>
-      <div class="mf-footer">
-        <button class="btn-cancel" (click)="closeSchedule()">Annuler</button>
-        <button class="btn-submit" [disabled]="scheduleSaving" (click)="submitSchedule()">
-          {{ scheduleSaving ? '⏳ Affectation…' : '📨 Affecter au manager' }}
+      <div class="modal__footer">
+        <button class="btn btn--ghost" (click)="closeSchedule()">Annuler</button>
+        <button class="btn btn--primary" [disabled]="scheduleSaving" (click)="submitSchedule()">
+          <app-icon [name]="scheduleSaving ? 'pending' : 'email'" [size]="16" />
+          {{ scheduleSaving ? 'Affectation…' : 'Affecter au manager' }}
         </button>
       </div>
     </div>

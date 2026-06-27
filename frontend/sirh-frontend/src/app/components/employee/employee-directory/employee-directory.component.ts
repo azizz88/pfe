@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EmployeeApiService } from '../../../services/employee-api.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 /**
  * Annuaire de l'entreprise.
@@ -10,7 +11,7 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
 @Component({
   selector: 'app-employee-directory',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   templateUrl: './employee-directory.component.html',
   styleUrls: ['./employee-directory.component.css']
 })
@@ -155,20 +156,6 @@ export class EmployeeDirectoryComponent implements OnInit {
     const orphans = map.get('none');
     if (orphans) groups.push(orphans);
     return groups;
-  }
-
-  getAvatarColor(emp: any): string {
-    const colors = [
-      'linear-gradient(135deg, #3b82f6, #2563eb)',
-      'linear-gradient(135deg, #0ea5e9, #0284c7)',
-      'linear-gradient(135deg, #6366f1, #4f46e5)',
-      'linear-gradient(135deg, #14b8a6, #0d9488)',
-      'linear-gradient(135deg, #64748b, #475569)',
-      'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-      'linear-gradient(135deg, #0891b2, #0e7490)',
-    ];
-    const hash = (emp.firstName?.charCodeAt(0) || 0) + (emp.lastName?.charCodeAt(0) || 0);
-    return colors[hash % colors.length];
   }
 
   getDeptBadgeClass(deptName: string): string {

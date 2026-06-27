@@ -1,226 +1,211 @@
-<div class="directory">
+<div class="page fade-in">
   <!-- Header -->
   <div class="page-header">
-    <div class="header-left">
-      <div class="header-icon-wrap">
-        <span>📖</span>
-      </div>
-      <div>
-        <h1>Annuaire de l'entreprise</h1>
-        <p class="header-sub">Retrouvez facilement vos collègues et leurs coordonnées</p>
-      </div>
+    <div class="page-header__title">
+      <h1>Annuaire de l'entreprise</h1>
+      <p class="page-header__sub">Retrouvez facilement vos collègues et leurs coordonnées</p>
     </div>
-    <div class="header-right">
-      <div class="view-toggle">
-        <button [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'" title="Vue grille">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="0" y="0" width="7" height="7" rx="1.5"/>
-            <rect x="9" y="0" width="7" height="7" rx="1.5"/>
-            <rect x="0" y="9" width="7" height="7" rx="1.5"/>
-            <rect x="9" y="9" width="7" height="7" rx="1.5"/>
-          </svg>
+    <div class="page-header__actions">
+      <div class="view-toggle" role="group" aria-label="Mode d'affichage">
+        <button type="button" class="icon-btn" [class.is-active]="viewMode === 'grid'"
+                [attr.aria-pressed]="viewMode === 'grid'" (click)="viewMode = 'grid'"
+                aria-label="Vue grille" title="Vue grille">
+          <app-icon name="dashboard" [size]="18" />
         </button>
-        <button [class.active]="viewMode === 'list'" (click)="viewMode = 'list'" title="Vue liste">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="0" y="1" width="16" height="3" rx="1"/>
-            <rect x="0" y="6.5" width="16" height="3" rx="1"/>
-            <rect x="0" y="12" width="16" height="3" rx="1"/>
-          </svg>
+        <button type="button" class="icon-btn" [class.is-active]="viewMode === 'list'"
+                [attr.aria-pressed]="viewMode === 'list'" (click)="viewMode = 'list'"
+                aria-label="Vue liste" title="Vue liste">
+          <app-icon name="list" [size]="18" />
         </button>
-        <button [class.active]="viewMode === 'grouped'" (click)="viewMode = 'grouped'" title="Regroupé par manager">
-          👔
+        <button type="button" class="icon-btn" [class.is-active]="viewMode === 'grouped'"
+                [attr.aria-pressed]="viewMode === 'grouped'" (click)="viewMode = 'grouped'"
+                aria-label="Regroupé par manager" title="Regroupé par manager">
+          <app-icon name="manager" [size]="18" />
         </button>
       </div>
     </div>
   </div>
 
   <!-- KPI Row -->
-  <div class="kpi-row">
-    <div class="kpi-card" style="--accent:#3b82f6; --accent-light:#eff6ff; --delay:0">
-      <div class="kpi-icon-wrap" style="background:linear-gradient(135deg,#3b82f6,#6366f1)">
-        <span class="kpi-icon">👥</span>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-value">{{ allEmployees.length }}</span>
-        <span class="kpi-label">Total Collaborateurs</span>
+  <div class="grid grid--kpi dir-kpis">
+    <div class="stat">
+      <div class="stat__icon"><app-icon name="employees" [size]="20" /></div>
+      <div class="stat__body">
+        <span class="stat__value">{{ allEmployees.length }}</span>
+        <span class="stat__label">Total collaborateurs</span>
       </div>
     </div>
-    <div class="kpi-card" style="--accent:#22c55e; --accent-light:#f0fdf4; --delay:1">
-      <div class="kpi-icon-wrap" style="background:linear-gradient(135deg,#22c55e,#10b981)">
-        <span class="kpi-icon">🏢</span>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-value">{{ departments.length }}</span>
-        <span class="kpi-label">Départements</span>
+    <div class="stat">
+      <div class="stat__icon"><app-icon name="department" [size]="20" /></div>
+      <div class="stat__body">
+        <span class="stat__value">{{ departments.length }}</span>
+        <span class="stat__label">Départements</span>
       </div>
     </div>
-    <div class="kpi-card" style="--accent:#8b5cf6; --accent-light:#f5f3ff; --delay:2">
-      <div class="kpi-icon-wrap" style="background:linear-gradient(135deg,#8b5cf6,#a855f7)">
-        <span class="kpi-icon">🔍</span>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-value">{{ filteredEmployees.length }}</span>
-        <span class="kpi-label">Résultats affichés</span>
+    <div class="stat">
+      <div class="stat__icon"><app-icon name="search" [size]="20" /></div>
+      <div class="stat__body">
+        <span class="stat__value">{{ filteredEmployees.length }}</span>
+        <span class="stat__label">Résultats affichés</span>
       </div>
     </div>
   </div>
 
   <!-- Toolbar -->
-  <div class="toolbar">
-    <div class="search-bar">
-      <span class="search-icon">🔍</span>
-      <input type="text" [(ngModel)]="searchKeyword" (input)="applyFilters()"
+  <div class="toolbar dir-toolbar">
+    <div class="input-icon dir-search">
+      <app-icon name="search" [size]="16" />
+      <input type="text" class="input" [(ngModel)]="searchKeyword" (input)="applyFilters()"
+             aria-label="Rechercher un collaborateur"
              placeholder="Rechercher par nom, prénom, email ou poste…" />
     </div>
-    <select [(ngModel)]="selectedDeptId" (change)="onDeptChange()" class="filter-select">
+    <select class="select dir-select" [(ngModel)]="selectedDeptId" (change)="onDeptChange()"
+            aria-label="Filtrer par département">
       <option value="">Tous les départements</option>
       <option *ngFor="let dept of departments" [value]="dept.id">{{ dept.name }}</option>
     </select>
-    <select [(ngModel)]="selectedServiceId" (change)="applyFilters()" class="filter-select"
-            [disabled]="!selectedDeptId">
+    <select class="select dir-select" [(ngModel)]="selectedServiceId" (change)="applyFilters()"
+            [disabled]="!selectedDeptId" aria-label="Filtrer par service">
       <option value="">Tous les services</option>
       <option *ngFor="let svc of filteredServices" [value]="svc.id">{{ svc.name }}</option>
     </select>
-    <select [(ngModel)]="selectedManagerId" (change)="applyFilters()" class="filter-select">
+    <select class="select dir-select" [(ngModel)]="selectedManagerId" (change)="applyFilters()"
+            aria-label="Filtrer par manager">
       <option value="">Tous les managers</option>
       <option *ngFor="let mgr of managers" [value]="mgr.id">
-        👔 {{ mgr.firstName }} {{ mgr.lastName }}
+        {{ mgr.firstName }} {{ mgr.lastName }}
       </option>
     </select>
-    <button class="reset-btn" (click)="resetFilters()" *ngIf="hasActiveFilters()">
-      ✕ Réinitialiser
+    <div class="toolbar__spacer"></div>
+    <button class="btn btn--secondary btn--sm" (click)="resetFilters()" *ngIf="hasActiveFilters()">
+      <app-icon name="close" [size]="16" /> Réinitialiser
     </button>
   </div>
 
   <!-- ═══ GRID VIEW ═══ -->
-  <div class="employee-grid" *ngIf="viewMode === 'grid'">
-    <div class="employee-card" *ngFor="let emp of filteredEmployees; let i = index"
+  <div class="dir-grid" *ngIf="viewMode === 'grid'">
+    <div class="card emp-card" *ngFor="let emp of filteredEmployees; let i = index"
          (click)="openEmployeeDetail(emp)" [style.animation-delay.ms]="i * 40">
-      <div class="card-body">
-        <div class="card-top-section">
-          <div class="avatar-lg" [style.background]="getAvatarColor(emp)">
-            <span class="avatar-initials">{{ emp.firstName?.charAt(0) }}{{ emp.lastName?.charAt(0) }}</span>
-          </div>
-          <div class="name-block">
-            <h3 class="emp-name">{{ emp.lastName?.toUpperCase() }}</h3>
-            <p class="emp-firstname">{{ emp.firstName }}</p>
-            <span class="emp-position">{{ emp.position || 'Poste non défini' }}</span>
+      <div class="card__body">
+        <div class="emp-card__top">
+          <div class="avatar avatar--lg">{{ emp.firstName?.charAt(0) }}{{ emp.lastName?.charAt(0) }}</div>
+          <div class="emp-card__id">
+            <h3 class="emp-card__name">{{ emp.lastName?.toUpperCase() }} {{ emp.firstName }}</h3>
+            <span class="emp-card__role u-muted">{{ emp.position || 'Poste non défini' }}</span>
           </div>
         </div>
 
-        <div class="card-details">
-          <div class="detail-row" *ngIf="emp.department">
-            <span class="detail-label">Département</span>
-            <span class="tag dept-tag" [ngClass]="getDeptBadgeClass(emp.department.name)">{{ emp.department.name }}</span>
+        <div class="emp-card__rows">
+          <div class="emp-row" *ngIf="emp.department">
+            <span class="emp-row__k u-eyebrow">Département</span>
+            <span class="badge" [ngClass]="getDeptBadgeClass(emp.department.name)">{{ emp.department.name }}</span>
           </div>
-          <div class="detail-row" *ngIf="emp.service">
-            <span class="detail-label">Service</span>
-            <span class="detail-value">{{ emp.service.name }}</span>
+          <div class="emp-row" *ngIf="emp.service">
+            <span class="emp-row__k u-eyebrow">Service</span>
+            <span class="emp-row__v">{{ emp.service.name }}</span>
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Email</span>
-            <span class="detail-value email-val">{{ emp.email }}</span>
+          <div class="emp-row">
+            <span class="emp-row__k u-eyebrow">Email</span>
+            <span class="emp-row__v">{{ emp.email }}</span>
           </div>
-          <div class="detail-row" *ngIf="emp.phone">
-            <span class="detail-label">Téléphone</span>
-            <span class="detail-value">{{ emp.phone }}</span>
+          <div class="emp-row" *ngIf="emp.phone">
+            <span class="emp-row__k u-eyebrow">Téléphone</span>
+            <span class="emp-row__v">{{ emp.phone }}</span>
           </div>
-          <div class="detail-row" *ngIf="emp.matricule">
-            <span class="detail-label">Matricule</span>
-            <span class="detail-value mono">{{ emp.matricule }}</span>
+          <div class="emp-row" *ngIf="emp.matricule">
+            <span class="emp-row__k u-eyebrow">Matricule</span>
+            <span class="emp-row__v u-mono">{{ emp.matricule }}</span>
           </div>
-          <div class="detail-row" *ngIf="getManagerOf(emp)">
-            <span class="detail-label">Manager</span>
-            <span class="detail-value mgr-pill">
-              👔 {{ getManagerOf(emp).firstName }} {{ getManagerOf(emp).lastName }}
+          <div class="emp-row" *ngIf="getManagerOf(emp)">
+            <span class="emp-row__k u-eyebrow">Manager</span>
+            <span class="badge badge--neutral">
+              <app-icon name="manager" [size]="13" /> {{ getManagerOf(emp).firstName }} {{ getManagerOf(emp).lastName }}
             </span>
           </div>
         </div>
       </div>
-      <div class="card-footer">
-        <span class="view-profile">Voir le profil complet</span>
-        <span class="arrow">→</span>
+      <div class="card__footer emp-card__footer">
+        <span>Voir le profil complet</span>
+        <app-icon name="arrow-right" [size]="16" class="emp-card__arrow" />
       </div>
     </div>
   </div>
 
   <!-- ═══ LIST VIEW ═══ -->
-  <div class="employee-list" *ngIf="viewMode === 'list'">
-    <div class="list-header list-header-6">
-      <span class="lh-name">Collaborateur</span>
-      <span class="lh-position">Poste</span>
-      <span class="lh-dept">Département</span>
-      <span class="lh-manager">Manager</span>
-      <span class="lh-email">Email</span>
-      <span class="lh-action"></span>
-    </div>
-    <div class="list-row list-row-6" *ngFor="let emp of filteredEmployees; let i = index"
-         (click)="openEmployeeDetail(emp)" [style.animation-delay.ms]="i * 30">
-      <div class="lr-name">
-        <div class="list-avatar" [style.background]="getAvatarColor(emp)">
-          {{ emp.firstName?.charAt(0) }}{{ emp.lastName?.charAt(0) }}
-        </div>
-        <div>
-          <div class="lr-fullname">
-            <span class="lr-lastname">{{ emp.lastName?.toUpperCase() }}</span> {{ emp.firstName }}
-          </div>
-          <div class="lr-matricule" *ngIf="emp.matricule">{{ emp.matricule }}</div>
-        </div>
-      </div>
-      <span class="lr-position">{{ emp.position || '—' }}</span>
-      <span class="lr-dept">
-        <span class="tag dept-tag sm" *ngIf="emp.department" [ngClass]="getDeptBadgeClass(emp.department.name)">
-          {{ emp.department.name }}
-        </span>
-        <span *ngIf="!emp.department">—</span>
-      </span>
-      <span class="lr-manager">
-        <span class="mgr-pill sm" *ngIf="getManagerOf(emp); else noMgr">
-          👔 {{ getManagerOf(emp).lastName }}
-        </span>
-        <ng-template #noMgr><span class="muted">—</span></ng-template>
-      </span>
-      <span class="lr-email">{{ emp.email }}</span>
-      <span class="lr-action">→</span>
-    </div>
+  <div class="table-wrap" *ngIf="viewMode === 'list'">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Collaborateur</th>
+          <th>Poste</th>
+          <th>Département</th>
+          <th>Manager</th>
+          <th>Email</th>
+          <th class="cell-actions"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="emp-tr" *ngFor="let emp of filteredEmployees; let i = index"
+            (click)="openEmployeeDetail(emp)" [style.animation-delay.ms]="i * 30">
+          <td>
+            <div class="cell-emp">
+              <div class="avatar avatar--sm">{{ emp.firstName?.charAt(0) }}{{ emp.lastName?.charAt(0) }}</div>
+              <div>
+                <div class="cell-strong"><span class="u-strong">{{ emp.lastName?.toUpperCase() }}</span> {{ emp.firstName }}</div>
+                <div class="u-faint cell-sub u-mono" *ngIf="emp.matricule">{{ emp.matricule }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ emp.position || '—' }}</td>
+          <td>
+            <span class="badge" *ngIf="emp.department" [ngClass]="getDeptBadgeClass(emp.department.name)">{{ emp.department.name }}</span>
+            <span *ngIf="!emp.department" class="u-faint">—</span>
+          </td>
+          <td>
+            <span class="badge badge--neutral" *ngIf="getManagerOf(emp); else noMgr">
+              <app-icon name="manager" [size]="12" /> {{ getManagerOf(emp).lastName }}
+            </span>
+            <ng-template #noMgr><span class="u-faint">—</span></ng-template>
+          </td>
+          <td class="u-muted">{{ emp.email }}</td>
+          <td class="cell-actions"><app-icon name="arrow-right" [size]="16" class="emp-tr__arrow" /></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- ═══ GROUPED-BY-MANAGER VIEW ═══ -->
-  <div class="grouped-view" *ngIf="viewMode === 'grouped'">
-    <div class="mgr-group" *ngFor="let group of groupedByManager()">
-      <div class="mgr-group-header">
+  <div class="dir-grouped" *ngIf="viewMode === 'grouped'">
+    <div class="card mgr-group" *ngFor="let group of groupedByManager()">
+      <div class="card__header mgr-group__head">
         <ng-container *ngIf="group.manager; else orphanHeader">
-          <div class="mgr-avatar" [style.background]="getAvatarColor(group.manager)">
-            {{ group.manager.firstName?.charAt(0) }}{{ group.manager.lastName?.charAt(0) }}
-          </div>
-          <div class="mgr-info">
-            <div class="mgr-title">👔 {{ group.manager.firstName }} {{ group.manager.lastName }}</div>
-            <div class="mgr-sub">{{ group.manager.position || 'Manager' }} • {{ group.employees.length }} collaborateur(s)</div>
+          <div class="avatar">{{ group.manager.firstName?.charAt(0) }}{{ group.manager.lastName?.charAt(0) }}</div>
+          <div class="mgr-group__info">
+            <div class="mgr-group__title"><app-icon name="manager" [size]="15" /> {{ group.manager.firstName }} {{ group.manager.lastName }}</div>
+            <div class="mgr-group__sub u-muted">{{ group.manager.position || 'Manager' }} • {{ group.employees.length }} collaborateur(s)</div>
           </div>
         </ng-container>
         <ng-template #orphanHeader>
-          <div class="mgr-avatar orphan-avatar">?</div>
-          <div class="mgr-info">
-            <div class="mgr-title">Sans manager assigné</div>
-            <div class="mgr-sub">{{ group.employees.length }} collaborateur(s)</div>
+          <div class="avatar mgr-group__orphan">?</div>
+          <div class="mgr-group__info">
+            <div class="mgr-group__title">Sans manager assigné</div>
+            <div class="mgr-group__sub u-muted">{{ group.employees.length }} collaborateur(s)</div>
           </div>
         </ng-template>
       </div>
 
-      <div class="mgr-group-members">
-        <div class="member-card" *ngFor="let emp of group.employees" (click)="openEmployeeDetail(emp)">
-          <div class="member-avatar" [style.background]="getAvatarColor(emp)">
-            {{ emp.firstName?.charAt(0) }}{{ emp.lastName?.charAt(0) }}
-          </div>
-          <div class="member-info">
-            <div class="member-name">{{ emp.lastName?.toUpperCase() }} {{ emp.firstName }}</div>
-            <div class="member-meta">
+      <div class="card__body mgr-group__members">
+        <div class="member" *ngFor="let emp of group.employees" (click)="openEmployeeDetail(emp)">
+          <div class="avatar avatar--sm">{{ emp.firstName?.charAt(0) }}{{ emp.lastName?.charAt(0) }}</div>
+          <div class="member__info">
+            <div class="member__name">{{ emp.lastName?.toUpperCase() }} {{ emp.firstName }}</div>
+            <div class="member__meta u-muted">
               <span *ngIf="emp.position">{{ emp.position }}</span>
-              <span class="dot" *ngIf="emp.position && emp.department">•</span>
+              <span class="member__dot" *ngIf="emp.position && emp.department">•</span>
               <span *ngIf="emp.department">{{ emp.department.name }}</span>
             </div>
           </div>
-          <span class="member-arrow">→</span>
+          <app-icon name="arrow-right" [size]="15" class="member__arrow" />
         </div>
       </div>
     </div>
@@ -228,106 +213,88 @@
 
   <!-- Empty state -->
   <div class="empty-state" *ngIf="filteredEmployees.length === 0 && viewMode !== 'grouped'">
-    <div class="empty-icon">🔍</div>
-    <p class="empty-title">Aucun collaborateur trouvé</p>
-    <p class="empty-sub">{{ hasActiveFilters() ? 'Essayez avec d\'autres critères de recherche' : 'L\'annuaire est vide pour le moment' }}</p>
-    <button class="reset-btn-large" *ngIf="hasActiveFilters()" (click)="resetFilters()">Réinitialiser les filtres</button>
+    <div class="empty-state__icon"><app-icon name="search" [size]="26" /></div>
+    <p class="empty-state__title">Aucun collaborateur trouvé</p>
+    <p class="empty-state__text">{{ hasActiveFilters() ? 'Essayez avec d\'autres critères de recherche' : 'L\'annuaire est vide pour le moment' }}</p>
+    <button class="btn btn--secondary" *ngIf="hasActiveFilters()" (click)="resetFilters()">Réinitialiser les filtres</button>
   </div>
 
   <!-- ═══ MODALE DÉTAIL ═══ -->
   <div class="modal-overlay" *ngIf="showDetail" (click)="closeDetail()">
-    <div class="modal-box" (click)="$event.stopPropagation()">
-      <div class="modal-header" [style.background]="getAvatarColor(selectedEmployee)">
-        <div class="modal-avatar">
-          {{ selectedEmployee?.firstName?.charAt(0)?.toUpperCase() }}{{ selectedEmployee?.lastName?.charAt(0)?.toUpperCase() }}
+    <div class="modal modal--lg" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div class="modal__title detail-title">
+          <div class="avatar avatar--lg">
+            {{ selectedEmployee?.firstName?.charAt(0)?.toUpperCase() }}{{ selectedEmployee?.lastName?.charAt(0)?.toUpperCase() }}
+          </div>
+          <div>
+            <div>{{ selectedEmployee?.lastName?.toUpperCase() }} {{ selectedEmployee?.firstName }}</div>
+            <div class="modal__sub">{{ selectedEmployee?.position || 'Employé' }}</div>
+          </div>
         </div>
-        <div class="modal-title-block">
-          <h2>{{ selectedEmployee?.lastName?.toUpperCase() }} {{ selectedEmployee?.firstName }}</h2>
-          <span class="modal-subtitle">{{ selectedEmployee?.position || 'Employé' }}</span>
-        </div>
-        <button class="close-btn" (click)="closeDetail()">✕</button>
+        <button class="icon-btn" aria-label="Fermer" (click)="closeDetail()">
+          <app-icon name="close" [size]="18" />
+        </button>
       </div>
 
-      <div class="modal-body">
-        <div class="section">
-          <div class="section-title"><span class="st-icon">📋</span> Informations Personnelles</div>
-          <div class="field-grid">
-            <div class="field">
-              <label>Matricule</label>
-              <div class="field-value mono">{{ selectedEmployee?.matricule || '—' }}</div>
-            </div>
-            <div class="field">
-              <label>Nom complet</label>
-              <div class="field-value highlight">{{ selectedEmployee?.lastName?.toUpperCase() }} {{ selectedEmployee?.firstName }}</div>
-            </div>
-            <div class="field">
-              <label>Email</label>
-              <div class="field-value email-val">{{ selectedEmployee?.email || '—' }}</div>
-            </div>
-            <div class="field">
-              <label>Téléphone</label>
-              <div class="field-value">{{ selectedEmployee?.phone || '—' }}</div>
-            </div>
-            <div class="field">
-              <label>Poste</label>
-              <div class="field-value highlight">{{ selectedEmployee?.position || '—' }}</div>
-            </div>
-            <div class="field">
-              <label>Date d'embauche</label>
-              <div class="field-value">{{ selectedEmployee?.hireDate || '—' }}</div>
-            </div>
-          </div>
+      <div class="modal__body">
+        <div class="detail-section">
+          <div class="section-title"><app-icon name="profile" [size]="16" /> Informations personnelles</div>
+          <dl class="dl">
+            <dt>Matricule</dt>
+            <dd class="u-mono">{{ selectedEmployee?.matricule || '—' }}</dd>
+            <dt>Nom complet</dt>
+            <dd class="u-strong">{{ selectedEmployee?.lastName?.toUpperCase() }} {{ selectedEmployee?.firstName }}</dd>
+            <dt>Email</dt>
+            <dd>{{ selectedEmployee?.email || '—' }}</dd>
+            <dt>Téléphone</dt>
+            <dd>{{ selectedEmployee?.phone || '—' }}</dd>
+            <dt>Poste</dt>
+            <dd class="u-strong">{{ selectedEmployee?.position || '—' }}</dd>
+            <dt>Date d'embauche</dt>
+            <dd>{{ selectedEmployee?.hireDate || '—' }}</dd>
+          </dl>
         </div>
 
-        <div class="section">
-          <div class="section-title"><span class="st-icon">🏢</span> Département & Service</div>
-          <div class="field-grid">
-            <div class="field">
-              <label>Département</label>
-              <div class="field-value">{{ selectedEmployee?.department?.name || '—' }}</div>
-            </div>
-            <div class="field">
-              <label>Service</label>
-              <div class="field-value">{{ selectedEmployee?.service?.name || '—' }}</div>
-            </div>
-            <div class="field" *ngIf="getManagerOf(selectedEmployee)">
-              <label>Manager</label>
-              <div class="field-value highlight">
-                👔 {{ getManagerOf(selectedEmployee).firstName }} {{ getManagerOf(selectedEmployee).lastName }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section" *ngIf="selectedEmployee?.contract">
-          <div class="section-title"><span class="st-icon">📄</span> Contrat</div>
-          <div class="field-grid">
-            <div class="field">
-              <label>Type de contrat</label>
-              <div class="field-value">
-                <span class="badge" [ngClass]="selectedEmployee?.contract?.type">
-                  {{ selectedEmployee?.contract?.type || '—' }}
+        <div class="detail-section">
+          <div class="section-title"><app-icon name="department" [size]="16" /> Département &amp; service</div>
+          <dl class="dl">
+            <dt>Département</dt>
+            <dd>{{ selectedEmployee?.department?.name || '—' }}</dd>
+            <dt>Service</dt>
+            <dd>{{ selectedEmployee?.service?.name || '—' }}</dd>
+            <ng-container *ngIf="getManagerOf(selectedEmployee)">
+              <dt>Manager</dt>
+              <dd class="u-strong">
+                <span class="badge badge--neutral">
+                  <app-icon name="manager" [size]="13" /> {{ getManagerOf(selectedEmployee).firstName }} {{ getManagerOf(selectedEmployee).lastName }}
                 </span>
-              </div>
-            </div>
-            <div class="field">
-              <label>Date début</label>
-              <div class="field-value">{{ selectedEmployee?.contract?.startDate || '—' }}</div>
-            </div>
-            <div class="field">
-              <label>Date fin</label>
-              <div class="field-value">{{ selectedEmployee?.contract?.endDate || 'Indéterminé' }}</div>
-            </div>
-            <div class="field">
-              <label>Salaire mensuel</label>
-              <div class="field-value salary">{{ selectedEmployee?.contract?.salary | number:'1.2-2' }} DT</div>
-            </div>
-          </div>
+              </dd>
+            </ng-container>
+          </dl>
+        </div>
+
+        <div class="detail-section" *ngIf="selectedEmployee?.contract">
+          <div class="section-title"><app-icon name="contract" [size]="16" /> Contrat</div>
+          <dl class="dl">
+            <dt>Type de contrat</dt>
+            <dd>
+              <span class="badge" [ngClass]="selectedEmployee?.contract?.type">
+                {{ selectedEmployee?.contract?.type || '—' }}
+              </span>
+            </dd>
+            <dt>Date début</dt>
+            <dd>{{ selectedEmployee?.contract?.startDate || '—' }}</dd>
+            <dt>Date fin</dt>
+            <dd>{{ selectedEmployee?.contract?.endDate || 'Indéterminé' }}</dd>
+            <dt>Salaire mensuel</dt>
+            <dd class="detail-salary">{{ selectedEmployee?.contract?.salary | number:'1.2-2' }} DT</dd>
+          </dl>
         </div>
       </div>
 
-      <div class="modal-footer">
-        <button class="close-modal-btn" (click)="closeDetail()">Fermer</button>
+      <div class="modal__footer">
+        <button class="btn btn--secondary" (click)="closeDetail()">Fermer</button>
       </div>
     </div>
   </div>

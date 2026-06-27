@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RecruitmentApiService } from '../../../services/recruitment-api.service';
 import { EmployeeApiService } from '../../../services/employee-api.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 /**
  * Gestion du pool de candidats externes (LinkedIn / cooptation / manuel).
@@ -12,7 +13,7 @@ import { EmployeeApiService } from '../../../services/employee-api.service';
 @Component({
   selector: 'app-external-candidates',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   templateUrl: './external-candidates.component.html',
   styleUrls: ['./external-candidates.component.css']
 })
@@ -282,7 +283,7 @@ export class ExternalCandidatesComponent implements OnInit {
     return cat === 'IDEAL' ? 'Idéal' : cat === 'TRAINING' ? 'À former' : cat === 'EXTERNAL' ? 'Faible' : cat;
   }
   getCategoryIcon(cat: string): string {
-    return cat === 'IDEAL' ? '✅' : cat === 'TRAINING' ? '🎓' : '⚠️';
+    return cat === 'IDEAL' ? 'approve' : cat === 'TRAINING' ? 'formation' : 'warning';
   }
   getLevelLabel(level: number): string {
     const labels: { [k: number]: string } = { 1:'Débutant', 2:'Notions', 3:'Intermédiaire', 4:'Avancé', 5:'Expert' };
@@ -334,7 +335,7 @@ export class ExternalCandidatesComponent implements OnInit {
     this.recruitmentApi.assignInterview(payload).subscribe({
       next: () => {
         this.scheduleSaving = false;
-        alert(`✅ Entretien affecté à ${managerName}. Le manager fixera la date et le candidat recevra une notification.`);
+        alert(`Entretien affecté à ${managerName}. Le manager fixera la date et le candidat recevra une notification.`);
         this.closeSchedule();
       },
       error: (err) => {

@@ -7,141 +7,159 @@ import {
   ProposalStatus,
   DeliveryMode
 } from '../../../services/training.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 @Component({
   selector: 'app-employee-formation',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   template: `
-    <div class="formation-page">
-      <div class="header">
-        <div>
-          <h1>🎓 Mes formations</h1>
-          <p class="subtitle">Propositions de formation reçues de votre manager.</p>
+    <div class="formation-page page fade-in">
+      <header class="page-header">
+        <div class="page-header__title">
+          <h1>Mes formations</h1>
+          <p class="page-header__sub">Propositions de formation reçues de votre manager.</p>
         </div>
+      </header>
+
+      <div class="loading-row" *ngIf="loading">
+        <span class="spinner"></span> Chargement…
       </div>
 
-      <div class="loading" *ngIf="loading">Chargement…</div>
-
       <div class="empty-state" *ngIf="!loading && proposals.length === 0">
-        <div class="empty-icon">📭</div>
-        <h3>Aucune formation proposée</h3>
-        <p>Vous serez notifié dès que votre manager vous proposera une formation.</p>
+        <div class="empty-state__icon"><app-icon name="inbox" [size]="28" /></div>
+        <h3 class="empty-state__title">Aucune formation proposée</h3>
+        <p class="empty-state__text">Vous serez notifié dès que votre manager vous proposera une formation.</p>
       </div>
 
       <!-- Section actions à prendre (PROPOSED) -->
-      <div *ngIf="pendingProposals.length > 0" class="section">
-        <h2 class="section-title">⚡ Action requise</h2>
+      <section *ngIf="pendingProposals.length > 0" class="section">
+        <h2 class="section-title"><app-icon name="notification" [size]="15" /> Action requise</h2>
         <div class="cards-grid">
-          <div class="card pending" *ngFor="let p of pendingProposals">
-            <div class="card-head">
-              <h3>{{ p.provider?.name }}</h3>
-              <span class="status-badge proposed">⏳ Décision attendue</span>
+          <article class="card pending" *ngFor="let p of pendingProposals">
+            <div class="card__body">
+              <div class="card-head">
+                <h3 class="provider-name">{{ p.provider?.name }}</h3>
+                <span class="badge badge--warning"><app-icon name="pending" [size]="13" /> Décision attendue</span>
+              </div>
+
+              <p class="provider-desc" *ngIf="p.provider?.description">{{ p.provider.description }}</p>
+
+              <div class="meta-row">
+                <span *ngIf="p.provider?.conventionStatus" class="badge" [ngClass]="conventionClass(p.provider.conventionStatus)">
+                  {{ conventionLabel(p.provider.conventionStatus) }}
+                </span>
+                <span class="badge badge--success" *ngIf="p.provider?.qualiopiCertified">
+                  <app-icon name="check" [size]="13" /> Qualiopi
+                </span>
+                <span *ngIf="p.provider?.deliveryMode" class="chip">{{ modeLabel(p.provider.deliveryMode) }}</span>
+                <span *ngIf="p.provider?.avgDurationDays != null" class="chip">{{ p.provider.avgDurationDays }} jours</span>
+                <a *ngIf="p.provider?.website" [href]="p.provider.website" target="_blank" class="provider-link">
+                  <app-icon name="external" [size]="14" /> Voir l'organisme
+                </a>
+              </div>
+
+              <div class="ai-block" *ngIf="p.aiJustification">
+                <app-icon name="ai" [size]="16" class="ai-ic" />
+                <p class="ai-justif">{{ p.aiJustification }}</p>
+              </div>
+
+              <p class="manager-from" *ngIf="p.managerName">Proposée par <strong>{{ p.managerName }}</strong></p>
             </div>
 
-            <div class="provider-desc" *ngIf="p.provider?.description">{{ p.provider.description }}</div>
-
-            <div class="meta-row">
-              <span *ngIf="p.provider?.conventionStatus" class="badge" [ngClass]="conventionClass(p.provider.conventionStatus)">
-                {{ conventionLabel(p.provider.conventionStatus) }}
-              </span>
-              <span class="badge qualiopi" *ngIf="p.provider?.qualiopiCertified">✓ Qualiopi</span>
-              <span *ngIf="p.provider?.deliveryMode" class="meta-item">{{ modeLabel(p.provider.deliveryMode) }}</span>
-              <span *ngIf="p.provider?.avgDurationDays != null" class="meta-item">{{ p.provider.avgDurationDays }} jours</span>
-              <span *ngIf="p.provider?.website" class="meta-item">
-                <a [href]="p.provider.website" target="_blank" class="link">🌐 Voir l'organisme</a>
-              </span>
+            <div class="card__footer actions">
+              <button class="btn btn--accent" (click)="accept(p)" [disabled]="acting">
+                <app-icon name="check" [size]="16" /> Accepter cette formation
+              </button>
+              <button class="btn btn--secondary" (click)="refuse(p)" [disabled]="acting">Refuser</button>
             </div>
-
-            <div class="ai-block" *ngIf="p.aiJustification">
-              <p class="ai-justif">💡 {{ p.aiJustification }}</p>
-            </div>
-
-            <p class="manager-from" *ngIf="p.managerName">Proposée par <strong>{{ p.managerName }}</strong></p>
-
-            <div class="actions">
-              <button class="btn-primary" (click)="accept(p)" [disabled]="acting">✓ Accepter cette formation</button>
-              <button class="btn-ghost" (click)="refuse(p)" [disabled]="acting">Refuser</button>
-            </div>
-          </div>
+          </article>
         </div>
-      </div>
+      </section>
 
       <!-- Section formations en cours / passées -->
-      <div *ngIf="otherProposals.length > 0" class="section">
-        <h2 class="section-title">📚 Mon historique</h2>
+      <section *ngIf="otherProposals.length > 0" class="section">
+        <h2 class="section-title"><app-icon name="directory" [size]="15" /> Mon historique</h2>
         <div class="cards-grid">
-          <div class="card" *ngFor="let p of otherProposals">
-            <div class="card-head">
-              <h3>{{ p.provider?.name }}</h3>
-              <span class="status-badge" [ngClass]="statusClass(p.status)">{{ statusLabel(p.status) }}</span>
-            </div>
+          <article class="card" *ngFor="let p of otherProposals">
+            <div class="card__body">
+              <div class="card-head">
+                <h3 class="provider-name">{{ p.provider?.name }}</h3>
+                <span class="badge" [ngClass]="statusClass(p.status)">{{ statusLabel(p.status) }}</span>
+              </div>
 
-            <div class="meta-row">
-              <span *ngIf="p.provider?.deliveryMode" class="meta-item">{{ modeLabel(p.provider.deliveryMode) }}</span>
-              <span *ngIf="p.provider?.avgDurationDays != null" class="meta-item">{{ p.provider.avgDurationDays }} jours</span>
-              <span *ngIf="p.enrollmentDate" class="meta-item">Inscrit le {{ formatDate(p.enrollmentDate) }}</span>
-              <span *ngIf="p.completionDate" class="meta-item">Terminé le {{ formatDate(p.completionDate) }}</span>
-            </div>
+              <div class="meta-row">
+                <span *ngIf="p.provider?.deliveryMode" class="chip">{{ modeLabel(p.provider.deliveryMode) }}</span>
+                <span *ngIf="p.provider?.avgDurationDays != null" class="chip">{{ p.provider.avgDurationDays }} jours</span>
+                <span *ngIf="p.enrollmentDate" class="chip">Inscrit le {{ formatDate(p.enrollmentDate) }}</span>
+                <span *ngIf="p.completionDate" class="chip">Terminé le {{ formatDate(p.completionDate) }}</span>
+              </div>
 
-            <a *ngIf="p.certificateUrl" [href]="p.certificateUrl" target="_blank" class="btn-link">📄 Voir mon certificat</a>
-          </div>
+              <a *ngIf="p.certificateUrl" [href]="p.certificateUrl" target="_blank" class="btn btn--secondary btn--sm certificate-link">
+                <app-icon name="document" [size]="15" /> Voir mon certificat
+              </a>
+            </div>
+          </article>
         </div>
-      </div>
+      </section>
     </div>
   `,
   styles: [`
-    .formation-page { color:#0f172a; }
-    .header { margin-bottom:24px; }
-    .header h1 { color:#1e3a5f; margin:0 0 6px 0; font-size:1.6rem; }
-    .subtitle { color:#64748b; margin:0; font-size:0.9rem; }
+    .formation-page { padding-bottom: var(--sp-6); }
 
-    .loading, .empty-state { text-align:center; padding:40px; color:#94a3b8; }
-    .empty-state { background:#fff; border:1px dashed #cbd5e1; border-radius:12px; }
-    .empty-icon { font-size:48px; margin-bottom:12px; }
+    .section { margin-bottom: var(--sp-7); }
+    .section-title { margin-bottom: var(--sp-4); }
 
-    .section { margin-bottom:32px; }
-    .section-title { font-size:1.1rem; color:#1e3a5f; margin:0 0 14px 0; font-weight:600; }
+    .cards-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: var(--sp-4);
+    }
+    .cards-grid .card { display: flex; flex-direction: column; }
+    .cards-grid .card__body { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--sp-3); }
 
-    .cards-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(400px,1fr)); gap:14px; }
-    .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(15,23,42,0.04); display:flex; flex-direction:column; gap:12px; }
-    .card.pending { border-color:#fde68a; background:linear-gradient(180deg, #fffbeb 0%, #fff 50%); }
-    .card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-    .card-head h3 { margin:0; color:#0f172a; font-size:1.05rem; }
+    /* Carte en attente de décision : liseré d'accent rôle */
+    .card.pending { border-color: var(--c-accent); }
 
-    .status-badge { padding:4px 11px; border-radius:999px; font-size:0.72rem; font-weight:600; white-space:nowrap; }
-    .status-badge.proposed { background:#fef3c7; color:#92400e; }
-    .status-badge.accepted { background:#dbeafe; color:#1e40af; }
-    .status-badge.enrolled { background:#eff6ff; color:#1e3a5f; }
-    .status-badge.completed { background:#dcfce7; color:#15803d; }
-    .status-badge.refused, .status-badge.abandoned { background:#fee2e2; color:#991b1b; }
+    .card-head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3);
+    }
+    .provider-name { font-size: var(--fs-15); margin: 0; }
 
-    .provider-desc { color:#475569; font-size:0.9rem; line-height:1.5; margin:0; }
+    .provider-desc { color: var(--c-muted); font-size: var(--fs-14); line-height: 1.55; margin: 0; }
 
-    .meta-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:0.8rem; color:#64748b; }
-    .meta-item { padding:2px 7px; background:#f1f5f9; border-radius:4px; }
-    .link { color:#1e3a5f; text-decoration:none; font-weight:500; }
-    .link:hover { text-decoration:underline; }
+    .meta-row { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
 
-    .badge { padding:3px 10px; border-radius:999px; font-size:0.72rem; font-weight:600; }
-    .badge.conventionne { background:#dcfce7; color:#15803d; }
-    .badge.reference    { background:#fef9c3; color:#854d0e; }
-    .badge.nouveau      { background:#dbeafe; color:#1e40af; }
-    .badge.qualiopi     { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
+    .provider-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: var(--fs-13); font-weight: 500; color: var(--c-brand);
+    }
+    .provider-link:hover { color: var(--c-brand-strong); }
 
-    .ai-block { background:#f8fafc; border-left:3px solid #1e3a5f; border-radius:6px; padding:10px 12px; }
-    .ai-justif { margin:0; font-size:0.88rem; color:#334155; line-height:1.4; }
+    /* Variantes de convention (conventionClass) */
+    .badge.conventionne { background: var(--c-success-soft); color: var(--c-success-ink); }
+    .badge.reference    { background: var(--c-warning-soft); color: var(--c-warning-ink); }
+    .badge.nouveau      { background: var(--c-info-soft);    color: var(--c-info-ink); }
 
-    .manager-from { margin:0; font-size:0.82rem; color:#64748b; font-style:italic; }
+    /* Variantes de statut (statusClass) */
+    .badge.proposed  { background: var(--c-warning-soft); color: var(--c-warning-ink); }
+    .badge.accepted  { background: var(--c-info-soft);    color: var(--c-info-ink); }
+    .badge.enrolled  { background: var(--c-brand-soft);   color: var(--c-brand-ink); }
+    .badge.completed { background: var(--c-success-soft); color: var(--c-success-ink); }
+    .badge.refused,
+    .badge.abandoned { background: var(--c-danger-soft);  color: var(--c-danger-ink); }
 
-    .actions { display:flex; gap:8px; flex-wrap:wrap; padding-top:8px; border-top:1px dashed #e2e8f0; }
-    .btn-primary { padding:9px 16px; background:#1e3a5f; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:0.88rem; font-weight:600; }
-    .btn-primary:hover:not(:disabled) { background:#17304f; }
-    .btn-primary:disabled { background:#94a3b8; cursor:not-allowed; }
-    .btn-ghost { padding:9px 16px; background:transparent; border:1px solid #cbd5e1; color:#475569; border-radius:8px; cursor:pointer; font-size:0.88rem; }
-    .btn-ghost:hover { background:#fef2f2; border-color:#ef4444; color:#991b1b; }
-    .btn-link { display:inline-block; padding:8px 14px; color:#1e3a5f; text-decoration:none; font-size:0.85rem; font-weight:500; border:1px solid #cbd5e1; border-radius:6px; align-self:flex-start; }
-    .btn-link:hover { background:#eff6ff; }
+    /* Bloc justification IA — teinté de l'accent rôle */
+    .ai-block {
+      display: flex; align-items: flex-start; gap: var(--sp-2);
+      background: var(--c-accent-soft); border-radius: var(--r-md); padding: var(--sp-3);
+    }
+    .ai-ic { color: var(--c-accent-ink); margin-top: 1px; }
+    .ai-justif { margin: 0; font-size: var(--fs-13); color: var(--c-accent-ink); line-height: 1.5; }
+
+    .manager-from { margin: 0; font-size: var(--fs-13); color: var(--c-muted); }
+
+    .actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+    .certificate-link { align-self: flex-start; text-decoration: none; }
   `]
 })
 export class EmployeeFormationComponent implements OnInit {
@@ -194,8 +212,8 @@ export class EmployeeFormationComponent implements OnInit {
       PROPOSED: 'En attente',
       ACCEPTED_BY_EMPLOYEE: 'Acceptée — inscription en cours',
       REFUSED_BY_EMPLOYEE: 'Refusée',
-      ENROLLED: '🎯 Formation en cours',
-      COMPLETED: '✓ Terminée',
+      ENROLLED: 'Formation en cours',
+      COMPLETED: 'Terminée',
       ABANDONED: 'Abandonnée'
     } as Record<ProposalStatus, string>)[s];
   }
@@ -206,11 +224,11 @@ export class EmployeeFormationComponent implements OnInit {
     } as Record<ProposalStatus, string>)[s];
   }
   conventionLabel(s: string): string {
-    return s === 'CONVENTIONNE' ? '✓ Conventionné' : s === 'REFERENCE' ? 'Référencé' : 'Nouveau';
+    return s === 'CONVENTIONNE' ? 'Conventionné' : s === 'REFERENCE' ? 'Référencé' : 'Nouveau';
   }
   conventionClass(s: string): string { return s.toLowerCase(); }
   modeLabel(m: DeliveryMode): string {
-    return m === 'PRESENTIEL' ? '📍 Présentiel' : m === 'DISTANCIEL' ? '💻 Distanciel' : '🔀 Hybride';
+    return m === 'PRESENTIEL' ? 'Présentiel' : m === 'DISTANCIEL' ? 'Distanciel' : 'Hybride';
   }
   formatDate(iso?: string): string {
     if (!iso) return '—';
